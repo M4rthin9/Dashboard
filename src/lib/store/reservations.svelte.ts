@@ -1,0 +1,161 @@
+import { getReservationsWithArchive, updateStatus as apiUpdateStatus, cancelBooking as apiCancelBooking, updateVisitorApproval as apiUpdateVisitorApproval } from '../api/endpoints';
+import { ApiError } from '../api/errors';
+import type { Reservation } from '../api/types';
+import { normalizeStatus, STATUS_LABELS } from '../utils/format';
+
+const CACHE_KEY = 'ccc_reservations_cache';
+const CACHE_TTL = 5 * 60 * 1000;
+
+export interface DaySummary {
+  counts: Record<string, number>;
+  totalAmount: number;
+  pendingDiscipline: number;
+  pendingParticipant: number;
+}
+
+class ReservationsStore {
+  rows = $state<Reservation[]>([]);
+  loading = $state(false);
+  error = $state('');
+  loadedAt = $state<number | null>(null);
+  includeArchive = $state(false);
+
+  private inFlight: Promise<void> | null = null;
+
+  async load(force = false): Promise<void> {
+    if (!force && this.rows.length > 0 && this.loadedAt && Date.now() - this.loadedAt < CACHE_TTL) return;
+    if (this.inFlight) return this.inFlight;
+
+    this.inFlight = (async () => {
+      this.loading = true;
+      this.error = '';
+      try {
+        const cached = this.readCache();
+        if (!force && cached && Date.now() - cached.t < CACHE_TTL) {
+          this.rows = cached.rows;
+          this.loadedAt = cached.t;
+          return;
+        }
+        const data = await getReservationsWithArchive(this.includeArchive);
+        this.rows = data.rows ?? [];
+        this.loadedAt = Date.now();
+        this.writeCache();
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'ไม่สามารถโหลดข้อมูลได้';
+        throw err;
+      } finally {
+        this.loading = false;
+        this.inFlight = null;
+      }
+    })();
+
+    return this.inFlight;
+  }
+
+  async refresh(): Promise<void> {
+    await this.load(true);
+  }
+
+  async toggleArchive(): Promise<void> {
+    this.includeArchive = !this.includeArchive;
+    await this.load(true);
+  }
+
+  private readCache(): { rows: Reservation[]; t: number } | null {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed.rows)) return parsed;
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  private writeCache(): void {
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ rows: this.rows, t: Date.now() }));
+    } catch {
+      // storage full or unavailable — ignore
+    }
+  }
+
+  async updateStatus(ref: string, status: string, reason?: string): Promise<void> {
+    const row = this.rows.find((r) => r.ref === ref);
+    const old = row ? row.status : undefined;
+    if (row) row.status = status;
+    try {
+      const res = await apiUpdateStatus(ref, status, reason);
+      if (res.status !== 'ok') throw new ApiError(String(res.message ?? 'เกิดข้อผิดพลาด'));
+      this.markDirty();
+    } catch (err) {
+      if (row) row.status = old;
+      throw err;
+    }
+  }
+
+  async cancelBooking(ref: string, reason: string): Promise<void> {
+    const row = this.rows.find((r) => r.ref === ref);
+    const old = row ? row.status : undefined;
+    if (row) row.status = 'ยกเลิก';
+    try {
+      const res = await apiCancelBooking(ref, reason);
+      if (res.status !== 'ok') throw new ApiError(String(res.message ?? 'เกิดข้อผิดพลาด'));
+      this.markDirty();
+    } catch (err) {
+      if (row) row.status = old;
+      throw err;
+    }
+  }
+
+  async updateVisitorApproval(ref: string, visitorApproved: string, extraVisitorApproved?: string): Promise<void> {
+    const row = this.rows.find((r) => r.ref === ref);
+    const oldApproved = row ? row.visitorApproved : undefined;
+    const oldExtra = row ? row.extraVisitorApproved : undefined;
+    const oldCount = row ? row.visitorCount : undefined;
+    const oldTotal = row ? row.total : undefined;
+    if (row) row.visitorApproved = visitorApproved;
+    if (row && extraVisitorApproved !== undefined) row.extraVisitorApproved = extraVisitorApproved;
+    try {
+      const res = await apiUpdateVisitorApproval(ref, visitorApproved, extraVisitorApproved);
+      if (res.status !== 'ok') throw new ApiError(String(res.message ?? 'เกิดข้อผิดพลาด'));
+      if (row && res.visitorCount !== undefined) row.visitorCount = res.visitorCount;
+      if (row && res.total !== undefined) row.total = res.total;
+      this.markDirty();
+    } catch (err) {
+      if (row) row.visitorApproved = oldApproved;
+      if (row && extraVisitorApproved !== undefined) row.extraVisitorApproved = oldExtra;
+      if (row) {
+        row.visitorCount = oldCount;
+        row.total = oldTotal;
+      }
+      throw err;
+    }
+  }
+
+  daySummary(dateISO: string): DaySummary {
+    const dayRows = this.rows.filter((r) => String(r.visitDateISO ?? '').trim() === dateISO && r.ref && String(r.ref).trim());
+    const counts: Record<string, number> = {};
+    let totalAmount = 0;
+    let pendingDiscipline = 0;
+    let pendingParticipant = 0;
+    for (const r of dayRows) {
+      const s = normalizeStatus(r.status);
+      counts[s] = (counts[s] ?? 0) + 1;
+      totalAmount += Number(r.total) || 0;
+      if (s === 'รอตรวจสอบวินัย') pendingDiscipline++;
+      if (s === 'รอตรวจสอบผู้เข้าร่วม') pendingParticipant++;
+    }
+    return { counts, totalAmount, pendingDiscipline, pendingParticipant };
+  }
+
+  private markDirty(): void {
+    if (this.loadedAt) {
+      this.loadedAt = Date.now() - CACHE_TTL + 1;
+    }
+  }
+}
+
+export const reservations = new ReservationsStore();
+export { STATUS_LABELS };

@@ -25,7 +25,7 @@ export function getReservations(): Promise<ApiResult & { rows?: Reservation[] }>
 }
 
 export function getReservationsWithArchive(withArchive = true): Promise<ApiResult & { rows?: Reservation[] }> {
-  return callAction('getAllWithArchive', { withArchive }, { auth: true });
+  return callAction('getAllWithArchive', { includeArchive: withArchive }, { auth: true });
 }
 
 export function getArchivedReservations(): Promise<ApiResult & { rows?: Reservation[] }> {
@@ -78,4 +78,24 @@ export function testConnection(): Promise<ApiResult & { message?: string }> {
 
 export function getBackendUrl(): Promise<ApiResult & { url?: string }> {
   return callAction('getBackendUrl');
+}
+
+export function updateStatus(ref: string, status: string, reason?: string): Promise<ApiResult> {
+  return callAction('updateStatus', { ref, status, ...(reason ? { reason } : {}) }, { auth: true });
+}
+
+export function cancelBooking(ref: string, reason?: string): Promise<ApiResult> {
+  return callAction('cancelBooking', { ref, ...(reason ? { reason } : {}) }, { auth: true });
+}
+
+export function updateVisitorApproval(
+  ref: string,
+  visitorApproved: string,
+  extraVisitorApproved?: string
+): Promise<ApiResult & { visitorCount?: number; total?: number }> {
+  return callAction(
+    'updateVisitorApproval',
+    { ref, visitorApproved, ...(extraVisitorApproved !== undefined ? { extraVisitorApproved } : {}) },
+    { auth: true }
+  );
 }

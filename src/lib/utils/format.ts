@@ -50,6 +50,24 @@ export const STATUS_LABELS: Record<string, string> = {
   'ยกเลิก': 'ยกเลิก',
 };
 
+export const STATUS_STEPS = ['รอตรวจสอบผู้เข้าร่วม', 'รอตรวจสอบวินัย', 'รอชำระเงิน', 'ชำระแล้ว', 'เสร็จสิ้น'];
+
+export function normalizeStatus(status: string | undefined): string {
+  const s = String(status ?? '').trim();
+  if (s === 'รอตรวจสอบ') return 'รอตรวจสอบผู้เข้าร่วม';
+  return s;
+}
+
+export const STATUS_COLORS: Record<string, string> = {
+  'รอตรวจสอบผู้เข้าร่วม': '#f59e0b',
+  'รอตรวจสอบวินัย': '#6366f1',
+  'รอชำระเงิน': '#d97706',
+  'ชำระแล้ว': '#059669',
+  'เสร็จสิ้น': '#4f46e5',
+  'ไม่อนุมัติ': '#ef4444',
+  'ยกเลิก': '#64748b',
+};
+
 export function statusColor(status: string | undefined): string {
   switch (status) {
     case 'รอตรวจสอบผู้เข้าร่วม':

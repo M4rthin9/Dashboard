@@ -674,14 +674,14 @@ jobs:
 - [ ] Test login against live backend
 
 ### Phase 2: Reservations View (Days 3-5)
-- [ ] Build `reservations.svelte.ts` store
-- [ ] Build UI components: Table, Toolbar, Filters, Pagination, Modal, Badge, ProgressBar
-- [ ] Build `Reservations.svelte` page
-- [ ] Implement server-pagination API calls (with fallback)
-- [ ] Role-gated columns/actions/bulk
-- [ ] Stale-while-revalidate + polling
-- [ ] Day summary panel + batch actions
-- [ ] CSV export (filtered rows)
+- [x] Build `reservations.svelte.ts` store
+- [x] Build UI components: Table, Toolbar, Filters, Pagination, Modal, Badge, StatusSteps
+- [x] Build `Reservations.svelte` page
+- [x] Implement server-pagination API calls (with fallback)
+- [x] Role-gated columns/actions/bulk
+- [x] Stale-while-revalidate + polling
+- [x] Day summary panel + batch actions
+- [x] CSV export (filtered rows)
 
 ### Phase 3: Dashboard/Home (Days 5-7)
 - [ ] Build `Dashboard.svelte` layout
