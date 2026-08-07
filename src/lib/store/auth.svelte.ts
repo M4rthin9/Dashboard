@@ -146,3 +146,32 @@ async function refreshAccessToken(): Promise<boolean> {
 export function callAction<T extends object = ApiResult>(action: string, body: Record<string, unknown> = {}, opts: RequestOptions = {}): Promise<T> {
   return postAction(action, body, opts) as unknown as Promise<T>;
 }
+
+/** GET a REST alias endpoint (e.g. /api/prisoners) with Bearer auth + refresh fallback. */
+async function getAction<T extends object = ApiResult>(path: string): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (auth.accessToken) headers['Authorization'] = `Bearer ${auth.accessToken}`;
+
+  const res = await fetch(`${API_BASE}${path}`, { method: 'GET', headers });
+
+  const data = (await res.json().catch(() => ({}))) as ApiResult;
+  if (typeof data !== 'object' || data === null || !('status' in data)) {
+    throw new ApiError('การตอบสนองจากเซิร์ฟเวอร์ไม่ถูกต้อง');
+  }
+
+  if (data.status === 'error') {
+    if (String(data.message ?? '').toLowerCase().includes('unauthorized')) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) return getAction<T>(path);
+      auth.logout();
+      throw new AuthExpiredError();
+    }
+    throw new ApiError(String(data.message ?? 'เกิดข้อผิดพลาด'));
+  }
+
+  return data as T;
+}
+
+export function callGet<T extends object = ApiResult>(path: string): Promise<T> {
+  return getAction<T>(path);
+}

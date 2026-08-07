@@ -693,12 +693,12 @@ jobs:
 - [x] Responsive grid (Tailwind)
 
 ### Phase 4: Remaining Views (Days 7-9)
-- [ ] `Reports.svelte` (charts + monthly generator)
-- [ ] `EventLog.svelte` (paginated table)
-- [ ] `Users.svelte` (Superadmin CRUD)
-- [ ] `Prisoners.svelte` (CSV import + preview)
-- [ ] `Connection.svelte` (test + URL)
-- [ ] `Settings.svelte` (local + server)
+- [x] `Reports.svelte` (charts + monthly generator)
+- [x] `EventLog.svelte` (paginated table)
+- [x] `Users.svelte` (Superadmin CRUD)
+- [x] `Prisoners.svelte` (CSV import + preview)
+- [x] `Connection.svelte` (test + URL)
+- [x] `Settings.svelte` (local + server)
 
 ### Phase 5: Polish & Deploy (Days 9-10)
 - [ ] Dark mode (Tailwind `dark:` + localStorage)

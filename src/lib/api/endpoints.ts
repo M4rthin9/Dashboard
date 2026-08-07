@@ -1,4 +1,4 @@
-import { callAction } from './client';
+import { callAction, callGet } from './client';
 import type {
   ApiResult,
   EventLog,
@@ -49,7 +49,7 @@ export function lookupByRef(ref: string): Promise<ApiResult & { rows?: Reservati
 }
 
 export function getPrisoners(): Promise<ApiResult & { prisoners?: Prisoner[] }> {
-  return callAction('getPrisoners');
+  return callGet('/api/prisoners');
 }
 
 export function getRoles(): Promise<ApiResult & { roles?: RolePermission[] }> {
@@ -98,4 +98,36 @@ export function updateVisitorApproval(
     { ref, visitorApproved, ...(extraVisitorApproved !== undefined ? { extraVisitorApproved } : {}) },
     { auth: true }
   );
+}
+
+export function createUser(username: string, password: string, role: string, displayName?: string): Promise<ApiResult> {
+  return callAction('createUser', { username, password, role, displayName }, { auth: true });
+}
+
+export function updateUser(targetUser: string, fields: { role?: string; displayName?: string; newPassword?: string }): Promise<ApiResult> {
+  return callAction('updateUser', { targetUser, ...fields }, { auth: true });
+}
+
+export function deleteUser(targetUser: string): Promise<ApiResult> {
+  return callAction('deleteUser', { targetUser }, { auth: true });
+}
+
+export function createRole(roleName: string, permissions: string[]): Promise<ApiResult> {
+  return callAction('createRole', { roleName, permissions }, { auth: true });
+}
+
+export function importPrisoners(prisoners: Record<string, unknown>[]): Promise<ApiResult & { added?: number; updated?: number; errors?: string[] }> {
+  return callAction('importPrisoners', { prisoners }, { auth: true });
+}
+
+export function syncPrisonerWings(): Promise<ApiResult & { updated?: number }> {
+  return callAction('syncPrisonerWings', {}, { auth: true });
+}
+
+export function getSettings(): Promise<ApiResult & { settings?: Record<string, unknown> }> {
+  return callAction('getSettings', {}, { auth: true });
+}
+
+export function saveSettings(settings: Record<string, unknown>): Promise<ApiResult> {
+  return callAction('saveSettings', { settings }, { auth: true });
 }
