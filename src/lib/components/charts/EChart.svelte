@@ -2,6 +2,7 @@
   import type { EChartsOption } from 'echarts';
   import type { ECharts } from 'echarts/core';
   import echarts from '../../utils/echarts';
+  import { ui } from '../../store/ui.svelte';
 
   let { option, height = '280px' }: { option: EChartsOption; height?: string } = $props();
 
@@ -10,20 +11,16 @@
 
   $effect(() => {
     if (!el) return;
-    if (!chart) {
-      chart = echarts.init(el, undefined, { renderer: 'canvas' });
-      const observer = new ResizeObserver(() => chart?.resize());
-      observer.observe(el);
-      return () => {
-        observer.disconnect();
-        chart?.dispose();
-        chart = null;
-      };
-    }
-  });
-
-  $effect(() => {
-    chart?.setOption(option, true);
+    chart?.dispose();
+    chart = echarts.init(el, ui.darkMode ? 'dark' : undefined, { renderer: 'canvas' });
+    chart.setOption(option, true);
+    const observer = new ResizeObserver(() => chart?.resize());
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      chart?.dispose();
+      chart = null;
+    };
   });
 </script>
 

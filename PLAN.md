@@ -701,13 +701,13 @@ jobs:
 - [x] `Settings.svelte` (local + server)
 
 ### Phase 5: Polish & Deploy (Days 9-10)
-- [ ] Dark mode (Tailwind `dark:` + localStorage)
-- [ ] Service Worker (Workbox)
-- [ ] Accessibility audit
-- [ ] Error boundaries + loading states
-- [ ] GitHub Actions → Cloudflare Pages
-- [ ] Custom domain setup
-- [ ] README with dev/deploy instructions
+- [x] Dark mode (Tailwind `dark:` + localStorage)
+- [x] Service Worker (Workbox)
+- [x] Accessibility audit
+- [x] Error boundaries + loading states
+- [x] GitHub Actions → Cloudflare Pages
+- [ ] Custom domain setup (requires user DNS access to Cloudflare dashboard)
+- [x] README with dev/deploy instructions
 
 ---
 

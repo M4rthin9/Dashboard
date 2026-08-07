@@ -10,6 +10,19 @@
     width?: string;
   } = $props();
 
+  let dialogEl = $state<HTMLDivElement | null>(null);
+  let lastFocused: HTMLElement | null = null;
+
+  $effect(() => {
+    if (open) {
+      lastFocused = document.activeElement as HTMLElement | null;
+      dialogEl?.focus();
+    } else if (lastFocused) {
+      lastFocused.focus();
+      lastFocused = null;
+    }
+  });
+
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape' && open) onclose();
   }
@@ -25,10 +38,12 @@
       aria-hidden="true"
     ></div>
     <div
+      bind:this={dialogEl}
       role="dialog"
       aria-modal="true"
       aria-label={title}
-      class="relative w-full {width} max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl dark:bg-slate-900"
+      tabindex="-1"
+      class="relative w-full {width} max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl outline-none dark:bg-slate-900"
     >
       {#if title}
         <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-700">
