@@ -684,13 +684,13 @@ jobs:
 - [x] CSV export (filtered rows)
 
 ### Phase 3: Dashboard/Home (Days 5-7)
-- [ ] Build `Dashboard.svelte` layout
-- [ ] KPI cards (role-filtered)
-- [ ] Chart wrappers (ECharts) + 8 charts
-- [ ] Floor plan component
-- [ ] Today's visits + alerts + payment queue
-- [ ] Welcome banner + quick actions
-- [ ] Responsive grid (Tailwind)
+- [x] Build `Dashboard.svelte` layout
+- [x] KPI cards (role-filtered)
+- [x] Chart wrappers (ECharts) + 8 charts
+- [x] Floor plan component
+- [x] Today's visits + alerts + payment queue
+- [x] Welcome banner + quick actions
+- [x] Responsive grid (Tailwind)
 
 ### Phase 4: Remaining Views (Days 7-9)
 - [ ] `Reports.svelte` (charts + monthly generator)
