@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Archive, Ban, Check, Download, Eye, Pencil, Plus, RefreshCw, Search, Users, X } from '@lucide/svelte';
+  import { Archive, Ban, Check, Download, Eye, Pencil, Plus, Printer, RefreshCw, Search, Users, X } from '@lucide/svelte';
   import Card from '../lib/components/ui/Card.svelte';
   import Spinner from '../lib/components/ui/Spinner.svelte';
   import Modal from '../lib/components/ui/Modal.svelte';
@@ -15,6 +15,7 @@
   import { hasPermission } from '../lib/utils/permissions';
   import { formatBaht, formatNumber, normalizeStatus, STATUS_COLORS, todayISO } from '../lib/utils/format';
   import { exportReservationsCSV } from '../lib/utils/csv';
+  import { openPrintWindow, buildSeatingReport } from '../lib/utils/print';
   import { getPrisoners } from '../lib/api/endpoints';
   import type { Prisoner, Reservation } from '../lib/api/types';
 
@@ -49,6 +50,7 @@
   const canEdit = $derived(role === 'Superadmin');
   const canViewSlip = $derived(hasPermission(role, 'view_slip'));
   const canVisitorApproval = $derived(isAdminOrSuper || hasPermission(role, 'visitor_approval'));
+  const canPrint = $derived(isAdminOrSuper || hasPermission(role, 'print'));
 
   const roleStatusFilter: Record<string, string[] | null> = {
     Superadmin: null,
@@ -259,6 +261,17 @@
     ui.showToast('ส่งออกไฟล์ CSV สำเร็จ', 'success');
   }
 
+  function doPrint(): void {
+    if (sorted.length === 0) {
+      ui.showToast('ไม่มีข้อมูลตาม filter ที่เลือก', 'warning');
+      return;
+    }
+    const rows = sorted.slice().sort((a, b) => String(a.ref).localeCompare(String(b.ref)));
+    const printerName = auth.user?.displayName || auth.user?.username || 'ไม่ระบุ';
+    const ok = openPrintWindow(buildSeatingReport(rows), 'รายงานการจัดโต๊ะ', printerName);
+    if (!ok) ui.showToast('กรุณาอนุญาต Popup เพื่อเปิดหน้าพิมพ์', 'warning');
+  }
+
   function openDetail(row: Reservation): void {
     detailRow = row;
     showDetail = true;
@@ -390,6 +403,18 @@
           <Download class="h-4 w-4" />
           ส่งออก CSV
         </button>
+
+        {#if canPrint}
+          <button
+            class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
+            onclick={doPrint}
+            disabled={sorted.length === 0}
+            title="พิมพ์รายงานการจัดโต๊ะตามตัวกรองปัจจุบัน"
+          >
+            <Printer class="h-4 w-4" />
+            พิมพ์รายงาน
+          </button>
+        {/if}
 
         {#if isAdminOrSuper}
           <button
