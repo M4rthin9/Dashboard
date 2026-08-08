@@ -1,22 +1,25 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Download, RefreshCw } from '@lucide/svelte';
+  import { Download, Printer, RefreshCw } from '@lucide/svelte';
   import type { EChartsOption } from 'echarts';
   import Card from '../lib/components/ui/Card.svelte';
   import Spinner from '../lib/components/ui/Spinner.svelte';
   import EChart from '../lib/components/charts/EChart.svelte';
   import { reservations } from '../lib/store/reservations.svelte';
+  import { auth } from '../lib/store/auth.svelte';
   import { ui } from '../lib/store/ui.svelte';
-  import { formatBaht, formatNumber, todayISO, STATUS_COLORS } from '../lib/utils/format';
+  import { formatBaht, formatNumber, todayISO, STATUS_COLORS, normalizeStatus } from '../lib/utils/format';
   import { exportReservationsCSV } from '../lib/utils/csv';
   import {
     computeRevenueSummary, computeStatusDistribution, computeWingCounts,
     computeDailyRevenue, computeMonthlyRevenue, computeVisitorTypes,
   } from '../lib/utils/dashboard';
+  import { openPrintWindow, buildDisciplinaryReport, buildGateRegistrationReport, buildKitchenReport } from '../lib/utils/print';
   import type { Reservation } from '../lib/api/types';
 
   let from = $state(todayISO());
   let to = $state(todayISO());
+  let reportDate = $state(todayISO());
 
   const inRange = $derived.by(() => {
     const rows = reservations.rows.filter((r) => {
@@ -93,6 +96,27 @@
     exportReservationsCSV(inRange);
     ui.showToast('ส่งออกไฟล์ CSV สำเร็จ', 'success');
   }
+
+  const dayRows = $derived.by(() => {
+    return reservations.rows.filter((r) => {
+      if (!r.ref || String(r.ref).trim() === '') return false;
+      if (r._archived && !reservations.includeArchive) return false;
+      if (normalizeStatus(r.status) !== 'เสร็จสิ้น') return false;
+      return String(r.visitDateISO ?? '').trim() === reportDate;
+    });
+  });
+
+  const printerName = $derived(auth.user?.displayName || auth.user?.username || 'ไม่ระบุ');
+
+  function doPrint(build: (rows: Reservation[], date: string) => string, title: string): void {
+    const rows = dayRows.slice().sort((a, b) => String(a.ref).localeCompare(String(b.ref)));
+    if (rows.length === 0) {
+      ui.showToast('ไม่มีรายการสถานะ เสร็จสิ้น ในวันที่เลือก', 'warning');
+      return;
+    }
+    const ok = openPrintWindow(build(rows, reportDate), title, printerName);
+    if (!ok) ui.showToast('กรุณาอนุญาต Popup เพื่อเปิดหน้าพิมพ์', 'warning');
+  }
 </script>
 
 <div class="flex flex-col gap-4">
@@ -125,6 +149,40 @@
   {#if reservations.loading && reservations.rows.length === 0}
     <div class="flex items-center justify-center py-16"><Spinner /></div>
   {:else}
+    <Card title="พิมพ์รายงานประจำวัน">
+      <div class="flex flex-wrap items-end gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label for="rep-print-date" class="text-xs font-medium text-slate-500 dark:text-slate-400">วันที่พิมพ์</label>
+          <input id="rep-print-date" type="date" bind:value={reportDate}
+            class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" />
+        </div>
+        <button
+          class="inline-flex items-center gap-1.5 rounded-lg bg-red-700 px-3 py-2 text-sm font-medium text-white hover:bg-red-800"
+          onclick={() => doPrint(buildDisciplinaryReport, 'รายงานส่วนทัณฑ์ (ปกครองกลาง)')}
+        >
+          <Printer class="h-4 w-4" /> ปกครองกลาง / ส่วนทัณฑ์
+        </button>
+        <button
+          class="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+          onclick={() => doPrint(buildGateRegistrationReport, 'ทะเบียนผู้เข้าเยี่ยม')}
+        >
+          <Printer class="h-4 w-4" /> ทะเบียนผู้เข้าเยี่ยม (ลงชื่อ)
+        </button>
+        <button
+          class="inline-flex items-center gap-1.5 rounded-lg bg-green-700 px-3 py-2 text-sm font-medium text-white hover:bg-green-800"
+          onclick={() => doPrint(buildKitchenReport, 'ครัว + เบเกอรี่')}
+        >
+          <Printer class="h-4 w-4" /> ครัว + เบเกอรี่
+        </button>
+        <span class="text-xs text-slate-400 dark:text-slate-500">
+          {reportDate}: {formatNumber(dayRows.length)} โต๊ะ
+        </span>
+        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+          พิมพ์เฉพาะสถานะ เสร็จสิ้น
+        </span>
+      </div>
+    </Card>
+
     <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
       <Card>
         <p class="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">การจองทั้งหมด</p>

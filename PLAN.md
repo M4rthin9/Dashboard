@@ -818,7 +818,62 @@ git push origin main
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2025-08-07
+## 31. Implementation Status Log (25-Item Plan)
+
+Status of the approved 25-item plan. Backend work lives in `H:\Web CIDA\CCC` (deployed to
+`https://ccc-backend.pongsinbas.workers.dev`); dashboard work lives in this repo.
+
+### Backend — Phase 0 (Todos 1–11) ✅ Complete & Deployed
+
+- [x] **1** `constants.ts`: added `create_booking` to `AVAILABLE_PERMISSIONS` + Superadmin/Admin `PERMISSIONS`
+- [x] **2** Migration `0004_add_create_booking.sql`: role column + UPDATE, plus `source` on `reservations` & `reservations_archive`; applied via `npm.cmd run migrate`
+- [x] **3** `handleCreateBooking` in `src/routes/reservations.ts` (`__AUTO__` ref via `generateUniqueRefServer`, dup-check via `findDuplicateActive`, ISO timestamps, `version:1`, `createdBy`, `source:'admin'`, logs `booking_created_admin`)
+- [x] **4** `createBooking` registered as `{ auth: true }` in dispatcher POST routes
+- [x] **5** `handleUpdateBooking` fixes: `UPDATE_BOOKING_FIELDS`/`UPDATE_BOOKING_NUMERIC` include `totalPersons`/`adultCount`/`child5to8Count`/`childUnder5Count`; bumps `updatedAt` + `version`
+- [x] **6** Tadtel = approve-only (`roleAllowedStatuses['Tadtel'] = ['รอตรวจสอบวินัย']`); rejection expressed per-visitor
+- [x] **7** Expiry guard in `handleUpdateStatus`: target ∈ {ไม่อนุมัติ, ยกเลิก} && all rows expired → error `เกินวันเข้างานแล้ว ไม่สามารถปฏิเสธ/ยกเลิกได้`
+- [x] **8** Same expiry guard in `handleCancelBooking`
+- [x] **9** Auto-reject: main visitor `visitorApproved='no'` → booking set to `ไม่อนุมัติ` with `cancelReason='ผู้เยี่ยมหลักถูกปฏิเสธการเข้าร่วม'` (logs `visitor_rejected_booking`)
+- [x] **10** `handleTestConnection` → `SELECT COUNT(*) FROM reservations` (reports `database:'D1 (SQLite)'` + `reservationCount`)
+- [x] **11** `npm.cmd run typecheck` + `npm.cmd run deploy` passed; deployed bundle verified (contains `create_booking`, `createBooking`, expiry-guard string, Tadtel single-status)
+
+### Dashboard — Phases (Todos 12–18) ✅ Complete
+
+- [x] **12** API layer: `updateBooking(ref, fields)` + `createBooking(fields)` in `endpoints.ts`; `source` in `types.ts`; store methods (`updateVisitorApproval`, `updateBooking`, `createBooking`) in `reservations.svelte.ts`
+- [x] **13** `ReservationDetailModal.svelte` (status/archived/source/createdBy, prisoner + visitor sections, extras, counts/total, `cancelReason`, `view_slip`-gated slip `<img>`, version footer)
+- [x] **14** `ReservationFormModal.svelte` (edit + create modes, prisoner suggestions, extras editor, live total with PRICING, a11y label fixes)
+- [x] **15** `Reservations.svelte` wired: detail modal, `canViewSlip`, `canVisitorApproval`, `canEdit` (Superadmin), `isExpired`, Vinai skips expired, bulk cancel skips expired, `สร้างการจอง` toolbar button, REF cell opens detail
+- [x] **16** New-booking modal path uses `store.createBooking` → toast `สร้างการจองสำเร็จ · REF {ref}`
+- [x] **17** `VisitorApprovalModal.svelte` (per-visitor ✓/✗, main-reject auto-reject confirm, extras `;;` payloads, `refresh()` after)
+- [x] **18** `src/lib/utils/print.ts` (escaping, extra parsing, `openPrintWindow`, ปกครองกลาง discipline report, gate-registration report, kitchen report) + `Reports.svelte` daily-report card with 3 print buttons
+
+### Verification (Todos 15–18) ✅
+
+- [x] `npm.cmd run check` — 0 errors, 0 warnings
+- [x] `npm.cmd run build` — passes (chunk-size warning only, acceptable)
+- [x] Live auth'd probes (superadmin / SuperAdmin@10900): `createBooking` → `{"status":"ok","ref":"VIS-78236"}`; `updateBooking` applied; `cancelBooking` ok; expiry guards on both reject & cancel return the error; main-visitor auto-reject set `ไม่อนุมัติ` + correct `cancelReason`
+- [x] Deployed worker bundle inspected — all key strings present
+
+### Todo 19 — Final Verification & Docs 🔄
+
+- [x] Deployed bundle string verification
+- [x] Temp probe files cleaned (`C:\Users\CIDA\AppData\Local\Temp\opencode\probe*.json`)
+- [x] This PLAN.md status update
+
+---
+
+## 32. Known Limitations
+
+- **`lookupByRef` does not echo `version`/`updatedAt` bumps** — those are visible via `getAll` (returns all columns), not via `lookupByRef`. Detail modal version footer relies on the full-row data.
+- **No direct delete endpoint** — test rows created during E2E (`VIS-78236` canceled, `VIS-24775` expired, `VIS-60840` auto-rejected) are terminal/expired and left in the DB (benign).
+- **Bundle size warning** — dist JS ~835 kB / gzip ~268 kB (>500 kB chunk warning on build; acceptable for now, ECharts is tree-shaken but still large).
+- **Password changes are forbidden in E2E** — seeded accounts keep `mustChangePassword:true`; re-login before each probe.
+- **Tadtel approve-only** — Tadtel cannot reject/cancel; rejection is expressed per-visitor (main-visitor rejection auto-cancels the booking).
+- **Date-bound reject/cancel applies to ALL roles**, including Superadmin and Admin (per product decision).
+
+---
+
+**Document Version**: 1.1
+**Last Updated**: 2026-08-08
 **Author**: opencode agent
-**Status**: Ready for implementation
+**Status**: Implementation complete (25-item plan); see §31 for status log and §32 for known limitations

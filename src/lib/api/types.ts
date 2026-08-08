@@ -54,6 +54,7 @@ export interface Reservation {
   updatedAt?: string;
   version?: number;
   createdBy?: string;
+  source?: string;
   _archived?: boolean;
 }
 

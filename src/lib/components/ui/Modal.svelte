@@ -1,13 +1,16 @@
 <script lang="ts">
   import { X } from '@lucide/svelte';
-  import type { Snippet } from 'svelte';
+  import type { Snippet, Component } from 'svelte';
 
-  let { open, title, onclose, children, width = 'max-w-lg' }: {
+  let { open, title, onclose, children, width = 'max-w-lg', accent = 'indigo', icon, subtitle }: {
     open: boolean;
     title?: string;
     onclose: () => void;
     children: Snippet;
     width?: string;
+    accent?: 'indigo' | 'emerald' | 'red' | 'amber' | 'sky' | 'violet' | 'slate';
+    icon?: Component;
+    subtitle?: string;
   } = $props();
 
   let dialogEl = $state<HTMLDivElement | null>(null);
@@ -26,6 +29,16 @@
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape' && open) onclose();
   }
+
+  const accentBar: Record<string, string> = {
+    indigo: 'bg-indigo-500',
+    emerald: 'bg-emerald-500',
+    red: 'bg-red-500',
+    amber: 'bg-amber-500',
+    sky: 'bg-sky-500',
+    violet: 'bg-violet-500',
+    slate: 'bg-slate-400',
+  };
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -33,7 +46,7 @@
 {#if open}
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
     <div
-      class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+      class="absolute inset-0 animate-fade-in bg-slate-900/60 backdrop-blur-sm"
       onclick={onclose}
       aria-hidden="true"
     ></div>
@@ -43,13 +56,27 @@
       aria-modal="true"
       aria-label={title}
       tabindex="-1"
-      class="relative w-full {width} max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl outline-none dark:bg-slate-900"
+      class="animate-modal-pop relative flex w-full {width} max-h-[90vh] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl outline-none dark:bg-slate-900"
     >
+      <div class="pointer-events-none absolute inset-x-0 top-0 z-0 h-1 {accentBar[accent]}" aria-hidden="true"></div>
       {#if title}
-        <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-700">
-          <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+        <div class="flex items-center gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+          {#if icon}
+            {@const HIcon = icon}
+            <div
+              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400"
+            >
+              <HIcon class="h-5 w-5" />
+            </div>
+          {/if}
+          <div class="min-w-0 flex-1">
+            <h2 class="truncate text-base font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+            {#if subtitle}
+              <p class="truncate text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>
+            {/if}
+          </div>
           <button
-            class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
+            class="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
             onclick={onclose}
             aria-label="ปิด"
           >
@@ -57,7 +84,7 @@
           </button>
         </div>
       {/if}
-      <div class="p-5">{@render children()}</div>
+      <div class="flex-1 overflow-y-auto p-5">{@render children()}</div>
     </div>
   </div>
 {/if}

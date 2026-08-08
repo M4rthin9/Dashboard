@@ -100,6 +100,14 @@ export function updateVisitorApproval(
   );
 }
 
+export function updateBooking(ref: string, fields: Record<string, unknown>): Promise<ApiResult> {
+  return callAction('updateBooking', { ref, ...fields }, { auth: true });
+}
+
+export function createBooking(fields: Record<string, unknown>): Promise<ApiResult & { ref?: string }> {
+  return callAction('createBooking', fields, { auth: true });
+}
+
 export function createUser(username: string, password: string, role: string, displayName?: string): Promise<ApiResult> {
   return callAction('createUser', { username, password, role, displayName }, { auth: true });
 }

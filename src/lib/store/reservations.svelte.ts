@@ -1,4 +1,4 @@
-import { getReservationsWithArchive, updateStatus as apiUpdateStatus, cancelBooking as apiCancelBooking, updateVisitorApproval as apiUpdateVisitorApproval } from '../api/endpoints';
+import { getReservationsWithArchive, updateStatus as apiUpdateStatus, cancelBooking as apiCancelBooking, updateVisitorApproval as apiUpdateVisitorApproval, updateBooking as apiUpdateBooking, createBooking as apiCreateBooking } from '../api/endpoints';
 import { ApiError } from '../api/errors';
 import type { Reservation } from '../api/types';
 import { normalizeStatus, STATUS_LABELS } from '../utils/format';
@@ -115,6 +115,7 @@ class ReservationsStore {
     const oldExtra = row ? row.extraVisitorApproved : undefined;
     const oldCount = row ? row.visitorCount : undefined;
     const oldTotal = row ? row.total : undefined;
+    const oldStatus = row ? row.status : undefined;
     if (row) row.visitorApproved = visitorApproved;
     if (row && extraVisitorApproved !== undefined) row.extraVisitorApproved = extraVisitorApproved;
     try {
@@ -122,16 +123,44 @@ class ReservationsStore {
       if (res.status !== 'ok') throw new ApiError(String(res.message ?? 'เกิดข้อผิดพลาด'));
       if (row && res.visitorCount !== undefined) row.visitorCount = res.visitorCount;
       if (row && res.total !== undefined) row.total = res.total;
-      this.markDirty();
+      if (visitorApproved.toLowerCase() === 'no') {
+        if (row) row.status = 'ไม่อนุมัติ';
+        await this.refresh();
+      } else {
+        this.markDirty();
+      }
     } catch (err) {
       if (row) row.visitorApproved = oldApproved;
       if (row && extraVisitorApproved !== undefined) row.extraVisitorApproved = oldExtra;
       if (row) {
         row.visitorCount = oldCount;
         row.total = oldTotal;
+        row.status = oldStatus;
       }
       throw err;
     }
+  }
+
+  async updateBooking(ref: string, fields: Record<string, unknown>): Promise<void> {
+    const row = this.rows.find((r) => r.ref === ref);
+    const snapshot = row ? { ...row } : null;
+    if (row) Object.assign(row, fields);
+    try {
+      const res = await apiUpdateBooking(ref, fields);
+      if (res.status !== 'ok') throw new ApiError(String(res.message ?? 'เกิดข้อผิดพลาด'));
+      await this.refresh();
+    } catch (err) {
+      if (row && snapshot) Object.assign(row, snapshot);
+      throw err;
+    }
+  }
+
+  async createBooking(fields: Record<string, unknown>): Promise<string> {
+    const res = await apiCreateBooking(fields);
+    if (res.status !== 'ok') throw new ApiError(String(res.message ?? 'เกิดข้อผิดพลาด'));
+    const ref = String(res.ref ?? '');
+    await this.refresh();
+    return ref;
   }
 
   daySummary(dateISO: string): DaySummary {

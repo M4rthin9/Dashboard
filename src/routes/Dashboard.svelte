@@ -1,7 +1,21 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { EChartsOption } from 'echarts';
-  import { AlertTriangle, ArrowRight, CreditCard, RefreshCw, Users } from '@lucide/svelte';
+  import {
+    AlertTriangle,
+    ArrowRight,
+    CalendarDays,
+    Coins,
+    CreditCard,
+    Crown,
+    LayoutDashboard,
+    PartyPopper,
+    RefreshCw,
+    Sparkles,
+    TrendingUp,
+    Users,
+    Wallet,
+  } from '@lucide/svelte';
   import Card from '../lib/components/ui/Card.svelte';
   import Spinner from '../lib/components/ui/Spinner.svelte';
   import EChart from '../lib/components/charts/EChart.svelte';
@@ -49,14 +63,14 @@
 
   const statCards = $derived.by(() => {
     const base = [
-      { id: 'statTotal', label: 'การจองทั้งหมด', value: formatNumber(stats.total) },
-      { id: 'statWait', label: 'รอตรวจสอบวินัย', value: formatNumber(stats.wait) },
-      { id: 'statOk', label: 'ผ่านการอนุมัติ/ชำระแล้ว', value: formatNumber(stats.ok) },
-      { id: 'statReject', label: 'ไม่อนุมัติ', value: formatNumber(stats.reject) },
-      { id: 'statUniquePrisoners', label: 'ผู้ต้องขังที่ถูกจอง', value: formatNumber(stats.uniquePrisoners) },
-      { id: 'statThisWeek', label: 'การจอง 7 วันนี้', value: formatNumber(stats.thisWeek) },
-      { id: 'statThisMonth', label: 'การจองเดือนนี้', value: formatNumber(stats.thisMonth) },
-      { id: 'statUniqueVisitors', label: 'ผู้เยี่ยมทั้งหมด', value: formatNumber(stats.uniqueVisitors) },
+      { id: 'statTotal', label: 'การจองทั้งหมด', value: formatNumber(stats.total), icon: LayoutDashboard, color: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400' },
+      { id: 'statWait', label: 'รอตรวจสอบวินัย', value: formatNumber(stats.wait), icon: Crown, color: 'bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-400' },
+      { id: 'statOk', label: 'ผ่านการอนุมัติ/ชำระแล้ว', value: formatNumber(stats.ok), icon: PartyPopper, color: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400' },
+      { id: 'statReject', label: 'ไม่อนุมัติ', value: formatNumber(stats.reject), icon: AlertTriangle, color: 'bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400' },
+      { id: 'statUniquePrisoners', label: 'ผู้ต้องขังที่ถูกจอง', value: formatNumber(stats.uniquePrisoners), icon: Users, color: 'bg-sky-100 text-sky-600 dark:bg-sky-950 dark:text-sky-400' },
+      { id: 'statThisWeek', label: 'การจอง 7 วันนี้', value: formatNumber(stats.thisWeek), icon: CalendarDays, color: 'bg-violet-100 text-violet-600 dark:bg-violet-950 dark:text-violet-400' },
+      { id: 'statThisMonth', label: 'การจองเดือนนี้', value: formatNumber(stats.thisMonth), icon: TrendingUp, color: 'bg-teal-100 text-teal-600 dark:bg-teal-950 dark:text-teal-400' },
+      { id: 'statUniqueVisitors', label: 'ผู้เยี่ยมทั้งหมด', value: formatNumber(stats.uniqueVisitors), icon: Sparkles, color: 'bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400' },
     ];
     const visibleByRole: Record<string, string[]> = {
       Superadmin: base.map((c) => c.id),
@@ -206,7 +220,51 @@
     ],
   });
 
-  const utilTone = $derived(revenue.utilRate >= 75 ? 'text-green-600' : revenue.utilRate >= 50 ? 'text-amber-600' : 'text-red-600');
+  const utilTone = $derived(revenue.utilRate >= 75 ? 'text-green-600 dark:text-green-400' : revenue.utilRate >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400');
+
+  const kpiCards = $derived.by(() => {
+    const base = [
+      {
+        id: 'fund',
+        label: 'กองทุนวิชาชีพ (เดือนนี้)',
+        value: formatBaht(revenue.mtdTotal),
+        sub: `${formatNumber(revenue.mtdCount)} รายการในเดือนนี้`,
+        icon: Coins,
+        grad: 'from-indigo-500 to-violet-600',
+        chip: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400',
+      },
+      {
+        id: 'paid',
+        label: 'ชำระแล้ว / รอชำระ',
+        value: `${formatBaht(revenue.paidTotal)} / ${formatBaht(revenue.pendingTotal)}`,
+        sub: `${revenue.paidPct}% ชำระแล้ว`,
+        icon: Wallet,
+        grad: 'from-emerald-500 to-teal-600',
+        chip: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400',
+        valueCls: 'text-green-600 dark:text-green-400',
+      },
+      {
+        id: 'avg',
+        label: 'เฉลี่ยต่อโต๊ะ',
+        value: formatBaht(revenue.avgRevenue),
+        sub: `จาก ${formatNumber(revenue.bookingCount)} รายการ`,
+        icon: CreditCard,
+        grad: 'from-sky-500 to-blue-600',
+        chip: 'bg-sky-100 text-sky-600 dark:bg-sky-950 dark:text-sky-400',
+      },
+      {
+        id: 'util',
+        label: 'การใช้โต๊ะวันนี้',
+        value: `${revenue.utilRate}%`,
+        sub: `${formatNumber(revenue.todayCount)} / 20 โต๊ะ`,
+        icon: TrendingUp,
+        grad: 'from-amber-500 to-orange-600',
+        chip: 'bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400',
+        valueCls: utilTone,
+      },
+    ];
+    return base;
+  });
 
   onMount(() => {
     reservations.load();
@@ -223,26 +281,36 @@
 </script>
 
 <div class="flex flex-col gap-6">
-  <div class="flex flex-wrap items-center justify-between gap-4">
-    <div>
-      <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">สวัสดี, {auth.displayName}</h2>
-      <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">วันนี้ {formatDateThai(new Date())}</p>
-    </div>
-    <div class="flex items-center gap-2">
-      <button
-        class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
-        onclick={() => reservations.refresh()}
-      >
-        <RefreshCw class="h-4 w-4" />
-        รีเฟรช
-      </button>
-      <button
-        class="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-        onclick={() => navigate('/reservations')}
-      >
-        เปิดตารางการจอง
-        <ArrowRight class="h-4 w-4" />
-      </button>
+  <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 p-6 text-white shadow-lg shadow-indigo-500/20">
+    <div class="pointer-events-none absolute -right-8 -top-10 h-48 w-48 rounded-full bg-white/10 blur-2xl" aria-hidden="true"></div>
+    <div class="pointer-events-none absolute -bottom-16 right-24 h-40 w-40 rounded-full bg-white/5 blur-xl" aria-hidden="true"></div>
+    <div class="relative flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-medium text-white/80">
+          <Sparkles class="h-3.5 w-3.5" />
+          {formatDateThai(new Date())}
+        </div>
+        <h2 class="mt-1 text-2xl font-bold tracking-tight">สวัสดี, {auth.displayName}</h2>
+        <p class="mt-1 text-sm text-white/80">
+          ยินดีต้อนรับสู่ระบบจอง C&amp;C Café · การจองวันนี้ {formatNumber(todaysVisits.length)} รายการ
+        </p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button
+          class="inline-flex items-center gap-1.5 rounded-xl bg-white/15 px-3.5 py-2 text-sm font-medium text-white backdrop-blur transition-colors hover:bg-white/25"
+          onclick={() => reservations.refresh()}
+        >
+          <RefreshCw class="h-4 w-4" />
+          รีเฟรช
+        </button>
+        <button
+          class="inline-flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-2 text-sm font-medium text-indigo-700 shadow transition-colors hover:bg-indigo-50"
+          onclick={() => navigate('/reservations')}
+        >
+          เปิดตารางการจอง
+          <ArrowRight class="h-4 w-4" />
+        </button>
+      </div>
     </div>
   </div>
 
@@ -255,35 +323,35 @@
       {reservations.error}
     </div>
   {:else}
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <Card title="กองทุนวิชาชีพ (เดือนนี้)">
-        <p class="text-2xl font-bold text-slate-900 dark:text-slate-100">{formatBaht(revenue.mtdTotal)}</p>
-        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{formatNumber(revenue.mtdCount)} รายการในเดือนนี้</p>
-      </Card>
-      <Card title="ชำระแล้ว / รอชำระ">
-        <p class="text-2xl font-bold">
-          <span class="text-green-600 dark:text-green-400">{formatBaht(revenue.paidTotal)}</span>
-          <span class="mx-1 text-slate-300">/</span>
-          <span class="text-amber-600 dark:text-amber-400">{formatBaht(revenue.pendingTotal)}</span>
-        </p>
-        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{revenue.paidPct}% ชำระแล้ว</p>
-      </Card>
-      <Card title="เฉลี่ยต่อโต๊ะ">
-        <p class="text-2xl font-bold text-slate-900 dark:text-slate-100">{formatBaht(revenue.avgRevenue)}</p>
-        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">จาก {formatNumber(revenue.bookingCount)} รายการ</p>
-      </Card>
-      <Card title="การใช้โต๊ะวันนี้">
-        <p class="text-2xl font-bold {utilTone}">{revenue.utilRate}%</p>
-        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{formatNumber(revenue.todayCount)} / 20 โต๊ะ</p>
-      </Card>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {#each kpiCards as k (k.id)}
+        {@const KIcon = k.icon}
+        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
+          <div class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r {k.grad}" aria-hidden="true"></div>
+          <div class="flex items-center justify-between">
+            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">{k.label}</p>
+            <div class="flex h-8 w-8 items-center justify-center rounded-lg {k.chip}">
+              <KIcon class="h-4 w-4" />
+            </div>
+          </div>
+          <p class="mt-2 text-xl font-bold tracking-tight text-slate-900 dark:text-white {k.valueCls ?? ''}">{k.value}</p>
+          <p class="mt-0.5 text-xs text-slate-400">{k.sub}</p>
+        </div>
+      {/each}
     </div>
 
     {#if statCards.length > 0}
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
         {#each statCards as c (c.id)}
-          <div class="rounded-xl border border-slate-200 bg-white p-3 text-center dark:border-slate-700 dark:bg-slate-900">
-            <p class="text-xl font-bold text-slate-900 dark:text-slate-100">{c.value}</p>
-            <p class="mt-0.5 text-[11px] leading-tight text-slate-500 dark:text-slate-400">{c.label}</p>
+          {@const CIcon = c.icon}
+          <div class="flex flex-col items-center gap-2 rounded-2xl border border-slate-200 bg-white p-3 text-center transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
+            <div class="flex h-9 w-9 items-center justify-center rounded-xl {c.color}">
+              <CIcon class="h-4 w-4" />
+            </div>
+            <div>
+              <p class="text-lg font-bold text-slate-900 dark:text-white">{c.value}</p>
+              <p class="mt-0.5 text-[11px] leading-tight text-slate-500 dark:text-slate-400">{c.label}</p>
+            </div>
           </div>
         {/each}
       </div>
@@ -296,12 +364,15 @@
         {:else}
           <div class="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
             {#each alerts.slice(0, 5) as r (r.ref)}
-              <div class="flex items-center gap-2 py-2 text-sm">
-                <AlertTriangle class="h-4 w-4 shrink-0 text-amber-500" />
-                <div class="min-w-0">
+              <div class="flex items-center gap-3 py-2 text-sm">
+                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400">
+                  <AlertTriangle class="h-4 w-4" />
+                </div>
+                <div class="min-w-0 flex-1">
                   <div class="font-mono text-xs font-semibold text-slate-700 dark:text-slate-200">{r.ref}</div>
                   <div class="truncate text-xs text-slate-500 dark:text-slate-400">{r.visitorName}</div>
                 </div>
+                <span class="text-xs font-semibold text-amber-600 dark:text-amber-400">{formatBaht(r.total)}</span>
               </div>
             {/each}
           </div>
@@ -314,8 +385,8 @@
         {:else}
           <div class="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
             {#each paymentQueue.slice(0, 5) as r (r.ref)}
-              <div class="flex items-center gap-2 py-2 text-sm">
-                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-base dark:bg-slate-800">
+              <div class="flex items-center gap-3 py-2 text-sm">
+                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-base dark:bg-indigo-950">
                   {r.slipImage ? '🧾' : '💳'}
                 </div>
                 <div class="min-w-0 flex-1">
@@ -325,7 +396,7 @@
                 <div class="whitespace-nowrap font-semibold text-slate-700 dark:text-slate-200">{formatBaht(r.total)}</div>
                 {#if canConfirmPayment}
                   <button
-                    class="rounded-lg bg-indigo-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-indigo-700"
+                    class="rounded-lg bg-indigo-600 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-700"
                     onclick={() => confirmQuick(r.ref)}
                   >
                     ยืนยัน
@@ -344,9 +415,14 @@
           <div class="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
             {#each todaysVisits.slice(0, 6) as r (r.ref)}
               <div class="flex items-center justify-between gap-2 py-2 text-sm">
-                <div class="min-w-0">
-                  <div class="font-mono text-xs font-semibold text-indigo-600 dark:text-indigo-400">{r.ref}</div>
-                  <div class="truncate text-xs text-slate-500 dark:text-slate-400">{r.visitorName} · {r.prisonerName}</div>
+                <div class="flex min-w-0 items-center gap-2">
+                  <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-600 dark:bg-violet-950 dark:text-violet-400">
+                    <Users class="h-3.5 w-3.5" />
+                  </div>
+                  <div class="min-w-0">
+                    <div class="font-mono text-xs font-semibold text-indigo-600 dark:text-indigo-400">{r.ref}</div>
+                    <div class="truncate text-xs text-slate-500 dark:text-slate-400">{r.visitorName} · {r.prisonerName}</div>
+                  </div>
                 </div>
                 <span class="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-medium {(() => {
                   switch (normalizeStatus(r.status)) {

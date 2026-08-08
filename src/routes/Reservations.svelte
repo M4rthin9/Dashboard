@@ -1,18 +1,22 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Archive, Ban, Check, Download, RefreshCw, Search, X } from '@lucide/svelte';
+  import { Archive, Ban, Check, Download, Eye, Pencil, Plus, RefreshCw, Search, Users, X } from '@lucide/svelte';
   import Card from '../lib/components/ui/Card.svelte';
   import Spinner from '../lib/components/ui/Spinner.svelte';
   import Modal from '../lib/components/ui/Modal.svelte';
   import Pagination from '../lib/components/ui/Pagination.svelte';
   import StatusSteps from '../lib/components/ui/StatusSteps.svelte';
+  import ReservationDetailModal from '../lib/components/ReservationDetailModal.svelte';
+  import ReservationFormModal from '../lib/components/ReservationFormModal.svelte';
+  import VisitorApprovalModal from '../lib/components/VisitorApprovalModal.svelte';
   import { auth } from '../lib/store/auth.svelte';
   import { reservations } from '../lib/store/reservations.svelte';
   import { ui } from '../lib/store/ui.svelte';
   import { hasPermission } from '../lib/utils/permissions';
-  import { formatBaht, formatNumber, normalizeStatus, STATUS_COLORS } from '../lib/utils/format';
+  import { formatBaht, formatNumber, normalizeStatus, STATUS_COLORS, todayISO } from '../lib/utils/format';
   import { exportReservationsCSV } from '../lib/utils/csv';
-  import type { Reservation } from '../lib/api/types';
+  import { getPrisoners } from '../lib/api/endpoints';
+  import type { Prisoner, Reservation } from '../lib/api/types';
 
   let search = $state('');
   let statusFilter = $state('');
@@ -27,6 +31,13 @@
   let cancelRef = $state('');
   let cancelReason = $state('');
   let batchRunning = $state('');
+  let detailRow = $state<Reservation | null>(null);
+  let showDetail = $state(false);
+  let approvalRow = $state<Reservation | null>(null);
+  let showApproval = $state(false);
+  let formMode = $state<'edit' | 'create' | null>(null);
+  let formSaving = $state(false);
+  let prisoners = $state<Prisoner[]>([]);
 
   const role = $derived(auth.user?.role ?? 'User');
   const isAdminOrSuper = $derived(role === 'Superadmin' || role === 'Admin');
@@ -36,6 +47,8 @@
   const canCancel = $derived(isAdminOrSuper || role === 'Vinai' || hasPermission(role, 'cancel'));
   const canReject = $derived(isAdminOrSuper || role === 'Vinai' || hasPermission(role, 'reject') || hasPermission(role, 'reject_discipline'));
   const canEdit = $derived(role === 'Superadmin');
+  const canViewSlip = $derived(hasPermission(role, 'view_slip'));
+  const canVisitorApproval = $derived(isAdminOrSuper || hasPermission(role, 'visitor_approval'));
 
   const roleStatusFilter: Record<string, string[] | null> = {
     Superadmin: null,
@@ -56,12 +69,19 @@
     Array.from(new Set(reservations.rows.map((r) => String(r.wing ?? '').trim()).filter(Boolean))).sort()
   );
 
+  function isExpired(row: Reservation): boolean {
+    const iso = String(row.visitDateISO ?? '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
+    return iso < todayISO();
+  }
+
   const filtered = $derived.by(() => {
     const allowed = roleStatusFilter[role] ?? null;
     const q = search.trim().toLowerCase();
     return reservations.rows.filter((r) => {
       if (!r.ref || String(r.ref).trim() === '') return false;
       if (r._archived && !reservations.includeArchive) return false;
+      if (role === 'Vinai' && isExpired(r)) return false;
       if (allowed) {
         const s = normalizeStatus(r.status);
         if (!allowed.includes(s)) return false;
@@ -107,6 +127,13 @@
 
   onMount(() => {
     reservations.load();
+    getPrisoners()
+      .then((res) => {
+        prisoners = res.prisoners ?? [];
+      })
+      .catch(() => {
+        prisoners = [];
+      });
   });
 
   function toggleSort(key: string): void {
@@ -170,9 +197,14 @@
       ui.showToast('กรุณาระบุเหตุผลในการยกเลิก', 'error');
       return;
     }
-    const refs = cancelMode === 'bulk' ? selectedRefs : [cancelRef];
-    if (refs.length === 0) {
+    let refs = cancelMode === 'bulk' ? selectedRefs : [cancelRef];
+    const allRows = reservations.rows.filter((r) => refs.includes(r.ref));
+    const expired = allRows.filter((r) => isExpired(r));
+    refs = refs.filter((ref) => !expired.some((r) => r.ref === ref));
+    if (expired.length > 0 && refs.length === 0) {
       closeCancel();
+      if (cancelMode === 'bulk') clearSelection();
+      ui.showToast('หมดวันเข้างานแล้ว ไม่สามารถยกเลิกได้', 'error');
       return;
     }
     let success = 0;
@@ -187,7 +219,11 @@
     closeCancel();
     if (cancelMode === 'bulk') clearSelection();
     if (success > 0) {
-      ui.showToast(`ยกเลิกสำเร็จ ${success}/${refs.length} รายการ`, success === refs.length ? 'success' : 'warning');
+      const skipNote = expired.length > 0 ? ` (ข้าม ${expired.length} รายการที่หมดวัน)` : '';
+      ui.showToast(
+        `ยกเลิกสำเร็จ ${success}/${refs.length + expired.length} รายการ${skipNote}`,
+        success === refs.length ? 'success' : 'warning'
+      );
     } else {
       ui.showToast('ไม่สามารถยกเลิกการจองได้', 'error');
     }
@@ -221,6 +257,62 @@
     }
     exportReservationsCSV(sorted);
     ui.showToast('ส่งออกไฟล์ CSV สำเร็จ', 'success');
+  }
+
+  function openDetail(row: Reservation): void {
+    detailRow = row;
+    showDetail = true;
+  }
+
+  function closeDetail(): void {
+    showDetail = false;
+    detailRow = null;
+  }
+
+  function openApproval(row: Reservation): void {
+    approvalRow = row;
+    showApproval = true;
+  }
+
+  function closeApproval(): void {
+    showApproval = false;
+    approvalRow = null;
+  }
+
+  function openEdit(row: Reservation): void {
+    detailRow = row;
+    formMode = 'edit';
+    formSaving = false;
+  }
+
+  function openCreate(): void {
+    detailRow = null;
+    formMode = 'create';
+    formSaving = false;
+  }
+
+  function closeForm(): void {
+    if (formSaving) return;
+    formMode = null;
+    detailRow = null;
+  }
+
+  async function submitForm(fields: Record<string, unknown>): Promise<void> {
+    formSaving = true;
+    try {
+      if (formMode === 'edit' && detailRow) {
+        await reservations.updateBooking(detailRow.ref, fields);
+        ui.showToast('บันทึกการแก้ไขสำเร็จ', 'success');
+      } else if (formMode === 'create') {
+        const ref = await reservations.createBooking(fields);
+        ui.showToast(`สร้างการจองสำเร็จ · REF ${ref}`, 'success');
+      }
+      closeForm();
+    } catch (err) {
+      ui.showToast(err instanceof Error ? err.message : 'ไม่สามารถบันทึกได้', 'error');
+    } finally {
+      formSaving = false;
+    }
   }
 </script>
 
@@ -298,6 +390,16 @@
           <Download class="h-4 w-4" />
           ส่งออก CSV
         </button>
+
+        {#if isAdminOrSuper}
+          <button
+            class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+            onclick={openCreate}
+          >
+            <Plus class="h-4 w-4" />
+            สร้างการจอง
+          </button>
+        {/if}
       </div>
 
       {#if daySummary && Object.keys(daySummary.counts).length > 0}
@@ -397,6 +499,7 @@
                 {@const s = normalizeStatus(row.status)}
                 {@const archived = !!row._archived}
                 {@const terminal = s === 'เสร็จสิ้น' || s === 'ไม่อนุมัติ' || s === 'ยกเลิก'}
+                {@const expired = isExpired(row)}
                 <tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50 {archived ? 'opacity-60' : ''}">
                   <td class="px-3 py-2.5 text-center">
                     <input
@@ -408,7 +511,13 @@
                     />
                   </td>
                   <td class="px-3 py-2.5">
-                    <span class="font-mono text-xs font-semibold text-indigo-600 dark:text-indigo-400">{row.ref}</span>
+                    <button
+                      class="font-mono text-xs font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
+                      onclick={() => openDetail(row)}
+                      title="ดูรายละเอียด"
+                    >
+                      {row.ref}
+                    </button>
                     {#if archived}
                       <span class="ml-1 text-[10px] text-slate-400">🗄️</span>
                     {/if}
@@ -449,26 +558,26 @@
                   <td class="px-3 py-2.5">
                     {#if !archived}
                       <div class="flex items-center justify-end gap-1">
-                        {#if s === 'รอตรวจสอบผู้เข้าร่วม' && canApproveParticipant}
-                          <button class="rounded-lg border border-green-200 p-1.5 text-green-600 hover:bg-green-50 dark:border-green-900 dark:hover:bg-green-950" title="อนุมัติผู้เข้าร่วม" onclick={() => doUpdateStatus(row, 'รอตรวจสอบวินัย')}>
-                            <Check class="h-4 w-4" />
-                          </button>
-                          {#if canReject}
-                            <button class="rounded-lg border border-red-200 p-1.5 text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950" title="ปฏิเสธ" onclick={() => doUpdateStatus(row, 'ไม่อนุมัติ')}>
-                              <X class="h-4 w-4" />
+                          {#if s === 'รอตรวจสอบผู้เข้าร่วม' && canApproveParticipant}
+                            <button class="rounded-lg border border-green-200 p-1.5 text-green-600 hover:bg-green-50 dark:border-green-900 dark:hover:bg-green-950" title="อนุมัติผู้เข้าร่วม" onclick={() => doUpdateStatus(row, 'รอตรวจสอบวินัย')}>
+                              <Check class="h-4 w-4" />
                             </button>
+                            {#if canReject && !expired}
+                              <button class="rounded-lg border border-red-200 p-1.5 text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950" title="ปฏิเสธ" onclick={() => doUpdateStatus(row, 'ไม่อนุมัติ')}>
+                                <X class="h-4 w-4" />
+                              </button>
+                            {/if}
                           {/if}
-                        {/if}
-                        {#if s === 'รอตรวจสอบวินัย' && canApproveDiscipline}
-                          <button class="rounded-lg border border-green-200 p-1.5 text-green-600 hover:bg-green-50 dark:border-green-900 dark:hover:bg-green-950" title="อนุมัติวินัย" onclick={() => doUpdateStatus(row, 'รอชำระเงิน')}>
-                            <Check class="h-4 w-4" />
-                          </button>
-                          {#if canReject}
-                            <button class="rounded-lg border border-red-200 p-1.5 text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950" title="ปฏิเสธวินัย" onclick={() => doUpdateStatus(row, 'ไม่อนุมัติ')}>
-                              <X class="h-4 w-4" />
+                          {#if s === 'รอตรวจสอบวินัย' && canApproveDiscipline}
+                            <button class="rounded-lg border border-green-200 p-1.5 text-green-600 hover:bg-green-50 dark:border-green-900 dark:hover:bg-green-950" title="อนุมัติวินัย" onclick={() => doUpdateStatus(row, 'รอชำระเงิน')}>
+                              <Check class="h-4 w-4" />
                             </button>
+                            {#if canReject && !expired}
+                              <button class="rounded-lg border border-red-200 p-1.5 text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950" title="ปฏิเสธวินัย" onclick={() => doUpdateStatus(row, 'ไม่อนุมัติ')}>
+                                <X class="h-4 w-4" />
+                              </button>
+                            {/if}
                           {/if}
-                        {/if}
                         {#if s === 'รอชำระเงิน' && canConfirmPayment}
                           <button class="rounded-lg bg-indigo-600 p-1.5 text-white hover:bg-indigo-700" title="ยืนยันชำระเงิน" onclick={() => doUpdateStatus(row, 'ชำระแล้ว')}>
                             <Check class="h-4 w-4" />
@@ -479,21 +588,33 @@
                             <Check class="h-4 w-4" />
                           </button>
                         {/if}
-                        {#if !terminal && canCancel && s !== 'ยกเลิก'}
+                        {#if !terminal && canCancel && s !== 'ยกเลิก' && !expired}
                           <button class="rounded-lg border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800" title="ยกเลิก" onclick={() => openCancelSingle(row)}>
                             <Ban class="h-4 w-4" />
                           </button>
                         {/if}
-                        {#if canReject && role === 'Vinai' && !terminal && s !== 'ยกเลิก'}
+                        {#if canReject && role === 'Vinai' && !terminal && s !== 'ยกเลิก' && !expired}
                           <button class="rounded-lg border border-red-200 p-1.5 text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950" title="ปฏิเสธ" onclick={() => doUpdateStatus(row, 'ไม่อนุมัติ')}>
                             <X class="h-4 w-4" />
                           </button>
                         {/if}
-                        {#if canEdit}
-                          <button class="rounded-lg border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800" title="แก้ไข (เร็วๆ นี้)">
-                            ✏️
+                        {#if canEdit && !archived && !terminal}
+                          <button class="rounded-lg border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800" title="แก้ไข" onclick={() => openEdit(row)}>
+                            <Pencil class="h-4 w-4" />
                           </button>
                         {/if}
+                        {#if canVisitorApproval && !archived && !terminal}
+                          <button class="rounded-lg border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800" title="ตรวจสอบผู้เข้าร่วม" onclick={() => openApproval(row)}>
+                            <Users class="h-4 w-4" />
+                          </button>
+                        {/if}
+                        <button
+                          class="rounded-lg border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+                          title="ดูรายละเอียด"
+                          onclick={() => openDetail(row)}
+                        >
+                          <Eye class="h-4 w-4" />
+                        </button>
                       </div>
                     {/if}
                   </td>
@@ -561,3 +682,18 @@
     </div>
   </div>
 </Modal>
+
+<ReservationDetailModal open={showDetail} row={detailRow} onclose={closeDetail} {canViewSlip} />
+
+<VisitorApprovalModal open={showApproval} row={approvalRow} onclose={closeApproval} />
+
+<ReservationFormModal
+  open={formMode !== null}
+  mode={formMode ?? 'create'}
+  row={formMode === 'edit' ? detailRow : null}
+  {prisoners}
+  onclose={closeForm}
+  onsubmit={submitForm}
+  saving={formSaving}
+  width="max-w-3xl"
+/>
