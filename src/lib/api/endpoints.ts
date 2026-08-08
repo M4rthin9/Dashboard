@@ -48,8 +48,33 @@ export function lookupByRef(ref: string): Promise<ApiResult & { rows?: Reservati
   return callAction('lookupByRef', { ref });
 }
 
-export function getPrisoners(): Promise<ApiResult & { prisoners?: Prisoner[] }> {
-  return callGet('/api/prisoners');
+export async function getPrisoners(): Promise<ApiResult & { prisoners?: Prisoner[] }> {
+  const data = await callGet<ApiResult & { prisoners?: unknown[] }>('/api/prisoners');
+  if (data.status !== 'ok' || !Array.isArray(data.prisoners)) return { status: 'ok', prisoners: [] };
+  const prisoners: Prisoner[] = [];
+  for (const r of data.prisoners) {
+    if (Array.isArray(r)) {
+      prisoners.push({
+        prisonerName: String(r[0] ?? ''),
+        prisonerId: String(r[1] ?? ''),
+        wing: String(r[2] ?? ''),
+        status: String(r[3] ?? ''),
+        vinaiDate: String(r[4] ?? ''),
+        note: String(r[5] ?? ''),
+      });
+    } else if (r && typeof r === 'object') {
+      const p = r as Record<string, unknown>;
+      prisoners.push({
+        prisonerId: String(p.prisonerId ?? ''),
+        prisonerName: String(p.prisonerName ?? ''),
+        wing: String(p.wing ?? ''),
+        status: String(p.status ?? ''),
+        vinaiDate: String(p.vinaiDate ?? ''),
+        note: String(p.note ?? ''),
+      });
+    }
+  }
+  return { status: 'ok', prisoners };
 }
 
 export function getRoles(): Promise<ApiResult & { roles?: RolePermission[] }> {
