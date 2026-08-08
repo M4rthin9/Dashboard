@@ -8,6 +8,7 @@
     Plus,
     Search,
     Trash2,
+    TriangleAlert,
     User,
     UsersRound,
     X,
@@ -18,6 +19,20 @@
 
   const RELATION_OPTIONS = ['บิดา / มารดา', 'แฟน/ภรรยา', 'บุตร / ธิดา', 'พี่ / น้อง', 'ญาติ', 'เพื่อน', 'ทนายความ', 'อื่น ๆ'];
   const RELIGION_OPTIONS = ['พุทธ', 'อิสลาม', 'คริสต์', 'อื่น ๆ'];
+
+  const DISCIPLINE_STATUS = 'ติดวินัย งดเยี่ยม';
+
+  function isDisciplineRestricted(p: Prisoner | undefined): boolean {
+    if (!p) return false;
+    if (String(p.status ?? '').trim() !== DISCIPLINE_STATUS) return false;
+    const vd = String(p.vinaiDate ?? '').trim();
+    if (!vd) return true;
+    const parsed = new Date(vd);
+    if (isNaN(parsed.getTime())) return true;
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    return parsed.getTime() > oneYearAgo.getTime();
+  }
 
   const PRICING = {
     MAIN_VISITOR: 1000,
@@ -116,6 +131,11 @@
   });
 
   const prisonerActiveIndex = $derived(Math.min(prisonerHighlight, Math.max(0, prisonerSuggestions.length - 1)));
+
+  const prisonerRestricted = $derived.by(() => {
+    if (!prisonerId) return false;
+    return isDisciplineRestricted(prisoners.find((x) => String(x.prisonerId) === String(prisonerId)));
+  });
 
   function onPrisonerKeydown(e: KeyboardEvent): void {
     if (e.key === 'Enter') {
@@ -283,6 +303,10 @@
       window.alert('กรุณาเลือกผู้ต้องขัง');
       return;
     }
+    if (prisonerRestricted) {
+      window.alert('⚠️ ไม่สามารถจองได้ — ผู้ต้องขังนี้มีสถานะติดวินัย งดเยี่ยม ไม่สามารถจองเยี่ยมได้');
+      return;
+    }
     if (!visitDateISO) {
       window.alert('กรุณาเลือกวันเข้างาน');
       return;
@@ -424,6 +448,15 @@
           >
             <X class="h-4 w-4" />
           </button>
+        </div>
+      {/if}
+      {#if prisonerRestricted}
+        <div class="flex items-start gap-2 rounded-xl border border-red-300 bg-red-50 px-3 py-2.5 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300">
+          <TriangleAlert class="mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            <div class="font-semibold">ติดวินัย งดเยี่ยม</div>
+            <div class="text-xs opacity-90">ผู้ต้องขังนี้มีสถานะติดวินัย งดเยี่ยม — ไม่สามารถสร้างหรือแก้ไขการจองเยี่ยมได้</div>
+          </div>
         </div>
       {/if}
     </section>
