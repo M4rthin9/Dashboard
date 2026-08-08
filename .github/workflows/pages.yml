@@ -5,6 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+env:
+  CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+  CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -31,11 +35,27 @@ jobs:
         env:
           VITE_API_BASE: https://ccc-backend.pongsinbas.workers.dev
 
+      - name: Check Cloudflare secrets
+        id: secrets
+        run: |
+          if [ -z "$CF_API_TOKEN" ]; then
+            echo "::error::Missing GitHub secret: CF_API_TOKEN (Cloudflare API token)"
+          fi
+          if [ -z "$CF_ACCOUNT_ID" ]; then
+            echo "::error::Missing GitHub secret: CF_ACCOUNT_ID (Cloudflare account ID = 0e00d9b1beeaf05140dd3777e0d2de90)"
+          fi
+          if [ -z "$CF_API_TOKEN" ] || [ -z "$CF_ACCOUNT_ID" ]; then
+            echo "Add both secrets at https://github.com/M4rthin9/Dashboard/settings/secrets/actions"
+            exit 1
+          fi
+          echo "Secrets OK"
+
       - name: Deploy to Cloudflare Pages
+        if: steps.secrets.outcome == 'success'
         uses: cloudflare/pages-action@v1
         with:
-          apiToken: ${{ secrets.CF_API_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CF_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
           projectName: ccc-dashboard
           directory: dist
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
