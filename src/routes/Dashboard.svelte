@@ -6,6 +6,7 @@
     AlertTriangle,
     ArrowRight,
     CalendarDays,
+    CheckCircle2,
     Coins,
     CreditCard,
     Crown,
@@ -303,9 +304,9 @@
 </script>
 
 <div class="flex flex-col gap-6">
-  <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 p-6 text-white shadow-lg shadow-indigo-500/20">
-    <div class="pointer-events-none absolute -right-8 -top-10 h-48 w-48 rounded-full bg-white/10 blur-2xl" aria-hidden="true"></div>
-    <div class="pointer-events-none absolute -bottom-16 right-24 h-40 w-40 rounded-full bg-white/5 blur-xl" aria-hidden="true"></div>
+  <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 p-6 text-white shadow-xl shadow-indigo-500/25">
+    <div class="pointer-events-none absolute -right-12 -top-14 h-56 w-56 rounded-full bg-white/10 blur-3xl" aria-hidden="true"></div>
+    <div class="pointer-events-none absolute -bottom-20 right-12 h-48 w-48 rounded-full bg-white/5 blur-2xl" aria-hidden="true"></div>
     <div class="relative flex flex-wrap items-center justify-between gap-4">
       <div>
         <div class="flex items-center gap-2 text-xs font-medium text-white/80">
@@ -317,16 +318,16 @@
           ยินดีต้อนรับสู่ระบบจอง C&amp;C Café · การจองวันนี้ {formatNumber(todaysVisits.length)} รายการ
         </p>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2.5">
         <button
-          class="inline-flex items-center gap-1.5 rounded-xl bg-white/15 px-3.5 py-2 text-sm font-medium text-white backdrop-blur transition-colors hover:bg-white/25"
+          class="inline-flex items-center gap-1.5 rounded-xl bg-white/15 px-4 py-2.5 text-sm font-medium text-white transition-colors duration-150 hover:bg-white/25"
           onclick={() => reservations.refresh()}
         >
           <RefreshCw class="h-4 w-4" />
           รีเฟรช
         </button>
         <button
-          class="inline-flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-2 text-sm font-medium text-indigo-700 shadow transition-colors hover:bg-indigo-50"
+          class="inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-indigo-700 shadow transition-colors duration-150 hover:bg-indigo-50 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
           onclick={() => navigate('/reservations')}
         >
           เปิดตารางการจอง
@@ -348,16 +349,18 @@
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {#each kpiCards as k (k.id)}
         {@const KIcon = k.icon}
-        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
-          <div class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r {k.grad}" aria-hidden="true"></div>
-          <div class="flex items-center justify-between">
-            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">{k.label}</p>
-            <div class="flex h-8 w-8 items-center justify-center rounded-lg {k.chip}">
-              <KIcon class="h-4 w-4" />
+        <div class="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 transition-all duration-200 ease-out hover:shadow-lg dark:border-slate-700/60 dark:bg-slate-900 dark:hover:shadow-xl">
+          <div class="pointer-events-none absolute inset-x-0 top-0 z-0 h-1 bg-gradient-to-r {k.grad}" aria-hidden="true"></div>
+          <div class="relative flex items-center justify-between gap-3">
+            <div class="min-w-0 flex-1">
+              <p class="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">{k.label}</p>
+              <p class="mt-1 text-xl font-bold tracking-tight text-slate-900 dark:text-white {k.valueCls ?? ''}">{k.value}</p>
+              <p class="mt-0.5 text-xs text-slate-400 dark:text-slate-500">{k.sub}</p>
+            </div>
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
+              <KIcon class="h-5 w-5" />
             </div>
           </div>
-          <p class="mt-2 text-xl font-bold tracking-tight text-slate-900 dark:text-white {k.valueCls ?? ''}">{k.value}</p>
-          <p class="mt-0.5 text-xs text-slate-400">{k.sub}</p>
         </div>
       {/each}
     </div>
@@ -366,7 +369,7 @@
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
         {#each statCards as c (c.id)}
           {@const CIcon = c.icon}
-          <div class="flex flex-col items-center gap-2 rounded-2xl border border-slate-200 bg-white p-3 text-center transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
+          <div class="flex flex-col items-center gap-2 rounded-2xl border border-slate-200/80 bg-white p-4 text-center transition-all duration-200 ease-out hover:shadow-md dark:border-slate-700/60 dark:bg-slate-900 dark:hover:shadow-lg">
             <div class="flex h-9 w-9 items-center justify-center rounded-xl {c.color}">
               <CIcon class="h-4 w-4" />
             </div>
@@ -380,45 +383,47 @@
     {/if}
 
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
-      <Card title="แจ้งเตือน" subtitle="รอชำระเงินเกิน 2 วัน">
+      <Card title="ชำระแล้ว" subtitle="รายการที่ชำระเงินแล้ว" interactive>
         {#if alerts.length === 0}
-          <p class="py-6 text-center text-sm text-slate-400 dark:text-slate-500">ไม่มีรายการค้างชำระเกินกำหนด</p>
+          <p class="py-8 text-center text-sm text-slate-400 dark:text-slate-500">ไม่มีการจองที่ชำระเงินแล้ว</p>
         {:else}
           <div class="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
             {#each alerts.slice(0, 5) as r (r.ref)}
-              <div class="flex items-center gap-3 py-2 text-sm">
-                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400">
-                  <AlertTriangle class="h-4 w-4" />
+              <div class="flex items-center gap-3 py-2.5 text-sm">
+                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-green-100 text-green-600 dark:bg-green-950 dark:text-green-400">
+                  <CheckCircle2 class="h-4 w-4" />
                 </div>
                 <div class="min-w-0 flex-1">
                   <div class="font-mono text-xs font-semibold text-slate-700 dark:text-slate-200">{r.ref}</div>
                   <div class="truncate text-xs text-slate-500 dark:text-slate-400">{r.visitorName}</div>
                 </div>
-                <span class="text-xs font-semibold text-amber-600 dark:text-amber-400">{formatBaht(r.total)}</span>
+                <span class="whitespace-nowrap text-xs font-semibold text-green-600 dark:text-green-400">{formatBaht(r.total)}</span>
               </div>
             {/each}
           </div>
         {/if}
       </Card>
 
-      <Card title="คิวชำระเงิน" subtitle="รายการที่รอชำระ">
+      <Card title="คิวชำระเงิน" subtitle="รายการที่รอชำระ" interactive>
         {#if paymentQueue.length === 0}
-          <p class="py-6 text-center text-sm text-slate-400 dark:text-slate-500">ไม่มีรายการรอชำระ</p>
+          <p class="py-8 text-center text-sm text-slate-400 dark:text-slate-500">ไม่มีรายการรอชำระ</p>
         {:else}
           <div class="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
             {#each paymentQueue.slice(0, 5) as r (r.ref)}
-              <div class="flex items-center gap-3 py-2 text-sm">
-                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-base dark:bg-indigo-950">
-                  {r.slipImage || r.status === 'ชำระแล้ว' || r.status === 'เสร็จสิ้น' ? '🧾' : '💳'}
-                </div>
-                <div class="min-w-0 flex-1">
-                  <div class="truncate font-medium text-slate-700 dark:text-slate-200">{r.visitorName}</div>
-                  <div class="truncate text-xs text-slate-400">{r.ref} · {r.prisonerName}</div>
+              <div class="flex items-center justify-between gap-2 py-2.5 text-sm">
+                <div class="flex min-w-0 items-center gap-3">
+                  <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-lg dark:bg-indigo-950">
+                    {r.slipImage || r.status === 'ชำระแล้ว' || r.status === 'เสร็จสิ้น' ? '🧾' : '💳'}
+                  </div>
+                  <div class="min-w-0">
+                    <div class="truncate font-medium text-slate-700 dark:text-slate-200">{r.visitorName}</div>
+                    <div class="truncate text-xs text-slate-400">{r.ref} · {r.prisonerName}</div>
+                  </div>
                 </div>
                 <div class="whitespace-nowrap font-semibold text-slate-700 dark:text-slate-200">{formatBaht(r.total)}</div>
                 {#if canConfirmPayment}
                   <button
-                    class="rounded-lg bg-indigo-600 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-700"
+                    class="shrink-0 rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors duration-150 hover:bg-indigo-700 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
                     onclick={() => openPaymentApproval(r)}
                   >
                     ยืนยัน
@@ -430,9 +435,9 @@
         {/if}
       </Card>
 
-      <Card title="การจองวันนี้" subtitle="{formatNumber(todaysVisits.length)} รายการ">
+      <Card title="การจองวันนี้" subtitle="{formatNumber(todaysVisits.length)} รายการ" interactive>
         {#if todaysVisits.length === 0}
-          <p class="py-6 text-center text-sm text-slate-400 dark:text-slate-500">ไม่มีการจองวันนี้</p>
+          <p class="py-8 text-center text-sm text-slate-400 dark:text-slate-500">ไม่มีการจองวันนี้</p>
         {:else}
           <div class="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
             {#each todaysVisits.slice(0, 6) as r (r.ref)}
@@ -446,7 +451,7 @@
                     <div class="truncate text-xs text-slate-500 dark:text-slate-400">{r.visitorName} · {r.prisonerName}</div>
                   </div>
                 </div>
-                <span class="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-medium {(() => {
+                <span class="shrink-0 inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium {(() => {
                   switch (normalizeStatus(r.status)) {
                     case 'รอตรวจสอบผู้เข้าร่วม': return 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300';
                     case 'รอตรวจสอบวินัย': return 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300';
@@ -468,28 +473,28 @@
     </div>
 
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <Card title="แนวโน้มการจอง 14 วัน">
+      <Card title="แนวโน้มการจอง 14 วัน" interactive>
         <EChart option={trendOption} />
       </Card>
-      <Card title="สรุปรายได้">
+      <Card title="สรุปรายได้" interactive>
         <EChart option={revenueOption} />
       </Card>
-      <Card title="สัดส่วนสถานะ">
+      <Card title="สัดส่วนสถานะ" interactive>
         <EChart option={statusOption} />
       </Card>
-      <Card title="จำนวนการจองแยกตามปีก">
+      <Card title="จำนวนการจองแยกตามปีก" interactive>
         <EChart option={wingOption} />
       </Card>
-      <Card title="รายได้รายเดือน (6 เดือน)">
+      <Card title="รายได้รายเดือน (6 เดือน)" interactive>
         <EChart option={monthlyOption} />
       </Card>
-      <Card title="สายงานสถานะ (Pipeline)">
+      <Card title="สายงานสถานะ (Pipeline)" interactive>
         <EChart option={funnelOption} />
       </Card>
-      <Card title="ประเภทผู้เยี่ยม">
+      <Card title="ประเภทผู้เยี่ยม" interactive>
         <EChart option={visitorOption} />
       </Card>
-      <Card title="รายได้รายวัน (14 วัน)">
+      <Card title="รายได้รายวัน (14 วัน)" interactive>
         <EChart option={dailyRevenueOption} />
       </Card>
     </div>

@@ -131,7 +131,7 @@
         prisonerName,
         wing: String(r['แดน'] ?? r['wing'] ?? '').trim() || cur?.wing || '',
         status: String(r['สถานะ'] ?? r['status'] ?? '').trim() || cur?.status || '',
-        vinaiDate: String(r['วันที่พ้นโทษ/ไถ่ถอน'] ?? r['vinaiDate'] ?? '').trim() || cur?.vinaiDate || '',
+        vinaiDate: String(r['วันกระทำความผิด/ไถ่ถอน'] ?? r['วันที่พ้นโทษ/ไถ่ถอน'] ?? r['vinaiDate'] ?? '').trim() || cur?.vinaiDate || '',
         note: String(r['หมายเหตุ'] ?? r['note'] ?? '').trim() || cur?.note || '',
         isNew,
       });
@@ -253,7 +253,7 @@
                 <th class="px-3 py-2 font-medium">ชื่อ-นามสกุล</th>
                 <th class="px-3 py-2 font-medium">แดน</th>
                 <th class="px-3 py-2 font-medium">สถานะ</th>
-                <th class="px-3 py-2 font-medium">วันที่พ้นโทษ</th>
+                <th class="px-3 py-2 font-medium">วันกระทำความผิด</th>
                 <th class="px-3 py-2 font-medium">หมายเหตุ</th>
                 {#if isManager}
                   <th class="px-3 py-2 font-medium"></th>
@@ -323,7 +323,7 @@
     <div class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
       <p>
         คอลัมน์ที่รองรับ: <span class="font-mono">เลขผู้ต้องขัง</span>, <span class="font-mono">ชื่อ-นามสกุล</span> (จำเป็น) และ
-        <span class="font-mono">แดน</span>, <span class="font-mono">สถานะ</span>, <span class="font-mono">วันที่พ้นโทษ/ไถ่ถอน</span>, <span class="font-mono">หมายเหตุ</span>
+        <span class="font-mono">แดน</span>, <span class="font-mono">สถานะ</span>, <span class="font-mono">วันกระทำความผิด/ไถ่ถอน</span>, <span class="font-mono">หมายเหตุ</span>
         (หรือชื่อคอลัมน์ภาษาอังกฤษ <span class="font-mono">prisonerId</span>, <span class="font-mono">prisonerName</span>, <span class="font-mono">wing</span>, <span class="font-mono">status</span>, <span class="font-mono">vinaiDate</span>, <span class="font-mono">note</span>)
       </p>
       <p class="mt-2 text-emerald-600 dark:text-emerald-400">
@@ -369,7 +369,7 @@
         bind:value={importText}
         rows="6"
         oninput={(e) => parseCSV((e.currentTarget as HTMLTextAreaElement).value)}
-        placeholder="เลขผู้ต้องขัง,ชื่อ-นามสกุล,แดน,สถานะ,วันที่พ้นโทษ/ไถ่ถอน,หมายเหตุ&#10;12345,นายสมชาย ใจดี,แดน 1,,,"
+        placeholder="เลขผู้ต้องขัง,ชื่อ-นามสกุล,แดน,สถานะ,วันกระทำความผิด/ไถ่ถอน,หมายเหตุ&#10;12345,นายสมชาย ใจดี,แดน 1,,,"
         class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
       ></textarea>
     </div>

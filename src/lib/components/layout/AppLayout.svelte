@@ -6,12 +6,14 @@
   let { children }: { children: Snippet } = $props();
 </script>
 
-<div class="flex h-full min-h-screen">
+<div class="flex min-h-screen w-full bg-slate-50/50 dark:bg-slate-950">
   <Sidebar />
   <div class="flex min-w-0 flex-1 flex-col">
     <Topbar />
-    <main class="flex-1 overflow-y-auto p-4 lg:p-6">
-      {@render children()}
+    <main class="flex-1 overflow-y-auto">
+      <div class="mx-auto w-full max-w-7xl px-4 py-6 lg:px-6 lg:py-8">
+        {@render children()}
+      </div>
     </main>
   </div>
 </div>

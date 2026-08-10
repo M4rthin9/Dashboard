@@ -28,8 +28,8 @@
   }
 
   const dotClasses: Record<string, string> = {
-    done: 'bg-green-500 text-white',
-    active: 'bg-indigo-600 text-white ring-2 ring-indigo-600/30',
+    done: 'bg-emerald-500 text-white',
+    active: 'bg-indigo-600 text-white ring-2 ring-indigo-400/30',
     pending: 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400',
     rejected: 'bg-red-500 text-white',
     skipped: 'bg-slate-100 text-slate-300 dark:bg-slate-800 dark:text-slate-600',
@@ -42,7 +42,7 @@
       <span class="h-px w-2 bg-slate-300 dark:bg-slate-600"></span>
     {/if}
     <span
-      class="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold {dotClasses[stepState(step)]}"
+      class="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold transition-colors {dotClasses[stepState(step)]}"
       title={labels[step - 1]}
     >
       {stepContent(stepState(step), step)}

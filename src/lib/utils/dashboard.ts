@@ -273,14 +273,10 @@ export function computeDailyRevenue(rows: Reservation[], days = 14): DailyRevenu
 }
 
 export function computeAlerts(rows: Reservation[]): Reservation[] {
-  const now = Date.now();
-  const day = 1000 * 60 * 60 * 24;
   return rows
     .filter((r) => {
-      if (normalizeStatus(r.status) !== 'รอชำระเงิน') return false;
-      const ts = r.timestamp ? new Date(String(r.timestamp)) : null;
-      if (!ts || isNaN(ts.getTime())) return false;
-      return (now - ts.getTime()) / day > 2;
+      const s = normalizeStatus(r.status);
+      return s === 'ชำระแล้ว' || s === 'เสร็จสิ้น';
     })
     .sort((a, b) => String(b.timestamp ?? '').localeCompare(String(a.timestamp ?? '')));
 }

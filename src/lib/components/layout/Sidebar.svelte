@@ -42,13 +42,13 @@
 {#if ui.sidebarOpen}
   <div
     class="fixed inset-0 z-30 bg-slate-900/50 lg:hidden"
-    onclick={ui.closeSidebar}
+    onclick={() => ui.closeSidebar()}
     aria-hidden="true"
   ></div>
 {/if}
 
 <aside
-  class="fixed inset-y-0 left-0 z-40 flex w-64 transform flex-col bg-slate-900 text-slate-100 transition-transform lg:static lg:translate-x-0 {ui.sidebarOpen ? 'translate-x-0' : '-translate-x-full'}"
+  class="fixed inset-y-0 left-0 z-40 flex w-64 transform flex-col bg-slate-900 text-slate-100 transition-transform duration-200 ease-in-out lg:translate-x-0 {ui.sidebarOpen ? 'translate-x-0' : '-translate-x-full'}"
 >
   <div class="flex h-16 items-center justify-between border-b border-slate-800 px-5">
     <div class="flex items-center gap-2.5">
@@ -60,23 +60,27 @@
         <p class="text-xs text-slate-400">ระบบจองเยี่ยม</p>
       </div>
     </div>
-    <button class="text-slate-400 hover:text-white lg:hidden" onclick={ui.closeSidebar} aria-label="ปิดเมนู">
+    <button class="rounded-xl p-1 text-slate-400 transition-colors duration-150 hover:text-white lg:hidden" onclick={() => ui.closeSidebar()} aria-label="ปิดเมนู">
       <X class="h-5 w-5" />
     </button>
   </div>
 
-  <nav class="flex-1 overflow-y-auto px-3 py-4">
+  <nav class="flex-1 overflow-y-auto px-3 py-5">
     <ul class="flex flex-col gap-1">
       {#each items as item (item.path)}
         {@const Icon = item.icon}
+        {@const isActive = activePath === item.path}
         <li>
           <a
             href="#{item.path}"
-            class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-800 hover:text-white {activePath === item.path
-              ? 'bg-slate-800 text-white'
-              : 'text-slate-300'}"
+            class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-150 ease-in-out {isActive
+              ? 'bg-indigo-600/15 text-indigo-400'
+              : 'text-slate-300 hover:bg-slate-800 hover:text-white'}"
           >
-            <Icon class="h-4.5 w-4.5 h-[18px] w-[18px]" />
+            {#if isActive}
+              <span class="h-5 w-0.5 shrink-0 rounded-full bg-indigo-500"></span>
+            {/if}
+            <Icon class={isActive ? 'h-[18px] w-[18px] text-indigo-400' : 'h-[18px] w-[18px] text-slate-400'} />
             {item.label}
           </a>
         </li>
@@ -90,7 +94,7 @@
         {(auth.displayName || '?').slice(0, 1).toUpperCase()}
       </span>
       <div class="min-w-0">
-        <p class="truncate text-sm font-medium">{auth.displayName}</p>
+        <p class="truncate text-sm font-medium text-slate-100">{auth.displayName}</p>
         <p class="truncate text-xs text-slate-400">{roleLabel(auth.user?.role ?? '')}</p>
       </div>
     </div>

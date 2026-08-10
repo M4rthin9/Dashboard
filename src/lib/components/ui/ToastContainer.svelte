@@ -13,7 +13,7 @@
     success: 'text-green-600 dark:text-green-400',
     error: 'text-red-600 dark:text-red-400',
     warning: 'text-amber-600 dark:text-amber-400',
-    info: 'text-blue-600 dark:text-blue-400',
+    info: 'text-sky-600 dark:text-sky-400',
   };
 </script>
 
@@ -22,7 +22,7 @@
     {#each ui.toasts as toast (toast.id)}
       {@const Icon = icons[toast.type]}
       <div
-        class="pointer-events-auto flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-lg dark:border-slate-700 dark:bg-slate-800"
+        class="pointer-events-auto flex items-start gap-3 rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-lg dark:border-slate-700/60 dark:bg-slate-800"
         role="alert"
       >
         <Icon class="mt-0.5 h-5 w-5 shrink-0 {colors[toast.type]}" />
@@ -30,7 +30,7 @@
           <p class="whitespace-pre-line text-sm text-slate-700 dark:text-slate-200">{toast.message}</p>
           {#if toast.ok}
             <button
-              class="mt-2 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700"
+              class="mt-2 rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors duration-150 hover:bg-indigo-700 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
               onclick={() => ui.dismissToast(toast.id)}
             >
               {toast.ok}
@@ -38,7 +38,7 @@
           {/if}
         </div>
         <button
-          class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+          class="rounded-xl p-1 text-slate-400 transition-colors duration-150 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
           onclick={() => ui.dismissToast(toast.id)}
           aria-label="ปิด"
         >

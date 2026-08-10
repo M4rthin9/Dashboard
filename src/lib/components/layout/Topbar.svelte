@@ -24,21 +24,23 @@
   }
 </script>
 
-<header class="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900">
+<header class="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 bg-white px-4 dark:border-slate-700/60 dark:bg-slate-900 lg:px-6">
   <div class="flex items-center gap-3">
     <button
-      class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden dark:hover:bg-slate-800"
-      onclick={ui.toggleSidebar}
+      class="rounded-xl p-2 text-slate-500 transition-colors duration-150 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 lg:hidden"
+      onclick={() => ui.toggleSidebar()}
       aria-label="เปิดเมนู"
     >
       <Menu class="h-5 w-5" />
     </button>
-    <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{route?.title ?? ''}</h1>
+    <div class="flex items-center gap-2.5">
+      <h1 class="text-base font-semibold text-slate-900 dark:text-slate-100">{route?.title ?? ''}</h1>
+    </div>
   </div>
 
-  <div class="flex items-center gap-2">
+  <div class="flex items-center gap-1.5">
     <span
-      class="hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium sm:inline-flex {online
+      class="hidden items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium sm:inline-flex {online
         ? 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300'
         : 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300'}"
     >
@@ -52,8 +54,8 @@
     </span>
 
     <button
-      class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
-      onclick={ui.toggleDarkMode}
+      class="rounded-xl p-2 text-slate-500 transition-colors duration-150 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+      onclick={() => ui.toggleDarkMode()}
       aria-label="สลับโหมดมืด"
     >
       {#if ui.darkMode}
@@ -64,7 +66,7 @@
     </button>
 
     <button
-      class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+      class="rounded-xl p-2 text-slate-500 transition-colors duration-150 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20"
       onclick={handleLogout}
       aria-label="ออกจากระบบ"
     >

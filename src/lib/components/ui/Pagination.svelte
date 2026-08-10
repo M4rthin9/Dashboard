@@ -21,7 +21,7 @@
 {#if totalPages > 1}
   <nav class="flex items-center gap-1" aria-label="แบ่งหน้า">
     <button
-      class="rounded-lg border border-slate-300 p-1.5 text-slate-500 hover:bg-slate-100 disabled:opacity-40 dark:border-slate-600 dark:hover:bg-slate-800"
+      class="rounded-xl border border-slate-300 p-1.5 text-slate-500 transition-colors duration-150 hover:bg-slate-100 disabled:opacity-40 dark:border-slate-600 dark:hover:bg-slate-800"
       onclick={() => onchange(page - 1)}
       disabled={page <= 1}
       aria-label="ก่อนหน้า"
@@ -30,10 +30,10 @@
     </button>
     {#each pages as p (p === '…' ? `e-${pages.indexOf(p)}` : p)}
       {#if p === '…'}
-        <span class="px-1.5 text-sm text-slate-400">…</span>
+        <span class="px-1.5 text-sm text-slate-400 dark:text-slate-500">…</span>
       {:else}
         <button
-          class="min-w-8 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors {p === page
+          class="min-w-8 rounded-xl px-2.5 py-1.5 text-sm font-medium transition-colors duration-150 {p === page
             ? 'bg-indigo-600 text-white'
             : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}"
           onclick={() => onchange(p)}
@@ -44,7 +44,7 @@
       {/if}
     {/each}
     <button
-      class="rounded-lg border border-slate-300 p-1.5 text-slate-500 hover:bg-slate-100 disabled:opacity-40 dark:border-slate-600 dark:hover:bg-slate-800"
+      class="rounded-xl border border-slate-300 p-1.5 text-slate-500 transition-colors duration-150 hover:bg-slate-100 disabled:opacity-40 dark:border-slate-600 dark:hover:bg-slate-800"
       onclick={() => onchange(page + 1)}
       disabled={page >= totalPages}
       aria-label="ถัดไป"

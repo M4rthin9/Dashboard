@@ -95,7 +95,7 @@
           {/if}
         </select>
       </div>
-      <Input label="วันที่พ้นโทษ/ไถ่ถอน" type="date" value={form.vinaiDate} oninput={(e) => (form.vinaiDate = e.currentTarget.value)} />
+      <Input label="วันกระทำความผิด/ไถ่ถอน" type="date" value={form.vinaiDate} oninput={(e) => (form.vinaiDate = e.currentTarget.value)} />
     </div>
 
     <div>
