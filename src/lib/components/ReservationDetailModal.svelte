@@ -18,6 +18,7 @@
   import Badge from './ui/Badge.svelte';
   import { formatBaht, formatNumber, formatDateTimeThai, normalizeStatus } from '../utils/format';
   import type { Reservation } from '../api/types';
+  import { getSlipByRef } from '../api/endpoints';
 
   let { open, row, onclose, canViewSlip }: {
     open: boolean;
@@ -25,6 +26,38 @@
     onclose: () => void;
     canViewSlip: boolean;
   } = $props();
+
+  let slipLoading = $state(false);
+  let fetchedSlip = $state('');
+
+  $effect(() => {
+    if (!open || !canViewSlip) {
+      fetchedSlip = '';
+      slipLoading = false;
+      return;
+    }
+    const base = String(row?.slipImage ?? '').trim();
+    if (base && !base.startsWith('SLIP_UPLOADED:')) return;
+    const ref = row?.ref;
+    if (!ref) return;
+    let cancelled = false;
+    fetchedSlip = '';
+    slipLoading = true;
+    getSlipByRef(ref)
+      .then((d) => {
+        if (cancelled) return;
+        if (d.status === 'ok' && d.slipImage) fetchedSlip = String(d.slipImage);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) slipLoading = false;
+      });
+    return () => {
+      cancelled = true;
+    };
+  });
+
+  const slipUrl = $derived(String(row?.slipImage ?? '').trim() || fetchedSlip);
 
   interface ExtraVisitor {
     name: string;
@@ -290,7 +323,7 @@
         </section>
       {/if}
 
-      {#if canViewSlip && row.slipImage}
+      {#if canViewSlip && slipUrl}
         <section class="flex flex-col gap-2">
           <div class="flex items-center gap-2">
             <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
@@ -298,13 +331,20 @@
             </div>
             <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100">สลิปชำระเงิน</h3>
           </div>
-          <a href={row.slipImage} target="_blank" rel="noopener noreferrer" class="group">
-            <img
-              src={row.slipImage}
-              alt="สลิปชำระเงิน"
-              class="max-h-80 w-full rounded-2xl border border-slate-200 object-contain transition group-hover:shadow-lg dark:border-slate-700"
-            />
-          </a>
+          {#if slipLoading}
+            <div class="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center dark:border-slate-700 dark:bg-slate-900">
+              <span class="h-8 w-8 animate-spin rounded-full border-2 border-indigo-500/30 border-t-indigo-500"></span>
+              <div class="text-sm font-medium text-slate-500 dark:text-slate-400">กำลังโหลดสลิปชำระเงิน...</div>
+            </div>
+          {:else}
+            <a href={slipUrl} target="_blank" rel="noopener noreferrer" class="group">
+              <img
+                src={slipUrl}
+                alt="สลิปชำระเงิน"
+                class="max-h-80 w-full rounded-2xl border border-slate-200 object-contain transition group-hover:shadow-lg dark:border-slate-700"
+              />
+            </a>
+          {/if}
         </section>
       {/if}
 

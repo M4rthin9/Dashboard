@@ -48,6 +48,10 @@ export function lookupByRef(ref: string): Promise<ApiResult & { rows?: Reservati
   return callAction('lookupByRef', { ref });
 }
 
+export function getSlipByRef(ref: string): Promise<ApiResult & { slipImage?: string }> {
+  return callAction('getSlipByRef', { ref }, { auth: true });
+}
+
 export async function getPrisoners(): Promise<ApiResult & { prisoners?: Prisoner[] }> {
   const data = await callGet<ApiResult & { prisoners?: unknown[] }>('/api/prisoners');
   if (data.status !== 'ok' || !Array.isArray(data.prisoners)) return { status: 'ok', prisoners: [] };

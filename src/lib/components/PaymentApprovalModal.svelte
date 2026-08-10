@@ -4,6 +4,7 @@
   import Badge from './ui/Badge.svelte';
   import { formatBaht, formatDateTimeThai } from '../utils/format';
   import type { Reservation } from '../api/types';
+  import { getSlipByRef } from '../api/endpoints';
 
   let { open, row, mode, onclose, onapprove }: {
     open: boolean;
@@ -14,11 +15,40 @@
   } = $props();
 
   let busy = $state(false);
+  let slipLoading = $state(false);
+  let fetchedSlip = $state('');
+
+  $effect(() => {
+    if (!open) {
+      fetchedSlip = '';
+      slipLoading = false;
+      return;
+    }
+    const base = String(row?.slipImage ?? '').trim();
+    if (base && !base.startsWith('SLIP_UPLOADED:')) return;
+    const ref = row?.ref;
+    if (!ref) return;
+    let cancelled = false;
+    fetchedSlip = '';
+    slipLoading = true;
+    getSlipByRef(ref)
+      .then((d) => {
+        if (cancelled) return;
+        if (d.status === 'ok' && d.slipImage) fetchedSlip = String(d.slipImage);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) slipLoading = false;
+      });
+    return () => {
+      cancelled = true;
+    };
+  });
 
   const isDone = $derived(mode === 'เสร็จสิ้น');
   const title = $derived(isDone ? 'ยืนยันการเสร็จสิ้น' : 'ยืนยันการชำระเงิน');
   const totalPersons = $derived(Number(row?.totalPersons) || (Number(row?.visitorCount) || 0) + 1);
-  const slipUrl = $derived(String(row?.slipImage ?? '').trim());
+  const slipUrl = $derived(String(row?.slipImage ?? '').trim() || fetchedSlip);
   const hasSlip = $derived(!!slipUrl && !slipUrl.startsWith('SLIP_UPLOADED:'));
 
   function initials(name: string | undefined): string {
@@ -104,6 +134,11 @@
             />
           </a>
           <p class="text-center text-[11px] text-slate-400">คลิกที่รูปเพื่อเปิดขนาดใหญ่</p>
+        {:else if slipLoading}
+          <div class="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center dark:border-slate-700 dark:bg-slate-900">
+            <span class="h-8 w-8 animate-spin rounded-full border-2 border-indigo-500/30 border-t-indigo-500"></span>
+            <div class="text-sm font-medium text-slate-500 dark:text-slate-400">กำลังโหลดสลิปชำระเงิน...</div>
+          </div>
         {:else}
           <div class="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-amber-300 bg-amber-50 px-4 py-6 text-center dark:border-amber-700 dark:bg-amber-950/40">
             <ImageOff class="h-8 w-8 text-amber-500" />
