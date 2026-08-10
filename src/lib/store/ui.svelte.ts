@@ -2,6 +2,7 @@ export interface Toast {
   id: number;
   message: string;
   type: 'success' | 'error' | 'warning' | 'info';
+  ok?: string;
 }
 
 class UIStore {
@@ -34,12 +35,14 @@ class UIStore {
     document.documentElement.classList.toggle('dark', this.darkMode);
   }
 
-  showToast(message: string, type: Toast['type'] = 'info', duration = 4000): void {
+  showToast(message: string, type: Toast['type'] = 'info', duration = 4000, ok?: string): void {
     const id = ++this.toastSeq;
-    this.toasts = [...this.toasts, { id, message, type }];
-    setTimeout(() => {
-      this.toasts = this.toasts.filter((t) => t.id !== id);
-    }, duration);
+    this.toasts = [...this.toasts, { id, message, type, ok }];
+    if (!ok) {
+      setTimeout(() => {
+        this.toasts = this.toasts.filter((t) => t.id !== id);
+      }, duration);
+    }
   }
 
   dismissToast(id: number): void {

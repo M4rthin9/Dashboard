@@ -350,8 +350,23 @@
         ui.showToast('บันทึกการแก้ไขสำเร็จ', 'success');
       } else if (formMode === 'create') {
         const ref = await reservations.createBooking(fields);
-        ui.showToast(`สร้างการจองสำเร็จ · REF ${ref}`, 'success');
+        ui.showToast(
+          [
+            'สร้างการจองสำเร็จ',
+            '',
+            `เลขที่การจอง: ${ref}`,
+            `ผู้เยี่ยม: ${String(fields.visitorName ?? '')}`,
+            `ผู้ต้องขัง: ${String(fields.prisonerName ?? '')}`,
+            `ปีก: ${String(fields.wing ?? '')}`,
+            `วันเข้างาน: ${String(fields.visitDate ?? fields.visitDateISO ?? '')}`,
+            `จำนวน: ${formatNumber(Number(fields.visitorCount) || 0)} คน · ${formatBaht(Number(fields.total) || 0)}`,
+          ].join('\n'),
+          'success',
+          0,
+          'ตกลง'
+        );
       }
+      formSaving = false;
       closeForm();
     } catch (err) {
       ui.showToast(err instanceof Error ? err.message : 'ไม่สามารถบันทึกได้', 'error');

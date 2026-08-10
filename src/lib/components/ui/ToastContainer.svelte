@@ -26,7 +26,17 @@
         role="alert"
       >
         <Icon class="mt-0.5 h-5 w-5 shrink-0 {colors[toast.type]}" />
-        <p class="flex-1 text-sm text-slate-700 dark:text-slate-200">{toast.message}</p>
+        <div class="flex-1">
+          <p class="whitespace-pre-line text-sm text-slate-700 dark:text-slate-200">{toast.message}</p>
+          {#if toast.ok}
+            <button
+              class="mt-2 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700"
+              onclick={() => ui.dismissToast(toast.id)}
+            >
+              {toast.ok}
+            </button>
+          {/if}
+        </div>
         <button
           class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
           onclick={() => ui.dismissToast(toast.id)}

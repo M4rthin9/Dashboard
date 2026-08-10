@@ -136,13 +136,11 @@ export function buildDisciplinaryReport(rows: Reservation[], date: string): stri
   return `
     <div class="print-title">หนังสือขออนุมัติเบิกตัวผู้ต้องขังเข้าร่วมกิจกรรม</div>
     <div style="margin-bottom:12px; line-height:1.8; font-size:13px;">
-      <div style="text-align:right;">ที่ จน.ศก. ๐๐๑/๒๕๖๘</div>
       <div style="text-align:right;">วันที่ ${escapeHtml(date)}</div>
       <br>
       <div><strong>เรื่อง</strong> ขออนุมัติเบิกตัวผู้ต้องขังเข้าร่วมกิจกรรม Chance &amp; Change Cafe</div>
-      <div><strong>เรียน</strong> ผู้อำนวยการทัณฑสถานบำบัดพิเศษกลาง</div>
+      <div><strong>เรียน</strong> ผู้อำนวยการส่วนปกครองผู้ต้องขัง</div>
       <br>
-      <div>ด้วยทัณฑสถานบำบัดพิเศษกลางกำหนดจัดกิจกรรม Chance &amp; Change Cafe ในวันดังกล่าว ข้าพเจ้าขออนุมัติเบิกตัวผู้ต้องขังตามรายการแนบท้าย เพื่อเข้าร่วมกิจกรรม จำนวน <strong>${prisoners.length} ราย</strong></div>
     </div>
 
     <table>
