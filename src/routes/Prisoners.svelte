@@ -1,45 +1,67 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { RefreshCw, Search, Upload } from '@lucide/svelte';
+  import { Download, FileDown, Pencil, RefreshCw, Search, Upload } from '@lucide/svelte';
   import Papa from 'papaparse';
   import Card from '../lib/components/ui/Card.svelte';
   import Spinner from '../lib/components/ui/Spinner.svelte';
   import Modal from '../lib/components/ui/Modal.svelte';
   import Pagination from '../lib/components/ui/Pagination.svelte';
+  import PrisonerEditModal from '../lib/components/PrisonerEditModal.svelte';
   import { auth } from '../lib/store/auth.svelte';
   import { ui } from '../lib/store/ui.svelte';
   import { hasPermission } from '../lib/utils/permissions';
+  import { downloadPrisonerTemplate, exportPrisonersCSV } from '../lib/utils/csv';
   import { getPrisoners, importPrisoners, syncPrisonerWings } from '../lib/api/endpoints';
   import type { Prisoner } from '../lib/api/types';
+
+  interface ImportRow {
+    prisonerId: string;
+    prisonerName: string;
+    wing: string;
+    status: string;
+    vinaiDate: string;
+    note: string;
+    isNew: boolean;
+  }
 
   let rows = $state<Prisoner[]>([]);
   let loading = $state(true);
   let error = $state('');
   let search = $state('');
+  let wingFilter = $state('');
   let page = $state(1);
   let pageSize = $state(20);
 
   let importOpen = $state(false);
   let importText = $state('');
   let importErrors = $state<string[]>([]);
-  let parsed = $state<{ prisonerId: string; prisonerName: string; wing: string; status: string; vinaiDate: string; note: string }[]>([]);
+  let parsed = $state<ImportRow[]>([]);
   let importing = $state(false);
   let syncing = $state(false);
+  let dragging = $state(false);
+
+  let editing = $state<Prisoner | null>(null);
+  let editOpen = $state(false);
 
   const isManager = $derived(auth.user?.role === 'Superadmin' || auth.user?.role === 'Admin' || hasPermission(auth.user?.role ?? '', 'manage_users'));
 
+  const wings = $derived([...new Set(rows.map((r) => r.wing).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'th')));
+
   const filtered = $derived.by(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((r) =>
-      [r.prisonerId, r.prisonerName, r.wing, r.status, r.vinaiDate]
+    return rows.filter((r) => {
+      if (wingFilter && r.wing !== wingFilter) return false;
+      if (!q) return true;
+      return [r.prisonerId, r.prisonerName, r.wing, r.status, r.vinaiDate]
         .map((v) => String(v ?? '').toLowerCase())
-        .some((v) => v.includes(q))
-    );
+        .some((v) => v.includes(q));
+    });
   });
 
   const totalPages = $derived(Math.max(1, Math.ceil(filtered.length / pageSize)));
   const paged = $derived(filtered.slice((page - 1) * pageSize, page * pageSize));
+  const addCount = $derived(parsed.filter((p) => p.isNew).length);
+  const updateCount = $derived(parsed.length - addCount);
 
   $effect(() => {
     if (page > totalPages) page = totalPages;
@@ -68,25 +90,50 @@
     importOpen = true;
   }
 
+  function openEdit(p: Prisoner): void {
+    editing = p;
+    editOpen = true;
+  }
+
+  function handleFile(e: Event): void {
+    const input = e.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result ?? '');
+      importText = text;
+      parseCSV(text);
+    };
+    reader.readAsText(file, 'UTF-8');
+    input.value = '';
+  }
+
   function parseCSV(text: string): void {
     const result = Papa.parse<Record<string, string>>(text.trim(), { header: true, skipEmptyLines: true });
-    const rows2 = result.data;
-    const cleaned: typeof parsed = [];
+    const parsedRows = result.data;
+    const cleaned: ImportRow[] = [];
     const errs: string[] = [];
-    rows2.forEach((r, i) => {
+    const seen = new Map(rows.map((r) => [r.prisonerId, r] as const));
+    const newIds: Record<string, boolean> = {};
+    parsedRows.forEach((r, i) => {
       const prisonerId = String(r['เลขผู้ต้องขัง'] ?? r['prisonerId'] ?? r['ref'] ?? '').trim();
       const prisonerName = String(r['ชื่อ-นามสกุล'] ?? r['prisonerName'] ?? r['ชื่อ'] ?? '').trim();
       if (!prisonerId || !prisonerName) {
         errs.push('แถวที่ ' + (i + 2) + ': ขาดเลขผู้ต้องขังหรือชื่อ');
         return;
       }
+      const cur = seen.get(prisonerId);
+      const isNew = !cur || !!newIds[prisonerId];
+      if (isNew) newIds[prisonerId] = true;
       cleaned.push({
         prisonerId,
         prisonerName,
-        wing: String(r['แดน'] ?? r['wing'] ?? '').trim(),
-        status: String(r['สถานะ'] ?? r['status'] ?? '').trim(),
-        vinaiDate: String(r['วันที่พ้นโทษ/ไถ่ถอน'] ?? r['vinaiDate'] ?? '').trim(),
-        note: String(r['หมายเหตุ'] ?? r['note'] ?? '').trim(),
+        wing: String(r['แดน'] ?? r['wing'] ?? '').trim() || cur?.wing || '',
+        status: String(r['สถานะ'] ?? r['status'] ?? '').trim() || cur?.status || '',
+        vinaiDate: String(r['วันที่พ้นโทษ/ไถ่ถอน'] ?? r['vinaiDate'] ?? '').trim() || cur?.vinaiDate || '',
+        note: String(r['หมายเหตุ'] ?? r['note'] ?? '').trim() || cur?.note || '',
+        isNew,
       });
     });
     parsed = cleaned.slice(0, 5000);
@@ -101,7 +148,15 @@
     if (parsed.length === 0) return;
     importing = true;
     try {
-      const res = await importPrisoners(parsed);
+      const payload = parsed.map((p) => ({
+        prisonerId: p.prisonerId,
+        prisonerName: p.prisonerName,
+        wing: p.wing,
+        status: p.status,
+        vinaiDate: p.vinaiDate,
+        note: p.note,
+      }));
+      const res = await importPrisoners(payload);
       if (res.status !== 'ok') {
         ui.showAlert({ title: 'นำเข้าไม่สำเร็จ', message: String(res.message ?? 'เกิดข้อผิดพลาด'), type: 'error' });
         return;
@@ -132,6 +187,13 @@
       syncing = false;
     }
   }
+
+  function statusBadgeClass(status: string): string {
+    if (!status) return 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400';
+    if (status === 'ติดวินัย งดเยี่ยม') return 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300';
+    if (status === 'ปกติ') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300';
+    return 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300';
+  }
 </script>
 
 <div class="flex flex-col gap-4">
@@ -147,12 +209,30 @@
             class="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
           />
         </div>
+        {#if wings.length > 0}
+          <select
+            bind:value={wingFilter}
+            class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            aria-label="กรองตามแดน"
+          >
+            <option value="">ทุกแดน</option>
+            {#each wings as w (w)}
+              <option value={w}>{w}</option>
+            {/each}
+          </select>
+        {/if}
         {#if isManager}
           <button class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" onclick={doSyncWings} disabled={syncing}>
             {syncing ? 'กำลังซิงค์...' : 'ซิงค์แดน'}
           </button>
           <button class="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700" onclick={openImport}>
             <span class="flex items-center gap-1.5"><Upload class="h-4 w-4" /> นำเข้า CSV</span>
+          </button>
+          <button class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" onclick={() => exportPrisonersCSV(rows)}>
+            <span class="flex items-center gap-1.5"><Download class="h-4 w-4" /> ส่งออก CSV</span>
+          </button>
+          <button class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" onclick={downloadPrisonerTemplate} aria-label="ดาวน์โหลดแบบฟอร์ม">
+            <span class="flex items-center gap-1.5"><FileDown class="h-4 w-4" /> แบบฟอร์ม</span>
           </button>
         {/if}
         <button class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" onclick={fetchData} aria-label="โหลดใหม่">
@@ -175,6 +255,9 @@
                 <th class="px-3 py-2 font-medium">สถานะ</th>
                 <th class="px-3 py-2 font-medium">วันที่พ้นโทษ</th>
                 <th class="px-3 py-2 font-medium">หมายเหตุ</th>
+                {#if isManager}
+                  <th class="px-3 py-2 font-medium"></th>
+                {/if}
               </tr>
             </thead>
             <tbody>
@@ -187,9 +270,22 @@
                       <span class="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">{p.wing}</span>
                     {/if}
                   </td>
-                  <td class="px-3 py-2.5 text-xs">{p.status || '-'}</td>
+                  <td class="px-3 py-2.5">
+                    {#if p.status}
+                      <span class="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium {statusBadgeClass(p.status)}">{p.status}</span>
+                    {:else}
+                      <span class="text-xs text-slate-400">-</span>
+                    {/if}
+                  </td>
                   <td class="px-3 py-2.5 text-xs text-slate-500 dark:text-slate-400">{p.vinaiDate || '-'}</td>
                   <td class="max-w-[220px] truncate px-3 py-2.5 text-xs text-slate-500 dark:text-slate-400">{p.note || ''}</td>
+                  {#if isManager}
+                    <td class="px-3 py-2.5 text-right">
+                      <button class="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:hover:bg-slate-800" onclick={() => openEdit(p)} aria-label="แก้ไข">
+                        <Pencil class="h-4 w-4" />
+                      </button>
+                    </td>
+                  {/if}
                 </tr>
               {/each}
             </tbody>
@@ -225,16 +321,53 @@
 <Modal open={importOpen} title="นำเข้าข้อมูลผู้ต้องขัง (CSV)" onclose={() => (importOpen = false)} width="max-w-2xl">
   <div class="flex flex-col gap-4">
     <div class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-      คอลัมน์ที่รองรับ: <span class="font-mono">เลขผู้ต้องขัง</span>, <span class="font-mono">ชื่อ-นามสกุล</span> (จำเป็น) และ
-      <span class="font-mono">แดน</span>, <span class="font-mono">สถานะ</span>, <span class="font-mono">วันที่พ้นโทษ/ไถ่ถอน</span>, <span class="font-mono">หมายเหตุ</span>
-      (หรือชื่อคอลัมน์ภาษาอังกฤษ <span class="font-mono">prisonerId</span>, <span class="font-mono">prisonerName</span>, <span class="font-mono">wing</span>, <span class="font-mono">status</span>, <span class="font-mono">vinaiDate</span>, <span class="font-mono">note</span>)
+      <p>
+        คอลัมน์ที่รองรับ: <span class="font-mono">เลขผู้ต้องขัง</span>, <span class="font-mono">ชื่อ-นามสกุล</span> (จำเป็น) และ
+        <span class="font-mono">แดน</span>, <span class="font-mono">สถานะ</span>, <span class="font-mono">วันที่พ้นโทษ/ไถ่ถอน</span>, <span class="font-mono">หมายเหตุ</span>
+        (หรือชื่อคอลัมน์ภาษาอังกฤษ <span class="font-mono">prisonerId</span>, <span class="font-mono">prisonerName</span>, <span class="font-mono">wing</span>, <span class="font-mono">status</span>, <span class="font-mono">vinaiDate</span>, <span class="font-mono">note</span>)
+      </p>
+      <p class="mt-2 text-emerald-600 dark:text-emerald-400">
+        เซลล์ที่เว้นว่างสำหรับผู้ต้องขังที่มีอยู่แล้วจะคงค่าเดิมไว้ (ไม่ลบทับ) — ผู้ต้องขังใหม่จะได้ค่าว่าง
+      </p>
     </div>
+
+    <div>
+      <label
+        for="csv-file"
+        class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-6 text-center transition-colors {dragging ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40' : 'border-slate-300 hover:border-indigo-400 hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800'}"
+        ondragover={(e) => {
+          e.preventDefault();
+          dragging = true;
+        }}
+        ondragleave={() => (dragging = false)}
+        ondrop={(e) => {
+          e.preventDefault();
+          dragging = false;
+          const file = e.dataTransfer?.files?.[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const text = String(reader.result ?? '');
+              importText = text;
+              parseCSV(text);
+            };
+            reader.readAsText(file, 'UTF-8');
+          }
+        }}
+      >
+        <Upload class="h-6 w-6 text-slate-400" />
+        <span class="text-sm font-medium text-slate-600 dark:text-slate-300">คลิกเพื่อเลือกไฟล์ หรือลากไฟล์ CSV มาวางที่นี่</span>
+        <span class="text-xs text-slate-400">รองรับไฟล์ .csv แบบ UTF-8 (ส่งออกจากระบบนี้แล้วแก้ไขได้ทันที)</span>
+        <input id="csv-file" type="file" accept=".csv,text/csv" class="hidden" onchange={handleFile} />
+      </label>
+    </div>
+
     <div class="flex flex-col gap-1.5">
-      <label for="csv-paste" class="text-sm font-medium text-slate-700 dark:text-slate-300">วางข้อมูล CSV</label>
+      <label for="csv-paste" class="text-sm font-medium text-slate-700 dark:text-slate-300">หรือวางข้อมูล CSV</label>
       <textarea
         id="csv-paste"
         bind:value={importText}
-        rows="8"
+        rows="6"
         oninput={(e) => parseCSV((e.currentTarget as HTMLTextAreaElement).value)}
         placeholder="เลขผู้ต้องขัง,ชื่อ-นามสกุล,แดน,สถานะ,วันที่พ้นโทษ/ไถ่ถอน,หมายเหตุ&#10;12345,นายสมชาย ใจดี,แดน 1,,,"
         class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
@@ -243,7 +376,7 @@
 
     {#if parsed.length > 0}
       <div class="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-green-900 dark:bg-green-950 dark:text-green-300">
-        พร้อมนำเข้า {parsed.length} รายการ (รายแรกที่เห็นด้านล่าง)
+        พร้อมนำเข้า {parsed.length} รายการ — เพิ่มใหม่ {addCount} รายการ, อัปเดต {updateCount} รายการ
       </div>
       <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
         <table class="w-full min-w-[600px] text-left text-xs">
@@ -253,6 +386,7 @@
               <th class="px-3 py-2 font-medium">ชื่อ-นามสกุล</th>
               <th class="px-3 py-2 font-medium">แดน</th>
               <th class="px-3 py-2 font-medium">สถานะ</th>
+              <th class="px-3 py-2 font-medium">ประเภท</th>
             </tr>
           </thead>
           <tbody>
@@ -262,6 +396,13 @@
                 <td class="px-3 py-2">{p.prisonerName}</td>
                 <td class="px-3 py-2">{p.wing}</td>
                 <td class="px-3 py-2">{p.status}</td>
+                <td class="px-3 py-2">
+                  {#if p.isNew}
+                    <span class="inline-block rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">เพิ่มใหม่</span>
+                  {:else}
+                    <span class="inline-block rounded-full bg-sky-100 px-2 py-0.5 font-medium text-sky-700 dark:bg-sky-950 dark:text-sky-300">อัปเดต</span>
+                  {/if}
+                </td>
               </tr>
             {/each}
           </tbody>
@@ -285,3 +426,5 @@
     </div>
   </div>
 </Modal>
+
+<PrisonerEditModal open={editOpen} prisoner={editing} {wings} onclose={() => (editOpen = false)} onsaved={fetchData} />
