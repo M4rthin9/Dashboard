@@ -50,7 +50,7 @@
 <aside
   class="fixed inset-y-0 left-0 z-40 flex w-64 transform flex-col bg-slate-900 text-slate-100 transition-transform duration-200 ease-in-out lg:translate-x-0 {ui.sidebarOpen ? 'translate-x-0' : '-translate-x-full'}"
 >
-  <div class="flex h-16 items-center justify-between border-b border-slate-800 px-5">
+  <div class="flex h-16 items-center justify-between px-5">
     <div class="flex items-center gap-2.5">
       <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-lg font-bold">
         CCC
@@ -73,7 +73,7 @@
         <li>
           <a
             href="#{item.path}"
-            class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-150 ease-in-out {isActive
+            class="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-150 ease-in-out {isActive
               ? 'bg-indigo-600/15 text-indigo-400'
               : 'text-slate-300 hover:bg-slate-800 hover:text-white'}"
           >
@@ -88,7 +88,7 @@
     </ul>
   </nav>
 
-  <div class="border-t border-slate-800 px-5 py-4">
+  <div class="px-5 py-4">
     <div class="flex items-center gap-3">
       <span class="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-500/20 text-sm font-semibold text-indigo-300">
         {(auth.displayName || '?').slice(0, 1).toUpperCase()}

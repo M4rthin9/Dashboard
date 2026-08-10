@@ -304,7 +304,7 @@
 </script>
 
 <div class="flex flex-col gap-6">
-  <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 p-6 text-white shadow-xl shadow-indigo-500/25">
+  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 p-5 text-white shadow-lg shadow-indigo-500/15 sm:p-6">
     <div class="pointer-events-none absolute -right-12 -top-14 h-56 w-56 rounded-full bg-white/10 blur-3xl" aria-hidden="true"></div>
     <div class="pointer-events-none absolute -bottom-20 right-12 h-48 w-48 rounded-full bg-white/5 blur-2xl" aria-hidden="true"></div>
     <div class="relative flex flex-wrap items-center justify-between gap-4">
@@ -366,7 +366,7 @@
     </div>
 
     {#if statCards.length > 0}
-      <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {#each statCards as c (c.id)}
           {@const CIcon = c.icon}
           <div class="flex flex-col items-center gap-2 rounded-2xl border border-slate-200/80 bg-white p-4 text-center transition-all duration-200 ease-out hover:shadow-md dark:border-slate-700/60 dark:bg-slate-900 dark:hover:shadow-lg">
@@ -472,7 +472,7 @@
       </Card>
     </div>
 
-    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+    <div class="grid grid-cols-1 gap-5 xl:grid-cols-2">
       <Card title="แนวโน้มการจอง 14 วัน" interactive>
         <EChart option={trendOption} />
       </Card>
