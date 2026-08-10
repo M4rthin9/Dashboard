@@ -15,19 +15,10 @@ export interface AlertBox {
 }
 
 class UIStore {
-  sidebarOpen = $state(false);
   darkMode = $state(false);
   toasts = $state<Toast[]>([]);
   alert = $state<AlertBox | null>(null);
   private toastSeq = 0;
-
-  toggleSidebar(): void {
-    this.sidebarOpen = !this.sidebarOpen;
-  }
-
-  closeSidebar(): void {
-    this.sidebarOpen = false;
-  }
 
   initDarkMode(): void {
     const saved = localStorage.getItem('ccc_dark_mode');

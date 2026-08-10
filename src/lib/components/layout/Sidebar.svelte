@@ -9,9 +9,7 @@
     UserRound,
     Link2,
     Settings,
-    X,
   } from '@lucide/svelte';
-  import { ui } from '../../store/ui.svelte';
   import { auth } from '../../store/auth.svelte';
   import { visibleMenu, roleLabel } from '../../utils/permissions';
   import { currentPath } from '../../router';
@@ -39,30 +37,15 @@
   let activePath = $derived(currentPath());
 </script>
 
-{#if ui.sidebarOpen}
-  <div
-    class="fixed inset-0 z-30 bg-slate-900/50 lg:hidden"
-    onclick={() => ui.closeSidebar()}
-    aria-hidden="true"
-  ></div>
-{/if}
-
-<aside
-  class="fixed inset-y-0 left-0 z-40 flex w-64 transform flex-col bg-slate-900 text-slate-100 transition-transform duration-200 ease-in-out lg:translate-x-0 {ui.sidebarOpen ? 'translate-x-0' : '-translate-x-full'}"
->
-  <div class="flex h-16 items-center justify-between px-5">
-    <div class="flex items-center gap-2.5">
-      <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-lg font-bold">
-        CCC
-      </span>
-      <div>
-        <p class="text-sm font-semibold leading-tight">CCC Dashboard</p>
-        <p class="text-xs text-slate-400">ระบบจองเยี่ยม</p>
-      </div>
+<aside class="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-slate-900 text-slate-100 lg:flex">
+  <div class="flex h-16 shrink-0 items-center gap-2.5 px-5">
+    <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-lg font-bold">
+      CCC
+    </span>
+    <div>
+      <p class="text-sm font-semibold leading-tight">CCC Dashboard</p>
+      <p class="text-xs text-slate-400">ระบบจองเยี่ยม</p>
     </div>
-    <button class="rounded-xl p-1 text-slate-400 transition-colors duration-150 hover:text-white lg:hidden" onclick={() => ui.closeSidebar()} aria-label="ปิดเมนู">
-      <X class="h-5 w-5" />
-    </button>
   </div>
 
   <nav class="flex-1 overflow-y-auto px-3 py-5">
@@ -88,7 +71,7 @@
     </ul>
   </nav>
 
-  <div class="px-5 py-4">
+  <div class="shrink-0 border-t border-slate-800 px-5 py-4">
     <div class="flex items-center gap-3">
       <span class="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-500/20 text-sm font-semibold text-indigo-300">
         {(auth.displayName || '?').slice(0, 1).toUpperCase()}

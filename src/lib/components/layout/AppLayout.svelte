@@ -2,6 +2,7 @@
   import type { Snippet } from 'svelte';
   import Sidebar from './Sidebar.svelte';
   import Topbar from './Topbar.svelte';
+  import BottomNav from './BottomNav.svelte';
 
   let { children }: { children: Snippet } = $props();
 </script>
@@ -10,10 +11,11 @@
   <Sidebar />
   <div class="flex min-w-0 flex-1 flex-col">
     <Topbar />
-    <main class="flex-1 overflow-y-auto overflow-x-hidden">
-      <div class="mx-auto w-full max-w-[1600px] px-4 py-6 lg:px-8 lg:py-8">
+    <main class="flex-1">
+      <div class="mx-auto w-full max-w-[1600px] px-4 py-6 pb-28 lg:px-8 lg:py-8 lg:pb-12">
         {@render children()}
       </div>
     </main>
   </div>
+  <BottomNav />
 </div>
