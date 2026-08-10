@@ -8,12 +8,13 @@
     CreditCard,
     Hash,
     Info,
-    Phone,
-    ReceiptText,
-    ShieldCheck,
-    User,
-    UsersRound,
-  } from '@lucide/svelte';
+     Phone,
+     ReceiptText,
+     ShieldCheck,
+     ExternalLink,
+     User,
+     UsersRound,
+   } from '@lucide/svelte';
   import Modal from './ui/Modal.svelte';
   import Badge from './ui/Badge.svelte';
   import { formatBaht, formatNumber, formatDateTimeThai, normalizeStatus } from '../utils/format';
@@ -169,7 +170,7 @@
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <section class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
           <div class="flex items-center gap-2">
-            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-400">
+            <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-400">
               <Building2 class="h-4 w-4" />
             </div>
             <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100">ผู้ต้องขัง</h3>
@@ -186,7 +187,7 @@
               </div>
             </div>
           </div>
-          <div class="flex items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
+          <div class="flex items-center gap-1.5 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
             <Building2 class="h-3.5 w-3.5 text-slate-400" />
             ปีกที่ดูแล: <span class="font-semibold">{row.wing ?? '—'}</span>
           </div>
@@ -195,7 +196,7 @@
         <section class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
           <div class="flex items-center justify-between gap-2">
             <div class="flex items-center gap-2">
-              <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
+              <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
                 <User class="h-4 w-4" />
               </div>
               <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100">ผู้เยี่ยมหลัก</h3>
@@ -229,7 +230,7 @@
             {/if}
           </div>
           {#if row.allergy && row.allergy !== '-'}
-            <div class="rounded-lg bg-amber-50 px-3 py-1.5 text-xs text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
+            <div class="rounded-xl bg-amber-50 px-3 py-1.5 text-xs text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
               ⚠️ แพ้อาหาร: {row.allergy}
             </div>
           {/if}
@@ -239,7 +240,7 @@
       {#if extras.length > 0}
         <section class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
           <div class="flex items-center gap-2">
-            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-600 dark:bg-violet-950 dark:text-violet-400">
+            <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-100 text-violet-600 dark:bg-violet-950 dark:text-violet-400">
               <UsersRound class="h-4 w-4" />
             </div>
             <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100">ผู้เยี่ยมร่วม ({extras.length} คน)</h3>
@@ -268,7 +269,7 @@
 
       <section class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
         <div class="flex items-center gap-2">
-          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 text-sky-600 dark:bg-sky-950 dark:text-sky-400">
+          <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-sky-100 text-sky-600 dark:bg-sky-950 dark:text-sky-400">
             <CalendarDays class="h-4 w-4" />
           </div>
           <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100">ข้อมูลการเยี่ยม</h3>
@@ -326,7 +327,7 @@
       {#if canViewSlip && slipUrl}
         <section class="flex flex-col gap-2">
           <div class="flex items-center gap-2">
-            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+            <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
               <CreditCard class="h-4 w-4" />
             </div>
             <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100">สลิปชำระเงิน</h3>
@@ -337,13 +338,25 @@
               <div class="text-sm font-medium text-slate-500 dark:text-slate-400">กำลังโหลดสลิปชำระเงิน...</div>
             </div>
           {:else}
-            <a href={slipUrl} target="_blank" rel="noopener noreferrer" class="group">
-              <img
-                src={slipUrl}
-                alt="สลิปชำระเงิน"
-                class="max-h-80 w-full rounded-2xl border border-slate-200 object-contain transition group-hover:shadow-lg dark:border-slate-700"
-              />
-            </a>
+            <div class="flex flex-col items-center gap-3">
+              <a href={slipUrl} target="_blank" rel="noopener noreferrer" class="group">
+                <img
+                  src={slipUrl}
+                  alt="สลิปชำระเงิน"
+                  class="max-h-80 w-full rounded-2xl border border-slate-200 bg-slate-50 object-contain shadow-sm transition group-hover:shadow-xl dark:border-slate-700"
+                />
+              </a>
+              <a
+                href={slipUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-950/60"
+              >
+                <ExternalLink class="h-4 w-4" />
+                เปิดสลิปชำระเงินเต็มในหน้าต่างใหม่
+              </a>
+              <p class="text-center text-[11px] text-slate-400">คลิกเพื่อเปิดรูปสลิปขนาดเต็ม</p>
+            </div>
           {/if}
         </section>
       {/if}

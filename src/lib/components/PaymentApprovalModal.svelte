@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Banknote, CalendarDays, Check, CreditCard, ImageOff, Info, ShieldCheck, User } from '@lucide/svelte';
+  import { Banknote, CalendarDays, Check, CreditCard, ExternalLink, ImageOff, Info, ShieldCheck, User } from '@lucide/svelte';
   import Modal from './ui/Modal.svelte';
   import Badge from './ui/Badge.svelte';
   import { formatBaht, formatDateTimeThai } from '../utils/format';
@@ -126,14 +126,25 @@
           <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100">สลิปชำระเงินที่อัปโหลด</h3>
         </div>
         {#if hasSlip}
-          <a href={slipUrl} target="_blank" rel="noopener noreferrer" class="group">
-            <img
-              src={slipUrl}
-              alt="สลิปชำระเงิน"
-              class="max-h-72 w-full rounded-2xl border border-slate-200 bg-slate-50 object-contain transition group-hover:shadow-lg dark:border-slate-700"
-            />
-          </a>
-          <p class="text-center text-[11px] text-slate-400">คลิกที่รูปเพื่อเปิดขนาดใหญ่</p>
+          <div class="flex flex-col items-center gap-3">
+            <a href={slipUrl} target="_blank" rel="noopener noreferrer" class="group">
+              <img
+                src={slipUrl}
+                alt="สลิปชำระเงิน"
+                class="max-h-72 w-full rounded-2xl border border-slate-200 bg-slate-50 object-contain shadow-sm transition group-hover:shadow-xl dark:border-slate-700"
+              />
+            </a>
+            <a
+              href={slipUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-950/60"
+            >
+              <ExternalLink class="h-4 w-4" />
+              เปิดสลิปชำระเงินเต็มในหน้าต่างใหม่
+            </a>
+            <p class="text-center text-[11px] text-slate-400">คลิกเพื่อเปิดรูปสลิปขนาดเต็ม</p>
+          </div>
         {:else if slipLoading}
           <div class="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center dark:border-slate-700 dark:bg-slate-900">
             <span class="h-8 w-8 animate-spin rounded-full border-2 border-indigo-500/30 border-t-indigo-500"></span>
@@ -154,18 +165,18 @@
       </div>
 
       <div class="flex justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
-        <button
-          class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
-          onclick={onclose}
-          disabled={busy}
-        >
-          กลับ
-        </button>
-        <button
-          class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
-          onclick={confirm}
-          disabled={busy}
-        >
+          <button
+            class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
+            onclick={onclose}
+            disabled={busy}
+          >
+            กลับ
+          </button>
+          <button
+            class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+            onclick={confirm}
+            disabled={busy}
+          >
           {#if busy}
             <span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span>
             กำลังบันทึก...
