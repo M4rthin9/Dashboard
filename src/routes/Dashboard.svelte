@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { EChartsOption } from 'echarts';
+  import type { Reservation } from '../lib/api/types';
   import {
     AlertTriangle,
     ArrowRight,
@@ -20,6 +21,7 @@
   import Spinner from '../lib/components/ui/Spinner.svelte';
   import EChart from '../lib/components/charts/EChart.svelte';
   import FloorPlan from '../lib/components/dashboard/FloorPlan.svelte';
+  import PaymentApprovalModal from '../lib/components/PaymentApprovalModal.svelte';
   import { auth } from '../lib/store/auth.svelte';
   import { reservations } from '../lib/store/reservations.svelte';
   import { ui } from '../lib/store/ui.svelte';
@@ -270,12 +272,32 @@
     reservations.load();
   });
 
-  async function confirmQuick(ref: string): Promise<void> {
+  let paymentRow = $state<Reservation | null>(null);
+  let showPaymentApproval = $state(false);
+  let paymentSaving = $state(false);
+
+  function openPaymentApproval(row: Reservation): void {
+    paymentRow = row;
+    showPaymentApproval = true;
+  }
+
+  function closePaymentApproval(): void {
+    if (paymentSaving) return;
+    showPaymentApproval = false;
+    paymentRow = null;
+  }
+
+  async function approvePayment(row: Reservation): Promise<void> {
+    paymentSaving = true;
     try {
-      await reservations.updateStatus(ref, 'ชำระแล้ว');
+      await reservations.updateStatus(row.ref, 'ชำระแล้ว');
       ui.showToast('ยืนยันการชำระเงินสำเร็จ', 'success');
+      closePaymentApproval();
     } catch (err) {
       ui.showToast(err instanceof Error ? err.message : 'ไม่สามารถยืนยันได้', 'error');
+      closePaymentApproval();
+    } finally {
+      paymentSaving = false;
     }
   }
 </script>
@@ -397,7 +419,7 @@
                 {#if canConfirmPayment}
                   <button
                     class="rounded-lg bg-indigo-600 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-700"
-                    onclick={() => confirmQuick(r.ref)}
+                    onclick={() => openPaymentApproval(r)}
                   >
                     ยืนยัน
                   </button>
@@ -474,4 +496,12 @@
 
     <FloorPlan />
   {/if}
+
+  <PaymentApprovalModal
+    open={showPaymentApproval}
+    row={paymentRow}
+    mode="ชำระแล้ว"
+    onclose={closePaymentApproval}
+    onapprove={approvePayment}
+  />
 </div>

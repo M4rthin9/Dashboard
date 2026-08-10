@@ -29,9 +29,8 @@
     if (!vd) return true;
     const parsed = new Date(vd);
     if (isNaN(parsed.getTime())) return true;
-    const oneYearAgo = new Date();
-    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-    return parsed.getTime() > oneYearAgo.getTime();
+    const oneYearAgoMs = Date.now() - 365 * 24 * 60 * 60 * 1000;
+    return parsed.getTime() > oneYearAgoMs;
   }
 
   const PRICING = {
@@ -576,7 +575,7 @@
           <input id="rf-kids5-8" type="number" bind:value={child5to8Count} min="0" class={inputCls} />
         </div>
         <div class="flex flex-col gap-1">
-          <label for="rf-kids-under5" class={labelCls}>เด็ก {'<'}5 ปี</label>
+          <label for="rf-kids-under5" class={labelCls}>เด็ก &lt;5 ปี</label>
           <input id="rf-kids-under5" type="number" bind:value={childUnder5Count} min="0" class={inputCls} />
         </div>
       </div>

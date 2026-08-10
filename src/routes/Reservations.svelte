@@ -8,6 +8,7 @@
   import StatusSteps from '../lib/components/ui/StatusSteps.svelte';
   import ReservationDetailModal from '../lib/components/ReservationDetailModal.svelte';
   import ReservationFormModal from '../lib/components/ReservationFormModal.svelte';
+  import PaymentApprovalModal from '../lib/components/PaymentApprovalModal.svelte';
   import VisitorApprovalModal from '../lib/components/VisitorApprovalModal.svelte';
   import { auth } from '../lib/store/auth.svelte';
   import { reservations } from '../lib/store/reservations.svelte';
@@ -36,6 +37,10 @@
   let showDetail = $state(false);
   let approvalRow = $state<Reservation | null>(null);
   let showApproval = $state(false);
+  let paymentRow = $state<Reservation | null>(null);
+  let showPaymentApproval = $state(false);
+  let paymentMode = $state<'ชำระแล้ว' | 'เสร็จสิ้น'>('ชำระแล้ว');
+  let paymentSaving = $state(false);
   let formMode = $state<'edit' | 'create' | null>(null);
   let formSaving = $state(false);
   let prisoners = $state<Prisoner[]>([]);
@@ -101,12 +106,10 @@
     rows.sort((a, b) => {
       const av = a[sortKey];
       const bv = b[sortKey];
-      let cmp = 0;
-      if (typeof av === 'number' || typeof bv === 'number') {
-        cmp = (Number(av) || 0) - (Number(bv) || 0);
-      } else {
-        cmp = String(av ?? '').localeCompare(String(bv ?? ''));
-      }
+      const cmp =
+        typeof av === 'number' || typeof bv === 'number'
+          ? (Number(av) || 0) - (Number(bv) || 0)
+          : String(av ?? '').localeCompare(String(bv ?? ''));
       return sortDir === 'asc' ? cmp : -cmp;
     });
     return rows;
@@ -290,6 +293,35 @@
   function closeApproval(): void {
     showApproval = false;
     approvalRow = null;
+  }
+
+  function openPaymentApproval(row: Reservation, mode: 'ชำระแล้ว' | 'เสร็จสิ้น'): void {
+    paymentRow = row;
+    paymentMode = mode;
+    showPaymentApproval = true;
+  }
+
+  function closePaymentApproval(): void {
+    if (paymentSaving) return;
+    showPaymentApproval = false;
+    paymentRow = null;
+  }
+
+  async function approvePayment(row: Reservation): Promise<void> {
+    paymentSaving = true;
+    try {
+      await reservations.updateStatus(row.ref, paymentMode);
+      ui.showToast(
+        paymentMode === 'เสร็จสิ้น' ? 'ยืนยันการเสร็จสิ้นสำเร็จ' : 'ยืนยันการชำระเงินสำเร็จ',
+        'success'
+      );
+      closePaymentApproval();
+    } catch (err) {
+      ui.showToast(err instanceof Error ? err.message : 'ไม่สามารถยืนยันได้', 'error');
+      closePaymentApproval();
+    } finally {
+      paymentSaving = false;
+    }
   }
 
   function openEdit(row: Reservation): void {
@@ -604,12 +636,12 @@
                             {/if}
                           {/if}
                         {#if s === 'รอชำระเงิน' && canConfirmPayment}
-                          <button class="rounded-lg bg-indigo-600 p-1.5 text-white hover:bg-indigo-700" title="ยืนยันชำระเงิน" onclick={() => doUpdateStatus(row, 'ชำระแล้ว')}>
+                          <button class="rounded-lg bg-indigo-600 p-1.5 text-white hover:bg-indigo-700" title="ยืนยันชำระเงิน" onclick={() => openPaymentApproval(row, 'ชำระแล้ว')}>
                             <Check class="h-4 w-4" />
                           </button>
                         {/if}
                         {#if s === 'ชำระแล้ว' && canConfirmPayment}
-                          <button class="rounded-lg bg-green-600 p-1.5 text-white hover:bg-green-700" title="เสร็จสิ้น" onclick={() => doUpdateStatus(row, 'เสร็จสิ้น')}>
+                          <button class="rounded-lg bg-green-600 p-1.5 text-white hover:bg-green-700" title="เสร็จสิ้น" onclick={() => openPaymentApproval(row, 'เสร็จสิ้น')}>
                             <Check class="h-4 w-4" />
                           </button>
                         {/if}
@@ -709,6 +741,14 @@
 </Modal>
 
 <ReservationDetailModal open={showDetail} row={detailRow} onclose={closeDetail} {canViewSlip} />
+
+<PaymentApprovalModal
+  open={showPaymentApproval}
+  row={paymentRow}
+  mode={paymentMode}
+  onclose={closePaymentApproval}
+  onapprove={approvePayment}
+/>
 
 <VisitorApprovalModal open={showApproval} row={approvalRow} onclose={closeApproval} />
 

@@ -32,6 +32,8 @@ VITE_API_BASE=https://ccc-backend.pongsinbas.workers.dev
 ```bash
 npm run dev        # dev server with HMR
 npm run check      # svelte-check + tsc (typecheck)
+npm run lint       # ESLint
+npm run lint:fix   # ESLint with --fix
 npm run build      # production build to dist/
 npm run preview    # preview the production build
 ```

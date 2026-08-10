@@ -14,7 +14,7 @@
   import { ui } from '../../store/ui.svelte';
   import { auth } from '../../store/auth.svelte';
   import { visibleMenu, roleLabel } from '../../utils/permissions';
-  import { navigate, currentPath } from '../../router';
+  import { currentPath } from '../../router';
 
   interface NavItem {
     path: string;

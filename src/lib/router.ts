@@ -1,13 +1,12 @@
 import type { Component } from 'svelte';
 import Login from '../routes/Login.svelte';
-import Dashboard from '../routes/Dashboard.svelte';
 import Reservations from '../routes/Reservations.svelte';
-import Reports from '../routes/Reports.svelte';
 import EventLog from '../routes/EventLog.svelte';
 import Users from '../routes/Users.svelte';
 import Prisoners from '../routes/Prisoners.svelte';
 import Connection from '../routes/Connection.svelte';
 import Settings from '../routes/Settings.svelte';
+import { hashState } from './store/hash.svelte';
 import { auth } from './store/auth.svelte';
 import { visibleMenu } from './utils/permissions';
 
@@ -15,15 +14,16 @@ export interface RouteDef {
   path: string;
   key: string;
   title: string;
-  component: Component;
+  component?: Component;
+  loader?: () => Promise<{ default: Component }>;
   roles?: string[];
 }
 
 export const routes: RouteDef[] = [
   { path: '/login', key: 'login', title: 'เข้าสู่ระบบ', component: Login },
-  { path: '/dashboard', key: 'home', title: 'หน้าหลัก', component: Dashboard },
+  { path: '/dashboard', key: 'home', title: 'หน้าหลัก', loader: () => import('../routes/Dashboard.svelte') },
   { path: '/reservations', key: 'reservations', title: 'ระบบจอง', component: Reservations },
-  { path: '/reports', key: 'reports', title: 'รายงาน', component: Reports },
+  { path: '/reports', key: 'reports', title: 'รายงาน', loader: () => import('../routes/Reports.svelte') },
   { path: '/eventlog', key: 'eventlog', title: 'บันทึกเหตุการณ์', component: EventLog, roles: ['Superadmin', 'Admin'] },
   { path: '/users', key: 'users', title: 'ผู้ใช้', component: Users, roles: ['Superadmin'] },
   { path: '/prisoners', key: 'prisoners', title: 'ผู้ต้องขัง', component: Prisoners },
@@ -37,7 +37,7 @@ export function navigate(path: string): void {
 }
 
 export function currentPath(): string {
-  return location.hash.replace(/^#/, '') || '/dashboard';
+  return hashState.value.replace(/^#/, '') || '/dashboard';
 }
 
 export function resolveRoute(): RouteDef {
