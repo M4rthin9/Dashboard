@@ -70,9 +70,13 @@
     busy = true;
     try {
       await reservations.updateVisitorApproval(row.ref, val);
-      ui.showToast(val === 'yes' ? 'อนุมัติผู้เยี่ยมหลักแล้ว' : 'ปฏิเสธผู้เยี่ยมหลัก · ยกเลิกการจองแล้ว', val === 'yes' ? 'success' : 'warning');
+      ui.showAlert({
+        title: val === 'yes' ? 'อนุมัติผู้เยี่ยมหลักแล้ว' : 'ปฏิเสธผู้เยี่ยมหลัก · ยกเลิกการจองแล้ว',
+        message: val === 'yes' ? `${row.visitorName} ได้รับอนุมัติแล้ว` : `${row.visitorName} ถูกปฏิเสธ และการจองถูกยกเลิกแล้ว`,
+        type: val === 'yes' ? 'success' : 'warning',
+      });
     } catch (err) {
-      ui.showToast(err instanceof Error ? err.message : 'ไม่สามารถอัปเดตการอนุมัติได้', 'error');
+      ui.showAlert({ title: 'ไม่สามารถอัปเดตการอนุมัติได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
     } finally {
       busy = false;
     }
@@ -85,9 +89,9 @@
     busy = true;
     try {
       await reservations.updateVisitorApproval(row.ref, 'yes', current.join(';;'));
-      ui.showToast('อัปเดตการอนุมัติผู้เยี่ยมร่วมแล้ว', 'success');
+      ui.showAlert({ title: 'อัปเดตการอนุมัติผู้เยี่ยมร่วมแล้ว', message: 'บันทึกการอนุมัติผู้เข้าร่วมเรียบร้อย', type: 'success' });
     } catch (err) {
-      ui.showToast(err instanceof Error ? err.message : 'ไม่สามารถอัปเดตการอนุมัติได้', 'error');
+      ui.showAlert({ title: 'ไม่สามารถอัปเดตการอนุมัติได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
     } finally {
       busy = false;
     }

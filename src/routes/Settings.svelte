@@ -29,7 +29,7 @@
       savedBy = String(serverSettings._savedBy ?? '');
       savedAt = String(serverSettings._savedAt ?? '');
     } catch (err) {
-      ui.showToast(err instanceof Error ? err.message : 'ไม่สามารถโหลดตั้งค่าได้', 'error');
+      ui.showAlert({ title: 'ไม่สามารถโหลดตั้งค่าได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
     } finally {
       loading = false;
     }
@@ -42,22 +42,22 @@
       try {
         parsed = JSON.parse(settingsText);
       } catch {
-        ui.showToast('JSON ไม่ถูกต้อง กรุณาตรวจสอบ', 'error');
+        ui.showAlert({ title: 'JSON ไม่ถูกต้อง', message: 'กรุณาตรวจสอบรูปแบบ JSON', type: 'error' });
         return;
       }
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-        ui.showToast('ค่าตั้งค่าต้องเป็น JSON object', 'error');
+        ui.showAlert({ title: 'รูปแบบไม่ถูกต้อง', message: 'ค่าตั้งค่าต้องเป็น JSON object', type: 'error' });
         return;
       }
       const res = await saveSettings(parsed as Record<string, unknown>);
       if (res.status !== 'ok') {
-        ui.showToast(String(res.message ?? 'บันทึกไม่สำเร็จ'), 'error');
+        ui.showAlert({ title: 'บันทึกไม่สำเร็จ', message: String(res.message ?? 'เกิดข้อผิดพลาด'), type: 'error' });
         return;
       }
-      ui.showToast('บันทึกตั้งค่าสำเร็จ', 'success');
+      ui.showAlert({ title: 'บันทึกตั้งค่าสำเร็จ', message: 'บันทึกข้อมูลการตั้งค่าเรียบร้อย', type: 'success' });
       await fetchSettings();
     } catch (err) {
-      ui.showToast(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', 'error');
+      ui.showAlert({ title: 'เกิดข้อผิดพลาด', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
     } finally {
       saving = false;
     }

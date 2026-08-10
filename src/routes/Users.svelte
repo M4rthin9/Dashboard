@@ -47,7 +47,7 @@
       roles = (r.roles ?? []).sort((a, b) => a.roleName.localeCompare(b.roleName));
     } catch (err) {
       error = err instanceof Error ? err.message : 'ไม่สามารถโหลดข้อมูลได้';
-      ui.showToast(error, 'error');
+      ui.showAlert({ title: 'ไม่สามารถโหลดข้อมูลได้', message: error, type: 'error' });
     } finally {
       loading = false;
     }
@@ -71,10 +71,10 @@
       if (mode === 'create') {
         const res = await createUser(form.username.trim(), form.password, form.role, form.displayName.trim() || undefined);
         if (res.status !== 'ok') {
-          ui.showToast(String(res.message ?? 'ไม่สามารถสร้างผู้ใช้ได้'), 'error');
+          ui.showAlert({ title: 'ไม่สามารถสร้างผู้ใช้ได้', message: String(res.message ?? 'เกิดข้อผิดพลาด'), type: 'error' });
           return;
         }
-        ui.showToast('สร้างผู้ใช้สำเร็จ', 'success');
+        ui.showAlert({ title: 'สร้างผู้ใช้สำเร็จ', message: `สร้างบัญชี ${form.username.trim()} เรียบร้อย`, type: 'success' });
       } else if (target) {
         const fields: { role?: string; displayName?: string; newPassword?: string } = {
           role: form.role,
@@ -83,15 +83,15 @@
         if (form.password) fields.newPassword = form.password;
         const res = await updateUser(target.username, fields);
         if (res.status !== 'ok') {
-          ui.showToast(String(res.message ?? 'ไม่สามารถแก้ไขผู้ใช้ได้'), 'error');
+          ui.showAlert({ title: 'ไม่สามารถแก้ไขผู้ใช้ได้', message: String(res.message ?? 'เกิดข้อผิดพลาด'), type: 'error' });
           return;
         }
-        ui.showToast('อัปเดตผู้ใช้สำเร็จ', 'success');
+        ui.showAlert({ title: 'อัปเดตผู้ใช้สำเร็จ', message: `แก้ไขบัญชี ${target.username} เรียบร้อย`, type: 'success' });
       }
       mode = null;
       await fetchData();
     } catch (err) {
-      ui.showToast(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', 'error');
+      ui.showAlert({ title: 'เกิดข้อผิดพลาด', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
     } finally {
       busy = false;
     }
@@ -103,14 +103,14 @@
     try {
       const res = await deleteUser(deleteTarget.username);
       if (res.status !== 'ok') {
-        ui.showToast(String(res.message ?? 'ไม่สามารถลบผู้ใช้ได้'), 'error');
+        ui.showAlert({ title: 'ไม่สามารถลบผู้ใช้ได้', message: String(res.message ?? 'เกิดข้อผิดพลาด'), type: 'error' });
         return;
       }
-      ui.showToast('ลบผู้ใช้สำเร็จ', 'success');
+      ui.showAlert({ title: 'ลบผู้ใช้สำเร็จ', message: `ลบบัญชี ${deleteTarget.username} เรียบร้อย`, type: 'success' });
       deleteTarget = null;
       await fetchData();
     } catch (err) {
-      ui.showToast(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', 'error');
+      ui.showAlert({ title: 'เกิดข้อผิดพลาด', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
     } finally {
       deleting = false;
     }
@@ -125,25 +125,25 @@
   async function submitRole(): Promise<void> {
     const perms = AVAILABLE_PERMISSIONS.filter((p) => newRolePerms[p]);
     if (!newRoleName.trim()) {
-      ui.showToast('กรุณากรอกชื่อบทบาท', 'warning');
+      ui.showAlert({ title: 'กรุณากรอกชื่อบทบาท', message: 'ต้องระบุชื่อบทบาทก่อนสร้าง', type: 'warning' });
       return;
     }
     if (perms.length === 0) {
-      ui.showToast('กรุณาเลือกอย่างน้อยหนึ่งสิทธิ์', 'warning');
+      ui.showAlert({ title: 'กรุณาเลือกสิทธิ์', message: 'กรุณาเลือกอย่างน้อยหนึ่งสิทธิ์', type: 'warning' });
       return;
     }
     roleBusy = true;
     try {
       const res = await createRole(newRoleName.trim(), perms);
       if (res.status !== 'ok') {
-        ui.showToast(String(res.message ?? 'ไม่สามารถสร้างบทบาทได้'), 'error');
+        ui.showAlert({ title: 'ไม่สามารถสร้างบทบาทได้', message: String(res.message ?? 'เกิดข้อผิดพลาด'), type: 'error' });
         return;
       }
-      ui.showToast('สร้างบทบาทสำเร็จ', 'success');
+      ui.showAlert({ title: 'สร้างบทบาทสำเร็จ', message: `สร้างบทบาท ${newRoleName.trim()} เรียบร้อย`, type: 'success' });
       roleModal = false;
       await fetchData();
     } catch (err) {
-      ui.showToast(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', 'error');
+      ui.showAlert({ title: 'เกิดข้อผิดพลาด', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
     } finally {
       roleBusy = false;
     }

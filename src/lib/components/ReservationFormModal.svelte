@@ -15,6 +15,7 @@
   } from '@lucide/svelte';
   import Modal from './ui/Modal.svelte';
   import { formatBaht, formatNumber } from '../utils/format';
+  import { ui } from '../store/ui.svelte';
   import type { Prisoner, Reservation } from '../api/types';
 
   const RELATION_OPTIONS = ['บิดา / มารดา', 'แฟน/ภรรยา', 'บุตร / ธิดา', 'พี่ / น้อง', 'ญาติ', 'เพื่อน', 'ทนายความ', 'อื่น ๆ'];
@@ -295,19 +296,19 @@
 
   async function submit(): Promise<void> {
     if (!visitorName.trim()) {
-      window.alert('กรุณากรอกชื่อผู้เยี่ยม');
+      ui.showAlert({ title: 'กรุณากรอกข้อมูล', message: 'กรุณากรอกชื่อผู้เยี่ยม', type: 'warning' });
       return;
     }
     if (!prisonerId || !prisonerName) {
-      window.alert('กรุณาเลือกผู้ต้องขัง');
+      ui.showAlert({ title: 'กรุณาเลือกผู้ต้องขัง', message: 'กรุณาเลือกผู้ต้องขังจากรายการค้นหา', type: 'warning' });
       return;
     }
     if (prisonerRestricted) {
-      window.alert('⚠️ ไม่สามารถจองได้ — ผู้ต้องขังนี้มีสถานะติดวินัย งดเยี่ยม ไม่สามารถจองเยี่ยมได้');
+      ui.showAlert({ title: 'ไม่สามารถจองได้', message: '⚠️ ผู้ต้องขังนี้มีสถานะติดวินัย งดเยี่ยม ไม่สามารถจองเยี่ยมได้', type: 'error' });
       return;
     }
     if (!visitDateISO) {
-      window.alert('กรุณาเลือกวันเข้างาน');
+      ui.showAlert({ title: 'กรุณาเลือกวันเข้างาน', message: 'กรุณาเลือกวันเข้างาน', type: 'warning' });
       return;
     }
     await onsubmit(buildFields());

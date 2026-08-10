@@ -90,11 +90,11 @@
 
   function exportCSV(): void {
     if (inRange.length === 0) {
-      ui.showToast('ไม่มีข้อมูลในช่วงวันที่เลือก', 'warning');
+      ui.showAlert({ title: 'ไม่มีข้อมูล', message: 'ไม่มีข้อมูลในช่วงวันที่เลือก', type: 'warning' });
       return;
     }
     exportReservationsCSV(inRange);
-    ui.showToast('ส่งออกไฟล์ CSV สำเร็จ', 'success');
+    ui.showAlert({ title: 'ส่งออกไฟล์ CSV สำเร็จ', message: `ส่งออก ${inRange.length} รายการเรียบร้อย`, type: 'success' });
   }
 
   const dayRows = $derived.by(() => {
@@ -111,11 +111,11 @@
   function doPrint(build: (rows: Reservation[], date: string) => string, title: string): void {
     const rows = dayRows.slice().sort((a, b) => String(a.ref).localeCompare(String(b.ref)));
     if (rows.length === 0) {
-      ui.showToast('ไม่มีรายการสถานะ เสร็จสิ้น ในวันที่เลือก', 'warning');
+      ui.showAlert({ title: 'ไม่มีข้อมูล', message: 'ไม่มีรายการสถานะ เสร็จสิ้น ในวันที่เลือก', type: 'warning' });
       return;
     }
     const ok = openPrintWindow(build(rows, reportDate), title, printerName);
-    if (!ok) ui.showToast('กรุณาอนุญาต Popup เพื่อเปิดหน้าพิมพ์', 'warning');
+    if (!ok) ui.showAlert({ title: 'กรุณาอนุญาต Popup', message: 'กรุณาอนุญาต Popup เพื่อเปิดหน้าพิมพ์', type: 'warning' });
   }
 </script>
 

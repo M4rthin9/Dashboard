@@ -1,14 +1,24 @@
+export type AlertType = 'success' | 'error' | 'warning' | 'info';
+
 export interface Toast {
   id: number;
   message: string;
-  type: 'success' | 'error' | 'warning' | 'info';
+  type: AlertType;
   ok?: string;
+}
+
+export interface AlertBox {
+  title: string;
+  message?: string;
+  type: AlertType;
+  okText?: string;
 }
 
 class UIStore {
   sidebarOpen = $state(false);
   darkMode = $state(false);
   toasts = $state<Toast[]>([]);
+  alert = $state<AlertBox | null>(null);
   private toastSeq = 0;
 
   toggleSidebar(): void {
@@ -47,6 +57,14 @@ class UIStore {
 
   dismissToast(id: number): void {
     this.toasts = this.toasts.filter((t) => t.id !== id);
+  }
+
+  showAlert(options: AlertBox): void {
+    this.alert = options;
+  }
+
+  closeAlert(): void {
+    this.alert = null;
   }
 }
 

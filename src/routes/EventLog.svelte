@@ -52,7 +52,7 @@
       logs = (data.logs ?? []).sort((a, b) => String(b.timestamp ?? '').localeCompare(String(a.timestamp ?? '')));
     } catch (err) {
       error = err instanceof Error ? err.message : 'ไม่สามารถโหลดข้อมูลได้';
-      ui.showToast(error, 'error');
+      ui.showAlert({ title: 'ไม่สามารถโหลดข้อมูลได้', message: error, type: 'error' });
     } finally {
       loading = false;
     }

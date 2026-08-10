@@ -44,6 +44,7 @@
   let formMode = $state<'edit' | 'create' | null>(null);
   let formSaving = $state(false);
   let prisoners = $state<Prisoner[]>([]);
+  let dateFilterInitialized = $state(false);
 
   const role = $derived(auth.user?.role ?? 'User');
   const isAdminOrSuper = $derived(role === 'Superadmin' || role === 'Admin');
@@ -101,11 +102,16 @@
     });
   });
 
+  function sortValue(row: Reservation, key: string): unknown {
+    if (key === 'timestamp') return row.timestamp ?? row.createdAt ?? row.updatedAt ?? '';
+    return row[key];
+  }
+
   const sorted = $derived.by(() => {
     const rows = filtered.slice();
     rows.sort((a, b) => {
-      const av = a[sortKey];
-      const bv = b[sortKey];
+      const av = sortValue(a, sortKey);
+      const bv = sortValue(b, sortKey);
       const cmp =
         typeof av === 'number' || typeof bv === 'number'
           ? (Number(av) || 0) - (Number(bv) || 0)
@@ -122,6 +128,13 @@
 
   $effect(() => {
     if (page > totalPages) page = totalPages;
+  });
+
+  $effect(() => {
+    if (!dateFilterInitialized && dates.length > 0) {
+      dateFilterInitialized = true;
+      dateFilter = dates[0];
+    }
   });
 
   $effect(() => {
@@ -172,9 +185,9 @@
     if (!window.confirm(`ยืนยันเปลี่ยนสถานะของ "${name}" เป็น "${newStatus}" ?`)) return;
     try {
       await reservations.updateStatus(row.ref, newStatus);
-      ui.showToast('เปลี่ยนสถานะการจองสำเร็จ', 'success');
+      ui.showAlert({ title: 'เปลี่ยนสถานะการจองสำเร็จ', message: `${name} · ${row.ref} → ${newStatus}`, type: 'success' });
     } catch (err) {
-      ui.showToast(err instanceof Error ? err.message : 'ไม่สามารถเปลี่ยนสถานะได้', 'error');
+      ui.showAlert({ title: 'ไม่สามารถเปลี่ยนสถานะได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
     }
   }
 
@@ -199,7 +212,7 @@
   async function submitCancel(): Promise<void> {
     const reason = cancelReason.trim();
     if (!reason) {
-      ui.showToast('กรุณาระบุเหตุผลในการยกเลิก', 'error');
+      ui.showAlert({ title: 'กรุณาระบุเหตุผลในการยกเลิก', message: 'ต้องระบุเหตุผลก่อนยืนยันการยกเลิก', type: 'error' });
       return;
     }
     let refs = cancelMode === 'bulk' ? selectedRefs : [cancelRef];
@@ -209,7 +222,7 @@
     if (expired.length > 0 && refs.length === 0) {
       closeCancel();
       if (cancelMode === 'bulk') clearSelection();
-      ui.showToast('หมดวันเข้างานแล้ว ไม่สามารถยกเลิกได้', 'error');
+      ui.showAlert({ title: 'ไม่สามารถยกเลิกได้', message: 'หมดวันเข้างานแล้ว ไม่สามารถยกเลิกได้', type: 'error' });
       return;
     }
     let success = 0;
@@ -225,12 +238,13 @@
     if (cancelMode === 'bulk') clearSelection();
     if (success > 0) {
       const skipNote = expired.length > 0 ? ` (ข้าม ${expired.length} รายการที่หมดวัน)` : '';
-      ui.showToast(
-        `ยกเลิกสำเร็จ ${success}/${refs.length + expired.length} รายการ${skipNote}`,
-        success === refs.length ? 'success' : 'warning'
-      );
+      ui.showAlert({
+        title: 'ยกเลิกการจองสำเร็จ',
+        message: `ยกเลิกสำเร็จ ${success}/${refs.length + expired.length} รายการ${skipNote}`,
+        type: success === refs.length ? 'success' : 'warning',
+      });
     } else {
-      ui.showToast('ไม่สามารถยกเลิกการจองได้', 'error');
+      ui.showAlert({ title: 'ไม่สามารถยกเลิกการจองได้', message: 'กรุณาลองใหม่อีกครั้ง', type: 'error' });
     }
   }
 
@@ -252,27 +266,31 @@
       }
     }
     batchRunning = '';
-    ui.showToast(`${label}สำเร็จ ${success}/${batch.length} รายการ`, success > 0 ? 'success' : 'error');
+    ui.showAlert({
+      title: `${label}เสร็จสิ้น`,
+      message: `${label}สำเร็จ ${success}/${batch.length} รายการ`,
+      type: success > 0 ? 'success' : 'error',
+    });
   }
 
   function doExport(): void {
     if (sorted.length === 0) {
-      ui.showToast('ไม่มีข้อมูลตาม filter ที่เลือก', 'warning');
+      ui.showAlert({ title: 'ไม่มีข้อมูล', message: 'ไม่มีข้อมูลตาม filter ที่เลือก', type: 'warning' });
       return;
     }
     exportReservationsCSV(sorted);
-    ui.showToast('ส่งออกไฟล์ CSV สำเร็จ', 'success');
+    ui.showAlert({ title: 'ส่งออกไฟล์ CSV สำเร็จ', message: `ส่งออก ${sorted.length} รายการเรียบร้อย`, type: 'success' });
   }
 
   function doPrint(): void {
     if (sorted.length === 0) {
-      ui.showToast('ไม่มีข้อมูลตาม filter ที่เลือก', 'warning');
+      ui.showAlert({ title: 'ไม่มีข้อมูล', message: 'ไม่มีข้อมูลตาม filter ที่เลือก', type: 'warning' });
       return;
     }
     const rows = sorted.slice().sort((a, b) => String(a.ref).localeCompare(String(b.ref)));
     const printerName = auth.user?.displayName || auth.user?.username || 'ไม่ระบุ';
     const ok = openPrintWindow(buildSeatingReport(rows), 'รายงานการจัดโต๊ะ', printerName);
-    if (!ok) ui.showToast('กรุณาอนุญาต Popup เพื่อเปิดหน้าพิมพ์', 'warning');
+    if (!ok) ui.showAlert({ title: 'กรุณาอนุญาต Popup', message: 'กรุณาอนุญาต Popup เพื่อเปิดหน้าพิมพ์', type: 'warning' });
   }
 
   function openDetail(row: Reservation): void {
@@ -311,13 +329,14 @@
     paymentSaving = true;
     try {
       await reservations.updateStatus(row.ref, paymentMode);
-      ui.showToast(
-        paymentMode === 'เสร็จสิ้น' ? 'ยืนยันการเสร็จสิ้นสำเร็จ' : 'ยืนยันการชำระเงินสำเร็จ',
-        'success'
-      );
+      ui.showAlert({
+        title: paymentMode === 'เสร็จสิ้น' ? 'ยืนยันการเสร็จสิ้นสำเร็จ' : 'ยืนยันการชำระเงินสำเร็จ',
+        message: `${row.visitorName} · ${row.ref} สถานะเป็น "${paymentMode}"`,
+        type: 'success',
+      });
       closePaymentApproval();
     } catch (err) {
-      ui.showToast(err instanceof Error ? err.message : 'ไม่สามารถยืนยันได้', 'error');
+      ui.showAlert({ title: 'ไม่สามารถยืนยันได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
       closePaymentApproval();
     } finally {
       paymentSaving = false;
@@ -347,13 +366,16 @@
     try {
       if (formMode === 'edit' && detailRow) {
         await reservations.updateBooking(detailRow.ref, fields);
-        ui.showToast('บันทึกการแก้ไขสำเร็จ', 'success');
+        ui.showAlert({
+          title: 'บันทึกการแก้ไขสำเร็จ',
+          message: `${detailRow.ref} · ${String(fields.prisonerName ?? '')} / ${String(fields.visitorName ?? '')}`,
+          type: 'success',
+        });
       } else if (formMode === 'create') {
         const ref = await reservations.createBooking(fields);
-        ui.showToast(
-          [
-            'สร้างการจองสำเร็จ',
-            '',
+        ui.showAlert({
+          title: 'สร้างการจองสำเร็จ',
+          message: [
             `เลขที่การจอง: ${ref}`,
             `ผู้เยี่ยม: ${String(fields.visitorName ?? '')}`,
             `ผู้ต้องขัง: ${String(fields.prisonerName ?? '')}`,
@@ -361,15 +383,13 @@
             `วันเข้างาน: ${String(fields.visitDate ?? fields.visitDateISO ?? '')}`,
             `จำนวน: ${formatNumber(Number(fields.visitorCount) || 0)} คน · ${formatBaht(Number(fields.total) || 0)}`,
           ].join('\n'),
-          'success',
-          0,
-          'ตกลง'
-        );
+          type: 'success',
+        });
       }
       formSaving = false;
       closeForm();
     } catch (err) {
-      ui.showToast(err instanceof Error ? err.message : 'ไม่สามารถบันทึกได้', 'error');
+      ui.showAlert({ title: 'ไม่สามารถบันทึกได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
     } finally {
       formSaving = false;
     }

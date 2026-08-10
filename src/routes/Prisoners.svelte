@@ -55,7 +55,7 @@
       rows = (res.prisoners ?? []).sort((a, b) => a.prisonerId.localeCompare(b.prisonerId));
     } catch (err) {
       error = err instanceof Error ? err.message : 'ไม่สามารถโหลดข้อมูลได้';
-      ui.showToast(error, 'error');
+      ui.showAlert({ title: 'ไม่สามารถโหลดข้อมูลได้', message: error, type: 'error' });
     } finally {
       loading = false;
     }
@@ -93,7 +93,7 @@
     importErrors = errs;
     if (cleaned.length > 5000) importErrors.push('ข้อมูลเกิน 5000 รายการ ระบบจะนำเข้าเพียง 5000 รายการแรก');
     if (parsed.length === 0) {
-      ui.showToast('ไม่พบข้อมูลที่สามารถนำเข้าได้ (ควรมีคอลัมน์ เลขผู้ต้องขัง และ ชื่อ-นามสกุล)', 'warning');
+      ui.showAlert({ title: 'ไม่พบข้อมูลที่นำเข้าได้', message: 'ไม่พบข้อมูลที่สามารถนำเข้าได้ (ควรมีคอลัมน์ เลขผู้ต้องขัง และ ชื่อ-นามสกุล)', type: 'warning' });
     }
   }
 
@@ -103,15 +103,15 @@
     try {
       const res = await importPrisoners(parsed);
       if (res.status !== 'ok') {
-        ui.showToast(String(res.message ?? 'นำเข้าไม่สำเร็จ'), 'error');
+        ui.showAlert({ title: 'นำเข้าไม่สำเร็จ', message: String(res.message ?? 'เกิดข้อผิดพลาด'), type: 'error' });
         return;
       }
-      ui.showToast(String(res.message ?? 'นำเข้าสำเร็จ'), 'success');
+      ui.showAlert({ title: 'นำเข้าสำเร็จ', message: String(res.message ?? 'นำเข้าข้อมูลผู้ต้องขังเรียบร้อย'), type: 'success' });
       if (res.errors && res.errors.length > 0) importErrors = [...importErrors, ...res.errors];
       importOpen = false;
       await fetchData();
     } catch (err) {
-      ui.showToast(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', 'error');
+      ui.showAlert({ title: 'เกิดข้อผิดพลาด', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
     } finally {
       importing = false;
     }
@@ -122,12 +122,12 @@
     try {
       const res = await syncPrisonerWings();
       if (res.status !== 'ok') {
-        ui.showToast(String(res.message ?? 'ซิงค์ไม่สำเร็จ'), 'error');
+        ui.showAlert({ title: 'ซิงค์ไม่สำเร็จ', message: String(res.message ?? 'เกิดข้อผิดพลาด'), type: 'error' });
         return;
       }
-      ui.showToast(String(res.message ?? 'ซิงค์แดนสำเร็จ'), 'success');
+      ui.showAlert({ title: 'ซิงค์แดนสำเร็จ', message: String(res.message ?? 'ซิงค์ข้อมูลแดนเรียบร้อย'), type: 'success' });
     } catch (err) {
-      ui.showToast(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', 'error');
+      ui.showAlert({ title: 'เกิดข้อผิดพลาด', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
     } finally {
       syncing = false;
     }

@@ -3,6 +3,7 @@
   import AppLayout from './lib/components/layout/AppLayout.svelte';
   import LazyRoute from './lib/components/LazyRoute.svelte';
   import ToastContainer from './lib/components/ui/ToastContainer.svelte';
+  import AlertBox from './lib/components/ui/AlertBox.svelte';
   import { ui } from './lib/store/ui.svelte';
   import { resolveRoute } from './lib/router';
 
@@ -15,6 +16,7 @@
 
 <svelte:boundary {onerror}>
   <ToastContainer />
+  <AlertBox />
 
   {#if route.path === '/login'}
     <LazyRoute {route} />

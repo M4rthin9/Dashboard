@@ -291,10 +291,10 @@
     paymentSaving = true;
     try {
       await reservations.updateStatus(row.ref, 'ชำระแล้ว');
-      ui.showToast('ยืนยันการชำระเงินสำเร็จ', 'success');
+      ui.showAlert({ title: 'ยืนยันการชำระเงินสำเร็จ', message: `${row.visitorName ?? ''} · ${row.ref}`, type: 'success' });
       closePaymentApproval();
     } catch (err) {
-      ui.showToast(err instanceof Error ? err.message : 'ไม่สามารถยืนยันได้', 'error');
+      ui.showAlert({ title: 'ไม่สามารถยืนยันได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
       closePaymentApproval();
     } finally {
       paymentSaving = false;
