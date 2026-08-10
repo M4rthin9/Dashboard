@@ -125,22 +125,22 @@
       <div class="flex flex-col gap-1.5">
         <label for="rep-from" class="text-xs font-medium text-slate-500 dark:text-slate-400">จากวันที่</label>
         <input id="rep-from" type="date" bind:value={from}
-          class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" />
+          class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" />
       </div>
       <div class="flex flex-col gap-1.5">
         <label for="rep-to" class="text-xs font-medium text-slate-500 dark:text-slate-400">ถึงวันที่</label>
         <input id="rep-to" type="date" bind:value={to}
-          class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" />
+          class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" />
       </div>
-      <button class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" onclick={() => { from = todayISO(); to = todayISO(); }}>
+      <button class="rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" onclick={() => { from = todayISO(); to = todayISO(); }}>
         วันนี้
       </button>
     </div>
     <div class="flex gap-2">
-      <button class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" onclick={() => reservations.refresh()} aria-label="โหลดใหม่">
+      <button class="rounded-xl p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" onclick={() => reservations.refresh()} aria-label="โหลดใหม่">
         <RefreshCw class="h-4 w-4" />
       </button>
-      <button class="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700" onclick={exportCSV}>
+      <button class="rounded-xl bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700" onclick={exportCSV}>
         <span class="flex items-center gap-1.5"><Download class="h-4 w-4" /> ส่งออก CSV</span>
       </button>
     </div>
@@ -154,22 +154,22 @@
         <div class="flex flex-col gap-1.5">
           <label for="rep-print-date" class="text-xs font-medium text-slate-500 dark:text-slate-400">วันที่พิมพ์</label>
           <input id="rep-print-date" type="date" bind:value={reportDate}
-            class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" />
+            class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" />
         </div>
         <button
-          class="inline-flex items-center gap-1.5 rounded-lg bg-red-700 px-3 py-2 text-sm font-medium text-white hover:bg-red-800"
+          class="inline-flex items-center gap-1.5 rounded-xl bg-red-700 px-3 py-2 text-sm font-medium text-white hover:bg-red-800"
           onclick={() => doPrint(buildDisciplinaryReport, 'รายงานส่วนทัณฑ์ (ปกครองกลาง)')}
         >
           <Printer class="h-4 w-4" /> ปกครองกลาง / ส่วนทัณฑ์
         </button>
         <button
-          class="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+          class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
           onclick={() => doPrint(buildGateRegistrationReport, 'ทะเบียนผู้เข้าเยี่ยม')}
         >
           <Printer class="h-4 w-4" /> ทะเบียนผู้เข้าเยี่ยม (ลงชื่อ)
         </button>
         <button
-          class="inline-flex items-center gap-1.5 rounded-lg bg-green-700 px-3 py-2 text-sm font-medium text-white hover:bg-green-800"
+          class="inline-flex items-center gap-1.5 rounded-xl bg-green-700 px-3 py-2 text-sm font-medium text-white hover:bg-green-800"
           onclick={() => doPrint(buildKitchenReport, 'ครัว + เบเกอรี่')}
         >
           <Printer class="h-4 w-4" /> ครัว + เบเกอรี่
@@ -235,25 +235,25 @@
     </Card>
 
     <Card title={`รายการจอง ({inRange.length} รายการ)`}>
-      <div class="max-h-[420px] overflow-auto rounded-lg border border-slate-200 dark:border-slate-700">
+      <div class="overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700">
         <table class="w-full min-w-[700px] text-left text-sm">
-          <thead class="sticky top-0 bg-white dark:bg-slate-900">
-            <tr class="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
-              <th class="px-3 py-2 font-medium">REF</th>
-              <th class="px-3 py-2 font-medium">ผู้ต้องขัง</th>
-              <th class="px-3 py-2 font-medium">วันที่เข้าเยี่ยม</th>
-              <th class="px-3 py-2 font-medium">สถานะ</th>
-              <th class="px-3 py-2 text-right font-medium">ยอดชำระ</th>
+          <thead class="sticky top-0 bg-slate-50 dark:bg-slate-800/50">
+            <tr class="border-b border-slate-200 dark:border-slate-800">
+              <th class="min-w-[90px] px-3 py-2.5 text-xs font-medium text-slate-500 dark:text-slate-400">REF</th>
+              <th class="min-w-[160px] px-3 py-2.5 text-xs font-medium text-slate-500 dark:text-slate-400">ผู้ต้องขัง</th>
+              <th class="min-w-[120px] px-3 py-2.5 text-xs font-medium text-slate-500 dark:text-slate-400">วันที่เข้าเยี่ยม</th>
+              <th class="min-w-[110px] px-3 py-2.5 text-xs font-medium text-slate-500 dark:text-slate-400">สถานะ</th>
+              <th class="w-[100px] px-3 py-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">ยอดชำระ</th>
             </tr>
           </thead>
           <tbody>
             {#each inRange.slice(0, 200) as r (r.ref)}
-              <tr class="border-b border-slate-100 last:border-0 dark:border-slate-800">
-                <td class="px-3 py-2 font-mono text-xs">{r.ref}</td>
-                <td class="px-3 py-2">{r.prisonerName}</td>
-                <td class="px-3 py-2 text-xs">{r.visitDate}</td>
-                <td class="px-3 py-2 text-xs">{r.status}</td>
-                <td class="px-3 py-2 text-right">{formatBaht(r.total)}</td>
+              <tr class="border-b border-slate-200 last:border-0 hover:bg-slate-50/50 dark:border-slate-800 dark:hover:bg-slate-800/30">
+                <td class="px-3 py-2 font-mono text-xs text-slate-800 dark:text-slate-200">{r.ref}</td>
+                <td class="px-3 py-2 text-slate-700 dark:text-slate-200">{r.prisonerName}</td>
+                <td class="px-3 py-2 text-xs text-slate-500 dark:text-slate-400">{r.visitDate}</td>
+                <td class="px-3 py-2 text-xs text-slate-600 dark:text-slate-300">{r.status}</td>
+                <td class="px-3 py-2 text-right text-xs text-slate-700 dark:text-slate-200">{formatBaht(r.total)}</td>
               </tr>
             {/each}
           </tbody>

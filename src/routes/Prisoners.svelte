@@ -197,22 +197,22 @@
 </script>
 
 <div class="flex flex-col gap-4">
-  <Card title="ผู้ต้องขัง" subtitle="ฐานข้อมูลผู้ต้องขังทั้งหมด ({rows.length} รายการ)">
-    <div class="flex flex-col gap-3">
-      <div class="flex flex-wrap items-center gap-2">
+  <Card title="ผู้ต้องขัง" subtitle="ฐานข้อมูลผู้ต้องขังทั้งหมด ({rows.length} รายการ)" interactive>
+    <div class="flex flex-col gap-4">
+      <div class="flex flex-wrap items-center gap-3">
         <div class="relative min-w-0 flex-1">
-          <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="search"
             bind:value={search}
             placeholder="ค้นหาเลขผู้ต้องขัง, ชื่อ, แดน..."
-            class="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            class="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 transition-colors duration-150 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
           />
         </div>
         {#if wings.length > 0}
           <select
             bind:value={wingFilter}
-            class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            class="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 transition-colors duration-150 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
             aria-label="กรองตามแดน"
           >
             <option value="">ทุกแดน</option>
@@ -222,20 +222,20 @@
           </select>
         {/if}
         {#if isManager}
-          <button class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" onclick={doSyncWings} disabled={syncing}>
+          <button class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors duration-150 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" onclick={doSyncWings} disabled={syncing}>
             {syncing ? 'กำลังซิงค์...' : 'ซิงค์แดน'}
           </button>
-          <button class="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700" onclick={openImport}>
+          <button class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-indigo-700 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2" onclick={openImport}>
             <span class="flex items-center gap-1.5"><Upload class="h-4 w-4" /> นำเข้า CSV</span>
           </button>
-          <button class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" onclick={() => exportPrisonersCSV(rows)}>
+          <button class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors duration-150 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" onclick={() => exportPrisonersCSV(rows)}>
             <span class="flex items-center gap-1.5"><Download class="h-4 w-4" /> ส่งออก CSV</span>
           </button>
-          <button class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" onclick={downloadPrisonerTemplate} aria-label="ดาวน์โหลดแบบฟอร์ม">
-            <span class="flex items-center gap-1.5"><FileDown class="h-4 w-4" /> แบบฟอร์ม</span>
+          <button class="rounded-xl border border-slate-300 p-2 text-slate-500 transition-colors duration-150 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800" onclick={downloadPrisonerTemplate} aria-label="ดาวน์โหลดแบบฟอร์ม">
+            <FileDown class="h-4 w-4" />
           </button>
         {/if}
-        <button class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" onclick={fetchData} aria-label="โหลดใหม่">
+        <button class="rounded-xl p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" onclick={fetchData} aria-label="โหลดใหม่">
           <RefreshCw class="h-4 w-4" />
         </button>
       </div>
@@ -243,7 +243,7 @@
       {#if loading && rows.length === 0}
         <div class="flex items-center justify-center py-16"><Spinner /></div>
       {:else if error}
-        <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">{error}</div>
+        <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">{error}</div>
       {:else}
         <div class="overflow-x-auto">
           <table class="w-full min-w-[700px] text-left text-sm">
@@ -281,7 +281,7 @@
                   <td class="max-w-[220px] truncate px-3 py-2.5 text-xs text-slate-500 dark:text-slate-400">{p.note || ''}</td>
                   {#if isManager}
                     <td class="px-3 py-2.5 text-right">
-                      <button class="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:hover:bg-slate-800" onclick={() => openEdit(p)} aria-label="แก้ไข">
+                      <button class="rounded-xl p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:hover:bg-slate-800" onclick={() => openEdit(p)} aria-label="แก้ไข">
                         <Pencil class="h-4 w-4" />
                       </button>
                     </td>
@@ -303,7 +303,7 @@
           <div class="flex items-center gap-2">
             <select
               bind:value={pageSize}
-              class="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+              class="rounded-xl border border-slate-300 bg-white px-2 py-1.5 text-sm focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
               aria-label="จำนวนรายการต่อหน้า"
             >
               <option value={10}>10</option>
@@ -320,7 +320,7 @@
 
 <Modal open={importOpen} title="นำเข้าข้อมูลผู้ต้องขัง (CSV)" onclose={() => (importOpen = false)} width="max-w-2xl">
   <div class="flex flex-col gap-4">
-    <div class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+    <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
       <p>
         คอลัมน์ที่รองรับ: <span class="font-mono">เลขผู้ต้องขัง</span>, <span class="font-mono">ชื่อ-นามสกุล</span> (จำเป็น) และ
         <span class="font-mono">แดน</span>, <span class="font-mono">สถานะ</span>, <span class="font-mono">วันกระทำความผิด/ไถ่ถอน</span>, <span class="font-mono">หมายเหตุ</span>
@@ -334,7 +334,7 @@
     <div>
       <label
         for="csv-file"
-        class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-6 text-center transition-colors {dragging ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40' : 'border-slate-300 hover:border-indigo-400 hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800'}"
+        class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-center transition-colors {dragging ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40' : 'border-slate-300 hover:border-indigo-400 hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800'}"
         ondragover={(e) => {
           e.preventDefault();
           dragging = true;
@@ -370,37 +370,37 @@
         rows="6"
         oninput={(e) => parseCSV((e.currentTarget as HTMLTextAreaElement).value)}
         placeholder="เลขผู้ต้องขัง,ชื่อ-นามสกุล,แดน,สถานะ,วันกระทำความผิด/ไถ่ถอน,หมายเหตุ&#10;12345,นายสมชาย ใจดี,แดน 1,,,"
-        class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+        class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-mono text-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
       ></textarea>
     </div>
 
     {#if parsed.length > 0}
-      <div class="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-green-900 dark:bg-green-950 dark:text-green-300">
+      <div class="rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-green-900 dark:bg-green-950 dark:text-green-300">
         พร้อมนำเข้า {parsed.length} รายการ — เพิ่มใหม่ {addCount} รายการ, อัปเดต {updateCount} รายการ
       </div>
-      <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+      <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
         <table class="w-full min-w-[600px] text-left text-xs">
           <thead>
-            <tr class="border-b border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
-              <th class="px-3 py-2 font-medium">เลขผู้ต้องขัง</th>
-              <th class="px-3 py-2 font-medium">ชื่อ-นามสกุล</th>
-              <th class="px-3 py-2 font-medium">แดน</th>
-              <th class="px-3 py-2 font-medium">สถานะ</th>
-              <th class="px-3 py-2 font-medium">ประเภท</th>
+            <tr class="bg-slate-50 dark:bg-slate-800/50">
+              <th class="min-w-[120px] px-3 py-2.5 text-xs font-medium text-slate-500 dark:text-slate-400">เลขผู้ต้องขัง</th>
+              <th class="min-w-[140px] px-3 py-2.5 text-xs font-medium text-slate-500 dark:text-slate-400">ชื่อ-นามสกุล</th>
+              <th class="min-w-[80px] px-3 py-2.5 text-xs font-medium text-slate-500 dark:text-slate-400">แดน</th>
+              <th class="min-w-[110px] px-3 py-2.5 text-xs font-medium text-slate-500 dark:text-slate-400">สถานะ</th>
+              <th class="min-w-[90px] px-3 py-2.5 text-xs font-medium text-slate-500 dark:text-slate-400">ประเภท</th>
             </tr>
           </thead>
           <tbody>
             {#each parsed.slice(0, 5) as p (p.prisonerId + p.prisonerName)}
-              <tr class="border-b border-slate-100 last:border-0 dark:border-slate-800">
-                <td class="px-3 py-2 font-mono">{p.prisonerId}</td>
-                <td class="px-3 py-2">{p.prisonerName}</td>
-                <td class="px-3 py-2">{p.wing}</td>
-                <td class="px-3 py-2">{p.status}</td>
-                <td class="px-3 py-2">
+              <tr class="border-b border-slate-200 last:border-0 hover:bg-slate-50/50 dark:border-slate-800 dark:hover:bg-slate-800/30">
+                <td class="px-3 py-2.5 font-mono text-xs text-slate-800 dark:text-slate-200">{p.prisonerId}</td>
+                <td class="px-3 py-2.5 text-slate-700 dark:text-slate-200">{p.prisonerName}</td>
+                <td class="px-3 py-2.5 text-slate-600 dark:text-slate-300">{p.wing}</td>
+                <td class="px-3 py-2.5 text-slate-600 dark:text-slate-300">{p.status}</td>
+                <td class="px-3 py-2.5">
                   {#if p.isNew}
-                    <span class="inline-block rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">เพิ่มใหม่</span>
+                    <span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">เพิ่มใหม่</span>
                   {:else}
-                    <span class="inline-block rounded-full bg-sky-100 px-2 py-0.5 font-medium text-sky-700 dark:bg-sky-950 dark:text-sky-300">อัปเดต</span>
+                    <span class="inline-flex items-center rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-950 dark:text-sky-300">อัปเดต</span>
                   {/if}
                 </td>
               </tr>
@@ -411,7 +411,7 @@
     {/if}
 
     {#if importErrors.length > 0}
-      <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
+      <div class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
         {#each importErrors as e (e)}
           <p>{e}</p>
         {/each}
@@ -419,8 +419,8 @@
     {/if}
 
     <div class="flex justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
-      <button class="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" onclick={() => (importOpen = false)}>ปิด</button>
-      <button class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50" onclick={submitImport} disabled={importing || parsed.length === 0}>
+      <button class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition-colors duration-150 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" onclick={() => (importOpen = false)}>ปิด</button>
+      <button class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-indigo-700 disabled:opacity-50" onclick={submitImport} disabled={importing || parsed.length === 0}>
         {importing ? 'กำลังนำเข้า...' : `นำเข้า ${parsed.length} รายการ`}
       </button>
     </div>
