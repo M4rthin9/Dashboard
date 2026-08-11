@@ -16,6 +16,7 @@
      UsersRound,
    } from '@lucide/svelte';
   import Modal from './ui/Modal.svelte';
+  import Button from './ui/Button.svelte';
   import Badge from './ui/Badge.svelte';
   import { formatBaht, formatNumber, formatDateTimeThai, normalizeStatus } from '../utils/format';
   import type { Reservation } from '../api/types';
@@ -370,4 +371,7 @@
       </div>
     </div>
   {/if}
+  {#snippet footer()}
+    <Button variant="outline" onclick={onclose}>ปิด</Button>
+  {/snippet}
 </Modal>

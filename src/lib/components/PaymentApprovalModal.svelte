@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Banknote, CalendarDays, Check, CreditCard, ExternalLink, ImageOff, Info, ShieldCheck, User } from '@lucide/svelte';
   import Modal from './ui/Modal.svelte';
+  import Button from './ui/Button.svelte';
   import Badge from './ui/Badge.svelte';
   import { formatBaht, formatDateTimeThai } from '../utils/format';
   import type { Reservation } from '../api/types';
@@ -164,28 +165,17 @@
         <span>{isDone ? 'ยืนยันแล้วสถานะจะเปลี่ยนเป็น "เสร็จสิ้น" และไม่สามารถแก้ไขได้อีก' : 'ยืนยันแล้วสถานะจะเปลี่ยนเป็น "ชำระแล้ว" และคุณจะต้องยืนยันเสร็จสิ้นอีกครั้ง'}</span>
       </div>
 
-      <div class="flex justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
-          <button
-            class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
-            onclick={onclose}
-            disabled={busy}
-          >
-            กลับ
-          </button>
-          <button
-            class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
-            onclick={confirm}
-            disabled={busy}
-          >
-          {#if busy}
-            <span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span>
-            กำลังบันทึก...
-          {:else}
-            <Check class="h-4 w-4" />
-            {isDone ? 'ยืนยันเสร็จสิ้น' : 'ยืนยันชำระเงิน'}
-          {/if}
-        </button>
-      </div>
     </div>
   {/if}
+  {#snippet footer()}
+    <Button variant="outline" onclick={onclose} disabled={busy}>กลับ</Button>
+    <Button variant={isDone ? 'success' : 'primary'} onclick={confirm} loading={busy}>
+      {#if busy}
+        กำลังบันทึก...
+      {:else}
+        <Check class="h-4 w-4" />
+        {isDone ? 'ยืนยันเสร็จสิ้น' : 'ยืนยันชำระเงิน'}
+      {/if}
+    </Button>
+  {/snippet}
 </Modal>

@@ -291,3 +291,152 @@ export function computeTodaysVisits(rows: Reservation[]): Reservation[] {
   const today = toLocalDateStr(new Date());
   return rows.filter((r) => visitKeyOf(r) === today);
 }
+
+export interface FinancialAgg {
+  bookings: number;
+  attended: number;
+  visitors: number;
+  prisoners: number;
+  paid: number;
+  pending: number;
+  total: number;
+}
+
+export interface FinancialSummary extends FinancialAgg {
+  distinctPrisoners: number;
+  paidPct: number;
+}
+
+export interface FinancialDayRow extends FinancialAgg {
+  date: string;
+}
+
+export interface FinancialMonthRow extends FinancialAgg {
+  month: string;
+}
+
+export function financialDateOf(r: Reservation): string {
+  return String(r.visitDateISO ?? '').trim() || String(r.visitDate ?? '').trim();
+}
+
+export function isFinancialAttended(r: Reservation): boolean {
+  const s = normalizeStatus(r.status);
+  return s === 'ชำระแล้ว' || s === 'เสร็จสิ้น';
+}
+
+function isFinancialExcluded(r: Reservation): boolean {
+  const s = normalizeStatus(r.status);
+  return s === 'ยกเลิก' || s === 'ไม่อนุมัติ';
+}
+
+function aggregateFinancial(rows: Reservation[]): FinancialAgg {
+  const agg: FinancialAgg = { bookings: 0, attended: 0, visitors: 0, prisoners: 0, paid: 0, pending: 0, total: 0 };
+  for (const r of rows) {
+    if (isFinancialExcluded(r)) continue;
+    const amt = Number(r.total) || 0;
+    agg.bookings++;
+    agg.total += amt;
+    if (isFinancialAttended(r)) {
+      agg.attended++;
+      agg.visitors += Number(r.visitorCount) || 0;
+      agg.prisoners += 1;
+      agg.paid += amt;
+    } else if (normalizeStatus(r.status) === 'รอชำระเงิน') {
+      agg.pending += amt;
+    }
+  }
+  return agg;
+}
+
+export function computeFinancialSummary(rows: Reservation[]): FinancialSummary {
+  const agg = aggregateFinancial(rows);
+  const prisoners = new Set<string>();
+  for (const r of rows) {
+    if (!isFinancialAttended(r)) continue;
+    const id = String(r.prisonerId ?? '').trim();
+    if (id) prisoners.add(id);
+  }
+  const paidPct = agg.total > 0 ? Math.round((agg.paid / agg.total) * 100) : 0;
+  return { ...agg, distinctPrisoners: prisoners.size, paidPct };
+}
+
+export function buildDailyFinancialReport(rows: Reservation[], fromISO: string, toISO: string): FinancialDayRow[] {
+  const byDate = new Map<string, Reservation[]>();
+  for (const r of rows) {
+    const d = financialDateOf(r);
+    if (!d) continue;
+    const list = byDate.get(d);
+    if (list) list.push(r);
+    else byDate.set(d, [r]);
+  }
+  const out: FinancialDayRow[] = [];
+  const cur = new Date(`${fromISO}T00:00:00`);
+  const end = new Date(`${toISO}T00:00:00`);
+  while (cur <= end) {
+    const key = toLocalDateStr(cur);
+    const agg = aggregateFinancial(byDate.get(key) ?? []);
+    out.push({ date: key, ...agg });
+    cur.setDate(cur.getDate() + 1);
+  }
+  return out;
+}
+
+export function buildMonthlyFinancialReport(rows: Reservation[], fromMonth: string, toMonth: string): FinancialMonthRow[] {
+  const byMonth = new Map<string, Reservation[]>();
+  for (const r of rows) {
+    const key = financialDateOf(r).slice(0, 7);
+    if (!key) continue;
+    const list = byMonth.get(key);
+    if (list) list.push(r);
+    else byMonth.set(key, [r]);
+  }
+  const out: FinancialMonthRow[] = [];
+  let y = Number(fromMonth.slice(0, 4));
+  let m = Number(fromMonth.slice(5, 7));
+  const ty = Number(toMonth.slice(0, 4));
+  const tm = Number(toMonth.slice(5, 7));
+  while (y < ty || (y === ty && m <= tm)) {
+    const key = `${y}-${String(m).padStart(2, '0')}`;
+    const agg = aggregateFinancial(byMonth.get(key) ?? []);
+    out.push({ month: key, ...agg });
+    m++;
+    if (m > 12) {
+      m = 1;
+      y++;
+    }
+  }
+  return out;
+}
+
+export function monthLabel(ym: string): string {
+  const y = Number(ym.slice(0, 4));
+  const m = Number(ym.slice(5, 7));
+  if (!y || !m) return ym;
+  return new Date(y, m - 1, 1).toLocaleDateString('th-TH', { month: 'long', year: 'numeric' });
+}
+
+export function currentMonthISO(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+export function shiftMonthISO(ym: string, delta: number): string {
+  let y = Number(ym.slice(0, 4));
+  let m = Number(ym.slice(5, 7)) + delta;
+  while (m > 12) {
+    m -= 12;
+    y++;
+  }
+  while (m < 1) {
+    m += 12;
+    y--;
+  }
+  return `${y}-${String(m).padStart(2, '0')}`;
+}
+
+export function lastDayISO(ym: string): string {
+  const y = Number(ym.slice(0, 4));
+  const m = Number(ym.slice(5, 7));
+  const last = new Date(y, m, 0).getDate();
+  return `${ym}-${String(last).padStart(2, '0')}`;
+}

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Check, Info, ShieldCheck, User, UsersRound, X } from '@lucide/svelte';
   import Modal from './ui/Modal.svelte';
+  import Button from './ui/Button.svelte';
   import Badge from './ui/Badge.svelte';
   import { reservations } from '../store/reservations.svelte';
   import { ui } from '../store/ui.svelte';
@@ -211,14 +212,9 @@
         <span>การปฏิเสธผู้เยี่ยมหลักจะทำให้การจองถูกปฏิเสธโดยอัตโนมัติ</span>
       </div>
 
-      <div class="flex justify-end border-t border-slate-200 pt-4 dark:border-slate-700">
-        <button
-          class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
-          onclick={onclose}
-        >
-          ปิด
-        </button>
-      </div>
     </div>
   {/if}
+  {#snippet footer()}
+    <Button variant="outline" onclick={onclose}>ปิด</Button>
+  {/snippet}
 </Modal>

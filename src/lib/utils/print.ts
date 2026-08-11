@@ -1,5 +1,7 @@
 import { formatNumber } from './format';
+import { monthLabel } from './dashboard';
 import type { Reservation } from '../api/types';
+import type { FinancialDayRow, FinancialMonthRow, FinancialSummary } from './dashboard';
 
 export function escapeHtml(value: unknown): string {
   return String(value ?? '')
@@ -445,5 +447,149 @@ export function buildKitchenReport(rows: Reservation[], date: string): string {
       ✂️ ตัดตรงนี้ — ส่งครัว
     </div>
     ${reportBody}
+  `;
+}
+
+function dayLabelTh(iso: string): string {
+  const d = new Date(`${iso}T00:00:00`);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+export function buildFinancialReport(
+  summary: FinancialSummary,
+  daily: FinancialDayRow[],
+  monthly: FinancialMonthRow[],
+  periodLabel: string
+): string {
+  const fmt = (n: number): string => formatNumber(n);
+
+  const dailyRows = daily
+    .filter((d) => d.bookings > 0 || d.attended > 0)
+    .map(
+      (d) => `
+      <tr>
+        <td style="text-align:center;">${fmt(d.bookings)}</td>
+        <td>${escapeHtml(dayLabelTh(d.date))}</td>
+        <td style="text-align:center;">${fmt(d.attended)}</td>
+        <td style="text-align:center;">${fmt(d.visitors)}</td>
+        <td style="text-align:center;">${fmt(d.prisoners)}</td>
+        <td style="text-align:right;">${fmt(d.paid)}</td>
+        <td style="text-align:right;">${fmt(d.pending)}</td>
+        <td style="text-align:right;">${fmt(d.total)}</td>
+      </tr>`
+    )
+    .join('');
+
+  const monthlyRows = monthly
+    .map(
+      (m) => `
+      <tr>
+        <td>${escapeHtml(monthLabel(m.month))}</td>
+        <td style="text-align:center;">${fmt(m.bookings)}</td>
+        <td style="text-align:center;">${fmt(m.attended)}</td>
+        <td style="text-align:center;">${fmt(m.visitors)}</td>
+        <td style="text-align:center;">${fmt(m.prisoners)}</td>
+        <td style="text-align:right;">${fmt(m.paid)}</td>
+        <td style="text-align:right;">${fmt(m.pending)}</td>
+        <td style="text-align:right;">${fmt(m.total)}</td>
+      </tr>`
+    )
+    .join('');
+
+  const people = summary.visitors + summary.prisoners;
+
+  return `
+    <div class="print-title">รายงานสรุปการเงินภาพรวม</div>
+    <div style="text-align:center; margin-bottom:14px; font-size:12px;">
+      ช่วงเวลา: ${escapeHtml(periodLabel)} &nbsp;·&nbsp; ระบบจองเยี่ยม Chance &amp; Change Cafe
+    </div>
+
+    <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px;">
+      <div style="flex:1; min-width:130px; border:2px solid #166534; border-radius:8px; padding:10px; text-align:center;">
+        <div style="font-size:10px; color:#555;">ยอดชำระแล้ว</div>
+        <div style="font-size:18px; font-weight:800; color:#166534;">${fmt(summary.paid)} บาท</div>
+      </div>
+      <div style="flex:1; min-width:130px; border:2px solid #b45309; border-radius:8px; padding:10px; text-align:center;">
+        <div style="font-size:10px; color:#555;">ยอดค้างชำระ</div>
+        <div style="font-size:18px; font-weight:800; color:#b45309;">${fmt(summary.pending)} บาท</div>
+      </div>
+      <div style="flex:1; min-width:130px; border:2px solid #1e3a5f; border-radius:8px; padding:10px; text-align:center;">
+        <div style="font-size:10px; color:#555;">ยอดรวม</div>
+        <div style="font-size:18px; font-weight:800; color:#1e3a5f;">${fmt(summary.total)} บาท</div>
+      </div>
+      <div style="flex:1; min-width:130px; border:2px solid #312e81; border-radius:8px; padding:10px; text-align:center;">
+        <div style="font-size:10px; color:#555;">การจองทั้งหมด</div>
+        <div style="font-size:18px; font-weight:800; color:#312e81;">${fmt(summary.bookings)} โต๊ะ</div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;">
+      <div style="flex:1; min-width:130px; border:2px solid #15803d; border-radius:8px; padding:10px; text-align:center;">
+        <div style="font-size:10px; color:#555;">ผู้เข้าร่วมทั้งหมด</div>
+        <div style="font-size:18px; font-weight:800; color:#15803d;">${fmt(people)} คน</div>
+      </div>
+      <div style="flex:1; min-width:130px; border:2px solid #0f766e; border-radius:8px; padding:10px; text-align:center;">
+        <div style="font-size:10px; color:#555;">ผู้เยี่ยมที่เข้าร่วม</div>
+        <div style="font-size:18px; font-weight:800; color:#0f766e;">${fmt(summary.visitors)} คน</div>
+      </div>
+      <div style="flex:1; min-width:130px; border:2px solid #7c2d12; border-radius:8px; padding:10px; text-align:center;">
+        <div style="font-size:10px; color:#555;">ผู้ต้องขังเข้าร่วม</div>
+        <div style="font-size:18px; font-weight:800; color:#7c2d12;">${fmt(summary.prisoners)} คน</div>
+      </div>
+      <div style="flex:1; min-width:130px; border:2px solid #44403c; border-radius:8px; padding:10px; text-align:center;">
+        <div style="font-size:10px; color:#555;">ผู้ต้องขัง (ไม่ซ้ำ)</div>
+        <div style="font-size:18px; font-weight:800; color:#44403c;">${fmt(summary.distinctPrisoners)} คน</div>
+      </div>
+    </div>
+
+    <h3 style="font-size:13px; font-weight:700; margin:16px 0 6px;">สรุปรายวัน</h3>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:55px; text-align:center;">การจอง</th>
+          <th>วันที่</th>
+          <th style="width:55px; text-align:center;">เข้าร่วม</th>
+          <th style="width:55px; text-align:center;">ผู้เยี่ยม</th>
+          <th style="width:55px; text-align:center;">ผู้ต้องขัง</th>
+          <th style="width:90px; text-align:right;">ชำระแล้ว</th>
+          <th style="width:90px; text-align:right;">ค้างชำระ</th>
+          <th style="width:90px; text-align:right;">ยอดรวม</th>
+        </tr>
+      </thead>
+      <tbody>${dailyRows || '<tr><td colspan="8" style="text-align:center;color:#888;">ไม่มีข้อมูล</td></tr>'}</tbody>
+    </table>
+
+    <h3 style="font-size:13px; font-weight:700; margin:16px 0 6px; page-break-before:avoid;">สรุปรายเดือน</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>เดือน</th>
+          <th style="width:55px; text-align:center;">การจอง</th>
+          <th style="width:55px; text-align:center;">เข้าร่วม</th>
+          <th style="width:55px; text-align:center;">ผู้เยี่ยม</th>
+          <th style="width:55px; text-align:center;">ผู้ต้องขัง</th>
+          <th style="width:90px; text-align:right;">ชำระแล้ว</th>
+          <th style="width:90px; text-align:right;">ค้างชำระ</th>
+          <th style="width:90px; text-align:right;">ยอดรวม</th>
+        </tr>
+      </thead>
+      <tbody>${monthlyRows || '<tr><td colspan="8" style="text-align:center;color:#888;">ไม่มีข้อมูล</td></tr>'}</tbody>
+    </table>
+
+    <table style="width:80%; margin:28px auto 0; border:none;">
+      <tbody>
+        <tr>
+          <td style="border:none; width:50%; text-align:center; height:70px; vertical-align:bottom;">
+            <div>ลงชื่อ.............................................. ผู้จัดทำ</div>
+            <div style="font-size:10px; color:#555; margin-top:2px;">(..................................................)</div>
+          </td>
+          <td style="border:none; width:50%; text-align:center; vertical-align:bottom;">
+            <div>ลงชื่อ.............................................. ผู้อนุมัติ</div>
+            <div style="font-size:10px; color:#555; margin-top:2px;">(..................................................)</div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   `;
 }

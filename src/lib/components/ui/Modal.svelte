@@ -2,11 +2,12 @@
   import { X } from '@lucide/svelte';
   import type { Snippet, Component } from 'svelte';
 
-  let { open, title, onclose, children, width = 'max-w-lg', accent = 'blue', icon, subtitle }: {
+  let { open, title, onclose, children, footer, width = 'max-w-lg', accent = 'blue', icon, subtitle }: {
     open: boolean;
     title?: string;
     onclose: () => void;
     children: Snippet;
+    footer?: Snippet;
     width?: string;
     accent?: 'blue' | 'emerald' | 'red' | 'amber' | 'sky' | 'slate';
     icon?: Component;
@@ -17,13 +18,16 @@
   let lastFocused: HTMLElement | null = null;
 
   $effect(() => {
-    if (open) {
-      lastFocused = document.activeElement as HTMLElement | null;
-      dialogEl?.focus();
-    } else if (lastFocused) {
-      lastFocused.focus();
+    if (!open) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    lastFocused = document.activeElement as HTMLElement | null;
+    dialogEl?.focus();
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      lastFocused?.focus();
       lastFocused = null;
-    }
+    };
   });
 
   function handleKeydown(e: KeyboardEvent) {
@@ -86,6 +90,11 @@
       <div class="modal-scroll flex-1 overflow-y-auto px-6 py-5">
         {@render children()}
       </div>
+      {#if footer}
+        <div class="flex shrink-0 flex-wrap items-center justify-end gap-2.5 border-t border-slate-200/80 bg-slate-50/50 px-6 py-3.5 dark:border-slate-700/60 dark:bg-slate-800/40">
+          {@render footer()}
+        </div>
+      {/if}
     </div>
   </div>
 {/if}

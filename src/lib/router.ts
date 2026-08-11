@@ -24,6 +24,7 @@ export const routes: RouteDef[] = [
   { path: '/dashboard', key: 'home', title: 'หน้าหลัก', loader: () => import('../routes/Dashboard.svelte') },
   { path: '/reservations', key: 'reservations', title: 'ระบบจอง', component: Reservations },
   { path: '/reports', key: 'reports', title: 'รายงาน', loader: () => import('../routes/Reports.svelte') },
+  { path: '/reports/overall', key: 'reports_overall', title: 'รายงานการเงิน', loader: () => import('../routes/OverallReport.svelte') },
   { path: '/eventlog', key: 'eventlog', title: 'บันทึกเหตุการณ์', component: EventLog, roles: ['Superadmin', 'Admin'] },
   { path: '/users', key: 'users', title: 'ผู้ใช้', component: Users, roles: ['Superadmin'] },
   { path: '/prisoners', key: 'prisoners', title: 'ผู้ต้องขัง', component: Prisoners },

@@ -12,7 +12,7 @@
     onclick,
     children,
   }: {
-    variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost';
+    variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost' | 'success';
     size?: 'sm' | 'md' | 'lg';
     type?: 'button' | 'submit' | 'reset';
     disabled?: boolean;
@@ -31,6 +31,8 @@
       'border border-slate-300 text-slate-700 hover:bg-slate-50 focus-visible:outline-slate-400 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800',
     danger:
       'bg-red-600 text-white hover:bg-red-700 focus-visible:outline-red-600',
+    success:
+      'bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:outline-emerald-600',
     ghost:
       'text-slate-600 hover:bg-slate-100 focus-visible:outline-slate-400 dark:text-slate-300 dark:hover:bg-slate-800',
   };

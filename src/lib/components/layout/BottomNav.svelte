@@ -10,6 +10,7 @@
     Settings,
     UserRound,
     Users,
+    Wallet,
     X,
   } from '@lucide/svelte';
   import { auth } from '../../store/auth.svelte';
@@ -26,6 +27,7 @@
     home: { path: '/dashboard', label: 'หน้าหลัก', icon: LayoutDashboard },
     reservations: { path: '/reservations', label: 'ระบบจอง', icon: CalendarDays },
     reports: { path: '/reports', label: 'รายงาน', icon: BarChart3 },
+    reports_overall: { path: '/reports/overall', label: 'รายงานการเงิน', icon: Wallet },
     eventlog: { path: '/eventlog', label: 'บันทึกเหตุการณ์', icon: ClipboardList },
     users: { path: '/users', label: 'ผู้ใช้', icon: Users },
     prisoners: { path: '/prisoners', label: 'ผู้ต้องขัง', icon: UserRound },
