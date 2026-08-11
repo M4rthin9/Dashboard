@@ -35,9 +35,7 @@
 
 <header class="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-white/85 dark:border-slate-700/60 dark:bg-slate-900/95 dark:supports-[backdrop-filter]:bg-slate-900/85 lg:h-16 lg:px-6">
   <div class="flex min-w-0 items-center gap-3">
-    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-700 text-sm font-bold text-white lg:hidden">
-      CCC
-    </span>
+    <img src="/cida-logo.png" alt="CCC" class="h-8 w-8 shrink-0 rounded-lg object-contain lg:hidden" />
     <h1 class="truncate text-base font-semibold text-slate-900 dark:text-slate-100">{route?.title ?? ''}</h1>
   </div>
 

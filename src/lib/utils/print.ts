@@ -78,7 +78,7 @@ const PRINT_SHARED_CSS = `
   tr:nth-child(even) { background: #fafafa; }
   .print-footer { text-align: center; font-size: 10px; color: #888; margin-top: 20px; border-top: 1px solid #ccc; padding-top: 6px; }
   .copy-watermark {
-    position: fixed;
+    position: absolute;
     top: 45%;
     left: 50%;
     transform: translate(-50%, -50%) rotate(-30deg);
@@ -104,7 +104,6 @@ const PRINT_SHARED_CSS = `
     th { background: #e8e8e8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     tr:nth-child(even) { background: #f5f5f5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .tear-off { page-break-inside: avoid; }
-    .copy-watermark { position: fixed; }
   }
 `;
 

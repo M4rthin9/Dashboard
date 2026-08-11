@@ -39,9 +39,7 @@
 
 <aside class="sticky top-0 z-20 hidden h-screen w-64 shrink-0 flex-col border-r border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 lg:flex">
   <div class="flex h-16 shrink-0 items-center gap-2.5 border-b border-slate-100 px-5 dark:border-slate-800">
-    <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-700 text-lg font-bold text-white shadow-sm">
-      CCC
-    </span>
+    <img src="/cida-logo.png" alt="CCC" class="h-9 w-9 shrink-0 rounded-lg object-contain shadow-sm" />
     <div>
       <p class="text-sm font-semibold leading-tight text-slate-900 dark:text-slate-100">CCC Dashboard</p>
       <p class="text-xs text-slate-400 dark:text-slate-500">ระบบจองเยี่ยม</p>

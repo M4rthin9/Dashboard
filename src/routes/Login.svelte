@@ -40,9 +40,7 @@
 <div class="flex min-h-screen items-center justify-center bg-slate-50 p-4 dark:bg-slate-950">
   <div class="w-full max-w-md">
     <div class="mb-8 text-center">
-      <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-950 text-xl font-bold text-amber-400 shadow-xl shadow-blue-950/40 ring-1 ring-amber-400/50">
-        CCC
-      </div>
+      <img src="/cida-logo.png" alt="CCC" class="mx-auto mb-4 h-14 w-14 rounded-2xl object-contain shadow-xl shadow-blue-950/20" />
       <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">CCC Dashboard</h1>
       <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">เข้าสู่ระบบจัดการการจองเยี่ยม</p>
     </div>
