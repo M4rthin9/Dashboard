@@ -2,13 +2,13 @@
   import { X } from '@lucide/svelte';
   import type { Snippet, Component } from 'svelte';
 
-  let { open, title, onclose, children, width = 'max-w-lg', accent = 'indigo', icon, subtitle }: {
+  let { open, title, onclose, children, width = 'max-w-lg', accent = 'blue', icon, subtitle }: {
     open: boolean;
     title?: string;
     onclose: () => void;
     children: Snippet;
     width?: string;
-    accent?: 'indigo' | 'emerald' | 'red' | 'amber' | 'sky' | 'violet' | 'slate';
+    accent?: 'blue' | 'emerald' | 'red' | 'amber' | 'sky' | 'slate';
     icon?: Component;
     subtitle?: string;
   } = $props();
@@ -31,12 +31,11 @@
   }
 
   const accentBar: Record<string, string> = {
-    indigo: 'bg-indigo-500',
-    emerald: 'bg-emerald-500',
-    red: 'bg-red-500',
+    blue: 'bg-blue-700',
+    emerald: 'bg-emerald-600',
+    red: 'bg-red-600',
     amber: 'bg-amber-500',
     sky: 'bg-sky-500',
-    violet: 'bg-violet-500',
     slate: 'bg-slate-400',
   };
 </script>
@@ -64,7 +63,7 @@
           {#if icon}
             {@const HIcon = icon}
             <div
-              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400"
+              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-400"
             >
               <HIcon class="h-5 w-5" />
             </div>

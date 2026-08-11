@@ -71,18 +71,18 @@
       >
         <span
           class="flex h-8 w-14 items-center justify-center rounded-full transition-all duration-150 ease-in-out {isActive
-            ? 'bg-indigo-600/12 dark:bg-indigo-500/20'
+            ? 'bg-blue-700/12 dark:bg-blue-600/20'
             : ''}"
         >
-          <Icon class={isActive ? 'h-5 w-5 text-indigo-600 dark:text-indigo-400' : 'h-5 w-5 text-slate-400'} />
+          <Icon class={isActive ? 'h-5 w-5 text-blue-700 dark:text-blue-400' : 'h-5 w-5 text-slate-400'} />
         </span>
         <span class="max-w-full truncate text-[10px] font-medium leading-none {isActive
-          ? 'text-indigo-600 dark:text-indigo-400'
+          ? 'text-blue-700 dark:text-blue-400'
           : 'text-slate-500 dark:text-slate-400'}">
           {item.label}
         </span>
         {#if isActive}
-          <span class="absolute top-0 h-0.5 w-8 rounded-full bg-indigo-600 dark:bg-indigo-400"></span>
+          <span class="absolute top-0 h-0.5 w-8 rounded-full bg-blue-700 dark:bg-blue-400"></span>
         {/if}
       </a>
     {/each}
@@ -129,7 +129,7 @@
         {@const isActive = activePath === item.path}
         <button
           class="flex flex-col items-center gap-2 rounded-2xl border p-4 text-center transition-all duration-150 ease-in-out {isActive
-            ? 'border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300'
+            ? 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300'
             : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:border-slate-600'}"
           onclick={() => go(item.path)}
         >

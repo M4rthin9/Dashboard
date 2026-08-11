@@ -14,7 +14,7 @@
     computeRevenueSummary, computeStatusDistribution, computeWingCounts,
     computeDailyRevenue, computeMonthlyRevenue, computeVisitorTypes,
   } from '../lib/utils/dashboard';
-  import { openPrintWindow, buildDisciplinaryReport, buildGateRegistrationReport, buildKitchenReport } from '../lib/utils/print';
+  import { openPrintWindow, wrapWithCopy, buildDisciplinaryReport, buildGateRegistrationReport, buildKitchenReport } from '../lib/utils/print';
   import type { Reservation } from '../lib/api/types';
 
   let from = $state(todayISO());
@@ -56,7 +56,7 @@
     grid: { left: 40, right: 16, top: 24, bottom: 40 },
     xAxis: { type: 'category', data: wingCounts.map((w) => w.wing), axisLabel: { interval: 0 } },
     yAxis: { type: 'value', minInterval: 1 },
-    series: [{ type: 'bar', data: wingCounts.map((w) => w.count), itemStyle: { color: '#6366f1' }, barMaxWidth: 32 }],
+    series: [{ type: 'bar', data: wingCounts.map((w) => w.count), itemStyle: { color: '#1e3a5f' }, barMaxWidth: 32 }],
   });
 
   const dailyOption = $derived<EChartsOption>({
@@ -67,7 +67,7 @@
     yAxis: { type: 'value' },
     series: [
       { name: 'ชำระแล้ว', type: 'bar', stack: 'rev', data: daily.map((p) => p.paid), itemStyle: { color: '#059669' }, barMaxWidth: 24 },
-      { name: 'รอชำระเงิน', type: 'bar', stack: 'rev', data: daily.map((p) => p.pending), itemStyle: { color: '#f59e0b' }, barMaxWidth: 24 },
+      { name: 'รอชำระเงิน', type: 'bar', stack: 'rev', data: daily.map((p) => p.pending), itemStyle: { color: '#c9a227' }, barMaxWidth: 24 },
     ],
   });
 
@@ -76,7 +76,7 @@
     grid: { left: 70, right: 16, top: 24, bottom: 32 },
     xAxis: { type: 'category', data: monthly.map((m) => m.label) },
     yAxis: { type: 'value' },
-    series: [{ type: 'line', smooth: true, data: monthly.map((m) => m.revenue), itemStyle: { color: '#4f46e5' }, areaStyle: { opacity: 0.15 } }],
+    series: [{ type: 'line', smooth: true, data: monthly.map((m) => m.revenue), itemStyle: { color: '#1e3a5f' }, areaStyle: { opacity: 0.15 } }],
   });
 
   function diffDays(a: string, b: string): number {
@@ -108,13 +108,15 @@
 
   const printerName = $derived(auth.user?.displayName || auth.user?.username || 'ไม่ระบุ');
 
-  function doPrint(build: (rows: Reservation[], date: string) => string, title: string): void {
+  function doPrint(build: (rows: Reservation[], date: string) => string, title: string, withCopy = false): void {
     const rows = dayRows.slice().sort((a, b) => String(a.ref).localeCompare(String(b.ref)));
     if (rows.length === 0) {
       ui.showAlert({ title: 'ไม่มีข้อมูล', message: 'ไม่มีรายการสถานะ เสร็จสิ้น ในวันที่เลือก', type: 'warning' });
       return;
     }
-    const ok = openPrintWindow(build(rows, reportDate), title, printerName);
+    let content = build(rows, reportDate);
+    if (withCopy) content = wrapWithCopy(content, title);
+    const ok = openPrintWindow(content, title, printerName);
     if (!ok) ui.showAlert({ title: 'กรุณาอนุญาต Popup', message: 'กรุณาอนุญาต Popup เพื่อเปิดหน้าพิมพ์', type: 'warning' });
   }
 </script>
@@ -125,12 +127,12 @@
       <div class="flex flex-col gap-1.5">
         <label for="rep-from" class="text-xs font-medium text-slate-500 dark:text-slate-400">จากวันที่</label>
         <input id="rep-from" type="date" bind:value={from}
-          class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" />
+          class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" />
       </div>
       <div class="flex flex-col gap-1.5">
         <label for="rep-to" class="text-xs font-medium text-slate-500 dark:text-slate-400">ถึงวันที่</label>
         <input id="rep-to" type="date" bind:value={to}
-          class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" />
+          class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" />
       </div>
       <button class="rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" onclick={() => { from = todayISO(); to = todayISO(); }}>
         วันนี้
@@ -140,7 +142,7 @@
       <button class="rounded-xl p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" onclick={() => reservations.refresh()} aria-label="โหลดใหม่">
         <RefreshCw class="h-4 w-4" />
       </button>
-      <button class="rounded-xl bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700" onclick={exportCSV}>
+      <button class="rounded-xl bg-blue-700 px-3 py-2 text-sm font-medium text-white hover:bg-blue-800" onclick={exportCSV}>
         <span class="flex items-center gap-1.5"><Download class="h-4 w-4" /> ส่งออก CSV</span>
       </button>
     </div>
@@ -154,7 +156,7 @@
         <div class="flex flex-col gap-1.5">
           <label for="rep-print-date" class="text-xs font-medium text-slate-500 dark:text-slate-400">วันที่พิมพ์</label>
           <input id="rep-print-date" type="date" bind:value={reportDate}
-            class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" />
+            class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" />
         </div>
         <button
           class="inline-flex items-center gap-1.5 rounded-xl bg-red-700 px-3 py-2 text-sm font-medium text-white hover:bg-red-800"
@@ -163,14 +165,14 @@
           <Printer class="h-4 w-4" /> ปกครองกลาง / ส่วนทัณฑ์
         </button>
         <button
-          class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-          onclick={() => doPrint(buildGateRegistrationReport, 'ทะเบียนผู้เข้าเยี่ยม')}
+          class="inline-flex items-center gap-1.5 rounded-xl bg-blue-700 px-3 py-2 text-sm font-medium text-white hover:bg-blue-800"
+          onclick={() => doPrint(buildGateRegistrationReport, 'ทะเบียนผู้เข้าเยี่ยม', true)}
         >
           <Printer class="h-4 w-4" /> ทะเบียนผู้เข้าเยี่ยม (ลงชื่อ)
         </button>
         <button
           class="inline-flex items-center gap-1.5 rounded-xl bg-green-700 px-3 py-2 text-sm font-medium text-white hover:bg-green-800"
-          onclick={() => doPrint(buildKitchenReport, 'ครัว + เบเกอรี่')}
+          onclick={() => doPrint(buildKitchenReport, 'ครัว + เบเกอรี่', true)}
         >
           <Printer class="h-4 w-4" /> ครัว + เบเกอรี่
         </button>

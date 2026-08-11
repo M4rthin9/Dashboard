@@ -21,7 +21,7 @@ echarts.use([
 ]);
 
 echarts.registerTheme('dark', {
-  color: ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc'],
+  color: ['#1e3a5f', '#c9a227', '#2563eb', '#0f766e', '#b91c1c', '#475569', '#64748b', '#7c5e10', '#111827'],
   backgroundColor: 'transparent',
   textStyle: { color: '#cbd5e1' },
   title: { textStyle: { color: '#e2e8f0' }, subtextStyle: { color: '#94a3b8' } },

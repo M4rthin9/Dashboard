@@ -69,12 +69,12 @@
             type="search"
             bind:value={search}
             placeholder="ค้นหาผู้ใช้, การกระทำ, REF, IP"
-            class="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 transition-colors duration-150 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
+            class="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 transition-colors duration-150 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
           />
         </div>
         <select
           bind:value={actionFilter}
-          class="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 transition-colors duration-150 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+          class="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 transition-colors duration-150 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
           aria-label="กรองตามการกระทำ"
         >
           <option value="">ทุกการกระทำ</option>
@@ -117,7 +117,7 @@
                   <td class="px-3 py-2.5 text-xs text-slate-500 dark:text-slate-400">{formatDateTimeThai(log.timestamp)}</td>
                   <td class="px-3 py-2.5 font-medium text-slate-800 dark:text-slate-200">{log.username}</td>
                   <td class="px-3 py-2.5">
-                    <span class="font-mono text-xs text-indigo-600 dark:text-indigo-400">{log.action}</span>
+                    <span class="font-mono text-xs text-blue-700 dark:text-blue-400">{log.action}</span>
                   </td>
                   <td class="px-3 py-2.5 font-mono text-xs">{log.targetRef ?? ''}</td>
                   <td class="max-w-[180px] truncate px-3 py-2.5 text-xs text-slate-600 dark:text-slate-300">{log.details ?? ''}</td>

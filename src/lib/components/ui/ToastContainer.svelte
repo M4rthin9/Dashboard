@@ -30,7 +30,7 @@
           <p class="whitespace-pre-line text-sm text-slate-700 dark:text-slate-200">{toast.message}</p>
           {#if toast.ok}
             <button
-              class="mt-2 rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors duration-150 hover:bg-indigo-700 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
+              class="mt-2 rounded-xl bg-blue-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors duration-150 hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-blue-700 focus-visible:outline-offset-2"
               onclick={() => ui.dismissToast(toast.id)}
             >
               {toast.ok}

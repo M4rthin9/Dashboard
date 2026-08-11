@@ -24,7 +24,7 @@
 
   const variants: Record<string, string> = {
     primary:
-      'bg-indigo-600 text-white hover:bg-indigo-700 focus-visible:outline-indigo-600',
+      'bg-blue-700 text-white hover:bg-blue-800 focus-visible:outline-blue-700',
     secondary:
       'bg-slate-800 text-white hover:bg-slate-900 focus-visible:outline-slate-800 dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-white',
     outline:

@@ -59,12 +59,12 @@ export function normalizeStatus(status: string | undefined): string {
 }
 
 export const STATUS_COLORS: Record<string, string> = {
-  'รอตรวจสอบผู้เข้าร่วม': '#f59e0b',
-  'รอตรวจสอบวินัย': '#6366f1',
-  'รอชำระเงิน': '#d97706',
-  'ชำระแล้ว': '#059669',
-  'เสร็จสิ้น': '#4f46e5',
-  'ไม่อนุมัติ': '#ef4444',
+  'รอตรวจสอบผู้เข้าร่วม': '#d97706',
+  'รอตรวจสอบวินัย': '#1e3a5f',
+  'รอชำระเงิน': '#2563eb',
+  'ชำระแล้ว': '#0f766e',
+  'เสร็จสิ้น': '#1e3a5f',
+  'ไม่อนุมัติ': '#b91c1c',
   'ยกเลิก': '#64748b',
 };
 
@@ -78,7 +78,7 @@ export function statusColor(status: string | undefined): string {
     case 'รอชำระเงิน':
       return 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300';
     case 'ชำระแล้ว':
-      return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300';
+      return 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300';
     case 'เสร็จสิ้น':
       return 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300';
     case 'ไม่อนุมัติ':

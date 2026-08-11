@@ -72,15 +72,15 @@
   title={title}
   onclose={onclose}
   width="max-w-xl"
-  accent={isDone ? 'emerald' : 'indigo'}
+  accent={isDone ? 'emerald' : 'blue'}
   icon={isDone ? ShieldCheck : CreditCard}
   subtitle={row ? `Ref: ${row.ref} · ${row.prisonerName ?? '—'}` : ''}
 >
   {#if row}
     <div class="flex flex-col gap-4">
-      <div class="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-indigo-50 px-4 py-3 ring-1 ring-indigo-100 dark:bg-indigo-950/40 dark:ring-indigo-900/60">
+      <div class="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-blue-50 px-4 py-3 ring-1 ring-blue-100 dark:bg-blue-950/40 dark:ring-blue-900/60">
         <Badge label={isDone ? 'ตรวจสอบสลิปก่อนเสร็จสิ้น' : 'ตรวจสอบสลิปก่อนยืนยันชำระเงิน'} tone="warning" />
-        <div class="flex items-center gap-1.5 text-sm font-bold text-indigo-700 dark:text-indigo-300">
+        <div class="flex items-center gap-1.5 text-sm font-bold text-blue-800 dark:text-blue-300">
           <Banknote class="h-4 w-4" />
           {formatBaht(row.total)}
         </div>
@@ -138,7 +138,7 @@
               href={slipUrl}
               target="_blank"
               rel="noopener noreferrer"
-              class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-950/60"
+              class="inline-flex items-center gap-1.5 rounded-xl bg-blue-50 px-4 py-2 text-sm font-medium text-blue-800 transition-colors hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-950/60"
             >
               <ExternalLink class="h-4 w-4" />
               เปิดสลิปชำระเงินเต็มในหน้าต่างใหม่
@@ -147,7 +147,7 @@
           </div>
         {:else if slipLoading}
           <div class="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center dark:border-slate-700 dark:bg-slate-900">
-            <span class="h-8 w-8 animate-spin rounded-full border-2 border-indigo-500/30 border-t-indigo-500"></span>
+            <span class="h-8 w-8 animate-spin rounded-full border-2 border-blue-600/30 border-t-blue-600"></span>
             <div class="text-sm font-medium text-slate-500 dark:text-slate-400">กำลังโหลดสลิปชำระเงิน...</div>
           </div>
         {:else}

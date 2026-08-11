@@ -34,7 +34,7 @@
       {:else}
         <button
           class="min-w-8 rounded-xl px-2.5 py-1.5 text-sm font-medium transition-colors duration-150 {p === page
-            ? 'bg-indigo-600 text-white'
+            ? 'bg-blue-700 text-white'
             : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}"
           onclick={() => onchange(p)}
           aria-current={p === page ? 'page' : undefined}

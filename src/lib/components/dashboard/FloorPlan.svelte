@@ -45,7 +45,7 @@
     <select
       id="floor-plan-date"
       bind:value={selectedDate}
-      class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 transition-colors duration-150 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+      class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 transition-colors duration-150 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
     >
       {#each dates as d (d)}
         <option value={d}>{d}</option>

@@ -6,6 +6,7 @@
     AlertTriangle,
     ArrowRight,
     CalendarDays,
+    Check,
     CheckCircle2,
     Coins,
     CreditCard,
@@ -17,12 +18,14 @@
     TrendingUp,
     Users,
     Wallet,
+    X,
   } from '@lucide/svelte';
   import Card from '../lib/components/ui/Card.svelte';
   import Spinner from '../lib/components/ui/Spinner.svelte';
   import EChart from '../lib/components/charts/EChart.svelte';
   import FloorPlan from '../lib/components/dashboard/FloorPlan.svelte';
   import PaymentApprovalModal from '../lib/components/PaymentApprovalModal.svelte';
+  import ReservationDetailModal from '../lib/components/ReservationDetailModal.svelte';
   import { auth } from '../lib/store/auth.svelte';
   import { reservations } from '../lib/store/reservations.svelte';
   import { ui } from '../lib/store/ui.svelte';
@@ -48,6 +51,8 @@
   const role = $derived(auth.user?.role ?? 'User');
   const isAdminOrSuper = $derived(role === 'Superadmin' || role === 'Admin');
   const canConfirmPayment = $derived(isAdminOrSuper || hasPermission(role, 'confirm_payment'));
+  const canRejectPayment = $derived(isAdminOrSuper || hasPermission(role, 'reject_payment'));
+  const canViewSlip = $derived(hasPermission(role, 'view_slip'));
 
   const rows = $derived(reservations.rows);
   const stats = $derived(computeStats(rows));
@@ -66,14 +71,14 @@
 
   const statCards = $derived.by(() => {
     const base = [
-      { id: 'statTotal', label: 'การจองทั้งหมด', value: formatNumber(stats.total), icon: LayoutDashboard, color: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400' },
-      { id: 'statWait', label: 'รอตรวจสอบวินัย', value: formatNumber(stats.wait), icon: Crown, color: 'bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-400' },
-      { id: 'statOk', label: 'ผ่านการอนุมัติ/ชำระแล้ว', value: formatNumber(stats.ok), icon: PartyPopper, color: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400' },
-      { id: 'statReject', label: 'ไม่อนุมัติ', value: formatNumber(stats.reject), icon: AlertTriangle, color: 'bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400' },
-      { id: 'statUniquePrisoners', label: 'ผู้ต้องขังที่ถูกจอง', value: formatNumber(stats.uniquePrisoners), icon: Users, color: 'bg-sky-100 text-sky-600 dark:bg-sky-950 dark:text-sky-400' },
-      { id: 'statThisWeek', label: 'การจอง 7 วันนี้', value: formatNumber(stats.thisWeek), icon: CalendarDays, color: 'bg-violet-100 text-violet-600 dark:bg-violet-950 dark:text-violet-400' },
-      { id: 'statThisMonth', label: 'การจองเดือนนี้', value: formatNumber(stats.thisMonth), icon: TrendingUp, color: 'bg-teal-100 text-teal-600 dark:bg-teal-950 dark:text-teal-400' },
-      { id: 'statUniqueVisitors', label: 'ผู้เยี่ยมทั้งหมด', value: formatNumber(stats.uniqueVisitors), icon: Sparkles, color: 'bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400' },
+      { id: 'statTotal', label: 'การจองทั้งหมด', value: formatNumber(stats.total), icon: LayoutDashboard, color: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400' },
+      { id: 'statWait', label: 'รอตรวจสอบวินัย', value: formatNumber(stats.wait), icon: Crown, color: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400' },
+      { id: 'statOk', label: 'ผ่านการอนุมัติ/ชำระแล้ว', value: formatNumber(stats.ok), icon: PartyPopper, color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' },
+      { id: 'statReject', label: 'ไม่อนุมัติ', value: formatNumber(stats.reject), icon: AlertTriangle, color: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400' },
+      { id: 'statUniquePrisoners', label: 'ผู้ต้องขังที่ถูกจอง', value: formatNumber(stats.uniquePrisoners), icon: Users, color: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300' },
+      { id: 'statThisWeek', label: 'การจอง 7 วันนี้', value: formatNumber(stats.thisWeek), icon: CalendarDays, color: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400' },
+      { id: 'statThisMonth', label: 'การจองเดือนนี้', value: formatNumber(stats.thisMonth), icon: TrendingUp, color: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400' },
+      { id: 'statUniqueVisitors', label: 'ผู้เยี่ยมทั้งหมด', value: formatNumber(stats.uniqueVisitors), icon: Sparkles, color: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400' },
     ];
     const visibleByRole: Record<string, string[]> = {
       Superadmin: base.map((c) => c.id),
@@ -112,8 +117,8 @@
         smooth: true,
         data: trend.map((p) => p.count),
         areaStyle: { opacity: 0.12 },
-        itemStyle: { color: '#6366f1' },
-        lineStyle: { color: '#6366f1' },
+        itemStyle: { color: '#1e3a5f' },
+        lineStyle: { color: '#1e3a5f' },
       },
     ],
   });
@@ -129,7 +134,7 @@
         label: { show: false },
         data: [
           { name: 'ชำระแล้ว', value: revSum.paid, itemStyle: { color: '#059669' } },
-          { name: 'ค้างชำระ', value: revSum.unpaid, itemStyle: { color: '#f59e0b' } },
+          { name: 'ค้างชำระ', value: revSum.unpaid, itemStyle: { color: '#c9a227' } },
         ],
       },
     ],
@@ -166,7 +171,7 @@
     grid: { left: 40, right: 16, top: 16, bottom: 28 },
     xAxis: { type: 'category', data: wings.map((w) => w.wing), axisLabel: { color: textColor, interval: 0 }, axisLine: { lineStyle: { color: axisLine } } },
     yAxis: { type: 'value', minInterval: 1, splitLine: { lineStyle: { color: axisLine, type: 'dashed' } }, axisLabel: { color: textColor } },
-    series: [{ type: 'bar', data: wings.map((w) => w.count), itemStyle: { color: '#0ea5e9', borderRadius: [4, 4, 0, 0] } }],
+    series: [{ type: 'bar', data: wings.map((w) => w.count), itemStyle: { color: '#1e3a5f', borderRadius: [4, 4, 0, 0] } }],
   });
 
   const monthlyOption = $derived<EChartsOption>({
@@ -174,7 +179,7 @@
     grid: { left: 56, right: 16, top: 16, bottom: 28 },
     xAxis: { type: 'category', data: monthly.map((m) => m.label), axisLine: { lineStyle: { color: axisLine } }, axisLabel: { color: textColor } },
     yAxis: { type: 'value', splitLine: { lineStyle: { color: axisLine, type: 'dashed' } }, axisLabel: { color: textColor } },
-    series: [{ type: 'bar', data: monthly.map((m) => m.revenue), itemStyle: { color: '#10b981', borderRadius: [4, 4, 0, 0] } }],
+    series: [{ type: 'bar', data: monthly.map((m) => m.revenue), itemStyle: { color: '#1e3a5f', borderRadius: [4, 4, 0, 0] } }],
   });
 
   const funnelOption = $derived<EChartsOption>({
@@ -188,7 +193,7 @@
         bottom: 8,
         label: { color: '#fff', formatter: '{b} {c}' },
         itemStyle: { borderColor: ui.darkMode ? '#0f172a' : '#fff', borderWidth: 2 },
-        data: funnel.map((f, i) => ({ ...f, itemStyle: { color: Object.values(STATUS_COLORS)[i] ?? '#6366f1' } })),
+        data: funnel.map((f, i) => ({ ...f, itemStyle: { color: Object.values(STATUS_COLORS)[i] ?? '#1e3a5f' } })),
       },
     ],
   });
@@ -203,9 +208,9 @@
         center: ['50%', '42%'],
         label: { show: false },
         data: [
-          { name: 'ผู้ใหญ่', value: visitorTypes.adult, itemStyle: { color: '#6366f1' } },
-          { name: 'เด็ก 5-8 ขวบ', value: visitorTypes.child5to8, itemStyle: { color: '#0ea5e9' } },
-          { name: 'เด็กต่ำกว่า 5 ขวบ', value: visitorTypes.childUnder5, itemStyle: { color: '#f59e0b' } },
+          { name: 'ผู้ใหญ่', value: visitorTypes.adult, itemStyle: { color: '#1e3a5f' } },
+          { name: 'เด็ก 5-8 ขวบ', value: visitorTypes.child5to8, itemStyle: { color: '#2563eb' } },
+          { name: 'เด็กต่ำกว่า 5 ขวบ', value: visitorTypes.childUnder5, itemStyle: { color: '#c9a227' } },
         ],
       },
     ],
@@ -219,7 +224,7 @@
     yAxis: { type: 'value', splitLine: { lineStyle: { color: axisLine, type: 'dashed' } }, axisLabel: { color: textColor } },
     series: [
       { name: 'ชำระแล้ว', type: 'bar', stack: 'rev', data: dailyRevenue.map((d) => d.paid), itemStyle: { color: '#059669' } },
-      { name: 'รอชำระ', type: 'bar', stack: 'rev', data: dailyRevenue.map((d) => d.pending), itemStyle: { color: '#f59e0b' } },
+      { name: 'รอชำระ', type: 'bar', stack: 'rev', data: dailyRevenue.map((d) => d.pending), itemStyle: { color: '#c9a227' } },
     ],
   });
 
@@ -233,8 +238,8 @@
         value: formatBaht(revenue.mtdTotal),
         sub: `${formatNumber(revenue.mtdCount)} รายการในเดือนนี้`,
         icon: Coins,
-        grad: 'from-indigo-500 to-violet-600',
-        chip: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400',
+        grad: 'from-amber-500 to-amber-600',
+        chip: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400',
       },
       {
         id: 'paid',
@@ -242,9 +247,9 @@
         value: `${formatBaht(revenue.paidTotal)} / ${formatBaht(revenue.pendingTotal)}`,
         sub: `${revenue.paidPct}% ชำระแล้ว`,
         icon: Wallet,
-        grad: 'from-emerald-500 to-teal-600',
-        chip: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400',
-        valueCls: 'text-green-600 dark:text-green-400',
+        grad: 'from-emerald-600 to-teal-700',
+        chip: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400',
+        valueCls: 'text-green-700 dark:text-green-400',
       },
       {
         id: 'avg',
@@ -252,8 +257,8 @@
         value: formatBaht(revenue.avgRevenue),
         sub: `จาก ${formatNumber(revenue.bookingCount)} รายการ`,
         icon: CreditCard,
-        grad: 'from-sky-500 to-blue-600',
-        chip: 'bg-sky-100 text-sky-600 dark:bg-sky-950 dark:text-sky-400',
+        grad: 'from-blue-800 to-blue-950',
+        chip: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400',
       },
       {
         id: 'util',
@@ -261,8 +266,8 @@
         value: `${revenue.utilRate}%`,
         sub: `${formatNumber(revenue.todayCount)} / 20 โต๊ะ`,
         icon: TrendingUp,
-        grad: 'from-amber-500 to-orange-600',
-        chip: 'bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400',
+        grad: 'from-blue-800 to-blue-950',
+        chip: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400',
         valueCls: utilTone,
       },
     ];
@@ -274,11 +279,13 @@
   });
 
   let paymentRow = $state<Reservation | null>(null);
+  let paymentMode = $state<'ชำระแล้ว' | 'เสร็จสิ้น'>('ชำระแล้ว');
   let showPaymentApproval = $state(false);
   let paymentSaving = $state(false);
 
-  function openPaymentApproval(row: Reservation): void {
+  function openPaymentApproval(row: Reservation, mode: 'ชำระแล้ว' | 'เสร็จสิ้น'): void {
     paymentRow = row;
+    paymentMode = mode;
     showPaymentApproval = true;
   }
 
@@ -291,8 +298,12 @@
   async function approvePayment(row: Reservation): Promise<void> {
     paymentSaving = true;
     try {
-      await reservations.updateStatus(row.ref, 'ชำระแล้ว');
-      ui.showAlert({ title: 'ยืนยันการชำระเงินสำเร็จ', message: `${row.visitorName ?? ''} · ${row.ref}`, type: 'success' });
+      await reservations.updateStatus(row.ref, paymentMode);
+      ui.showAlert({
+        title: paymentMode === 'เสร็จสิ้น' ? 'ยืนยันการเสร็จสิ้นสำเร็จ' : 'ยืนยันการชำระเงินสำเร็จ',
+        message: `${row.visitorName ?? ''} · ${row.ref} สถานะเป็น "${paymentMode}"`,
+        type: 'success',
+      });
       closePaymentApproval();
     } catch (err) {
       ui.showAlert({ title: 'ไม่สามารถยืนยันได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
@@ -301,12 +312,37 @@
       paymentSaving = false;
     }
   }
+
+  async function rejectPaid(row: Reservation): Promise<void> {
+    const name = String(row.visitorName ?? row.ref ?? '');
+    if (!window.confirm(`ยืนยันปฏิเสธรายการ "${name}" (${row.ref}) ? สถานะจะเปลี่ยนเป็น "ไม่อนุมัติ"`)) return;
+    try {
+      await reservations.updateStatus(row.ref, 'ไม่อนุมัติ');
+      ui.showAlert({ title: 'ปฏิเสธรายการสำเร็จ', message: `${name} · ${row.ref}`, type: 'success' });
+    } catch (err) {
+      ui.showAlert({ title: 'ไม่สามารถปฏิเสธได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
+    }
+  }
+
+  let detailRow = $state<Reservation | null>(null);
+  let showDetail = $state(false);
+
+  function openDetail(row: Reservation): void {
+    detailRow = row;
+    showDetail = true;
+  }
+
+  function closeDetail(): void {
+    showDetail = false;
+    detailRow = null;
+  }
 </script>
 
 <div class="flex flex-col gap-6">
-  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 p-5 text-white shadow-lg shadow-indigo-500/15 sm:p-6">
-    <div class="pointer-events-none absolute -right-12 -top-14 h-56 w-56 rounded-full bg-white/10 blur-3xl" aria-hidden="true"></div>
-    <div class="pointer-events-none absolute -bottom-20 right-12 h-48 w-48 rounded-full bg-white/5 blur-2xl" aria-hidden="true"></div>
+  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 p-5 text-white shadow-lg shadow-black/25 sm:p-6">
+    <div class="pointer-events-none absolute -right-12 -top-14 h-56 w-56 rounded-full bg-amber-400/10 blur-3xl" aria-hidden="true"></div>
+    <div class="pointer-events-none absolute -bottom-20 right-12 h-48 w-48 rounded-full bg-amber-400/5 blur-2xl" aria-hidden="true"></div>
+    <div class="pointer-events-none absolute left-8 top-4 h-px w-24 bg-gradient-to-r from-transparent to-amber-400/60" aria-hidden="true"></div>
     <div class="relative flex flex-wrap items-center justify-between gap-4">
       <div>
         <div class="flex items-center gap-2 text-xs font-medium text-white/80">
@@ -327,7 +363,7 @@
           รีเฟรช
         </button>
         <button
-          class="inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-indigo-700 shadow transition-colors duration-150 hover:bg-indigo-50 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
+          class="inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-blue-800 shadow transition-colors duration-150 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-blue-700 focus-visible:outline-offset-2"
           onclick={() => navigate('/reservations')}
         >
           เปิดตารางการจอง
@@ -357,7 +393,7 @@
               <p class="mt-1 text-xl font-bold tracking-tight text-slate-900 dark:text-white {k.valueCls ?? ''}">{k.value}</p>
               <p class="mt-0.5 text-xs text-slate-400 dark:text-slate-500">{k.sub}</p>
             </div>
-            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400">
               <KIcon class="h-5 w-5" />
             </div>
           </div>
@@ -389,15 +425,42 @@
         {:else}
           <div class="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
             {#each alerts.slice(0, 5) as r (r.ref)}
+              {@const s = normalizeStatus(r.status)}
               <div class="flex items-center gap-3 py-2.5 text-sm">
-                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-green-100 text-green-600 dark:bg-green-950 dark:text-green-400">
+                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
                   <CheckCircle2 class="h-4 w-4" />
                 </div>
                 <div class="min-w-0 flex-1">
-                  <div class="font-mono text-xs font-semibold text-slate-700 dark:text-slate-200">{r.ref}</div>
+                  <button
+                    class="font-mono text-xs font-semibold text-blue-700 hover:underline dark:text-blue-400"
+                    onclick={() => openDetail(r)}
+                    title="ดูรายละเอียด"
+                  >
+                    {r.ref}
+                  </button>
                   <div class="truncate text-xs text-slate-500 dark:text-slate-400">{r.visitorName}</div>
                 </div>
-                <span class="whitespace-nowrap text-xs font-semibold text-green-600 dark:text-green-400">{formatBaht(r.total)}</span>
+                <div class="flex items-center gap-1.5">
+                  <span class="whitespace-nowrap text-xs font-semibold text-emerald-700 dark:text-emerald-400">{formatBaht(r.total)}</span>
+                  {#if s === 'ชำระแล้ว' && canConfirmPayment}
+                    <button
+                      class="shrink-0 rounded-lg border border-emerald-200 bg-white p-1 text-emerald-600 transition-colors duration-150 hover:bg-emerald-50 dark:border-emerald-900 dark:bg-slate-800 dark:hover:bg-emerald-950/30"
+                      title="ยืนยันเสร็จสิ้น"
+                      onclick={() => openPaymentApproval(r, 'เสร็จสิ้น')}
+                    >
+                      <Check class="h-3.5 w-3.5" />
+                    </button>
+                  {/if}
+                  {#if s === 'ชำระแล้ว' && canRejectPayment}
+                    <button
+                      class="shrink-0 rounded-lg border border-red-200 bg-white p-1 text-red-600 transition-colors duration-150 hover:bg-red-50 dark:border-red-900 dark:bg-slate-800 dark:hover:bg-red-950/30"
+                      title="ปฏิเสธรายการ"
+                      onclick={() => rejectPaid(r)}
+                    >
+                      <X class="h-3.5 w-3.5" />
+                    </button>
+                  {/if}
+                </div>
               </div>
             {/each}
           </div>
@@ -412,7 +475,7 @@
             {#each paymentQueue.slice(0, 5) as r (r.ref)}
               <div class="flex items-center justify-between gap-2 py-2.5 text-sm">
                 <div class="flex min-w-0 items-center gap-3">
-                  <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-lg dark:bg-indigo-950">
+                  <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-lg dark:bg-blue-950">
                     {r.slipImage || r.status === 'ชำระแล้ว' || r.status === 'เสร็จสิ้น' ? '🧾' : '💳'}
                   </div>
                   <div class="min-w-0">
@@ -423,8 +486,8 @@
                 <div class="whitespace-nowrap font-semibold text-slate-700 dark:text-slate-200">{formatBaht(r.total)}</div>
                 {#if canConfirmPayment}
                   <button
-                    class="shrink-0 rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors duration-150 hover:bg-indigo-700 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
-                    onclick={() => openPaymentApproval(r)}
+                    class="shrink-0 rounded-xl bg-blue-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors duration-150 hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-blue-700 focus-visible:outline-offset-2"
+                    onclick={() => openPaymentApproval(r, 'ชำระแล้ว')}
                   >
                     ยืนยัน
                   </button>
@@ -443,11 +506,11 @@
             {#each todaysVisits.slice(0, 6) as r (r.ref)}
               <div class="flex items-center justify-between gap-2 py-2 text-sm">
                 <div class="flex min-w-0 items-center gap-2">
-                  <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-600 dark:bg-violet-950 dark:text-violet-400">
+                  <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
                     <Users class="h-3.5 w-3.5" />
                   </div>
                   <div class="min-w-0">
-                    <div class="font-mono text-xs font-semibold text-indigo-600 dark:text-indigo-400">{r.ref}</div>
+                    <div class="font-mono text-xs font-semibold text-blue-700 dark:text-blue-400">{r.ref}</div>
                     <div class="truncate text-xs text-slate-500 dark:text-slate-400">{r.visitorName} · {r.prisonerName}</div>
                   </div>
                 </div>
@@ -456,7 +519,7 @@
                     case 'รอตรวจสอบผู้เข้าร่วม': return 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300';
                     case 'รอตรวจสอบวินัย': return 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300';
                     case 'รอชำระเงิน': return 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300';
-                    case 'ชำระแล้ว': return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300';
+                    case 'ชำระแล้ว': return 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300';
                     case 'เสร็จสิ้น': return 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300';
                     case 'ไม่อนุมัติ': return 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300';
                     case 'ยกเลิก': return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
@@ -505,8 +568,15 @@
   <PaymentApprovalModal
     open={showPaymentApproval}
     row={paymentRow}
-    mode="ชำระแล้ว"
+    mode={paymentMode}
     onclose={closePaymentApproval}
     onapprove={approvePayment}
+  />
+
+  <ReservationDetailModal
+    open={showDetail}
+    row={detailRow}
+    canViewSlip={canViewSlip}
+    onclose={closeDetail}
   />
 </div>

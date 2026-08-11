@@ -103,16 +103,16 @@
   title={row ? `ตรวจสอบผู้เข้าร่วม · ${row.ref}` : 'ตรวจสอบผู้เข้าร่วม'}
   onclose={onclose}
   width="max-w-xl"
-  accent="violet"
+  accent="blue"
   icon={ShieldCheck}
   subtitle={row ? `${row.prisonerName ?? '—'} · ปีก ${row.wing ?? '—'}` : ''}
 >
   {#if row}
     <div class="flex flex-col gap-4">
-      <div class="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-violet-50 px-4 py-3 ring-1 ring-violet-100 dark:bg-violet-950/40 dark:ring-violet-900/60">
+      <div class="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-blue-50 px-4 py-3 ring-1 ring-blue-100 dark:bg-blue-950/40 dark:ring-blue-900/60">
         <Badge label={`${String(row.visitorCount ?? '')} คน`} tone="info" />
-        <div class="flex items-center gap-1.5 text-sm font-semibold text-violet-700 dark:text-violet-300">
-          <span class="rounded-full bg-white px-2.5 py-1 text-xs ring-1 ring-violet-200 dark:bg-slate-900 dark:ring-violet-900">
+        <div class="flex items-center gap-1.5 text-sm font-semibold text-blue-700 dark:text-blue-300">
+          <span class="rounded-full bg-white px-2.5 py-1 text-xs ring-1 ring-blue-200 dark:bg-slate-900 dark:ring-blue-900">
             อนุมัติแล้ว {approvedCount}/{totalPeople}
           </span>
         </div>
@@ -161,7 +161,7 @@
       {#if extras.length > 0}
         <section class="flex flex-col gap-2">
           <div class="flex items-center gap-2">
-            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-600 dark:bg-violet-950 dark:text-violet-400">
+            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
               <UsersRound class="h-4 w-4" />
             </div>
             <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100">ผู้เยี่ยมร่วม ({extras.length} คน)</h3>
@@ -170,7 +170,7 @@
             {#each extras as ex, i (i)}
               <div class="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
                 <div class="flex min-w-0 items-center gap-3">
-                  <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-purple-500 text-xs font-bold text-white">
+                  <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-blue-500 text-xs font-bold text-white">
                     {initials(ex.name)}
                   </div>
                   <div class="min-w-0">

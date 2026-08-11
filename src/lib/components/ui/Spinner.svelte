@@ -9,7 +9,7 @@
 </script>
 
 <span
-  class="inline-block animate-spin rounded-full border-slate-300 border-t-indigo-600 dark:border-slate-600 dark:border-t-indigo-500 {sizes[size]}"
+  class="inline-block animate-spin rounded-full border-slate-300 border-t-blue-700 dark:border-slate-600 dark:border-t-blue-600 {sizes[size]}"
   role="status"
   aria-label="กำลังโหลด"
 ></span>

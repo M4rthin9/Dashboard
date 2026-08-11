@@ -167,7 +167,7 @@
             <button class="rounded-xl border border-slate-300 p-2 text-slate-500 transition-colors duration-150 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800" onclick={fetchData} aria-label="โหลดใหม่">
               <RefreshCw class="h-4 w-4" />
             </button>
-            <button class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-indigo-700 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2" onclick={openCreate}>
+            <button class="inline-flex items-center gap-1.5 rounded-xl bg-blue-700 px-3.5 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-blue-700 focus-visible:outline-offset-2" onclick={openCreate}>
               <Plus class="h-4 w-4" /> สร้างผู้ใช้
             </button>
           </div>
@@ -195,7 +195,7 @@
                     <td class="px-3 py-2.5 font-mono text-xs text-slate-800 dark:text-slate-200">{u.username}</td>
                     <td class="px-3 py-2.5 text-slate-700 dark:text-slate-200">{u.displayName}</td>
                     <td class="px-3 py-2.5">
-                      <span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">{u.role}</span>
+                      <span class="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-950 dark:text-blue-300">{u.role}</span>
                     </td>
                     <td class="px-3 py-2.5 text-xs text-slate-500 dark:text-slate-400">{formatDateThai(u.createdAt)}</td>
                     <td class="px-3 py-2.5">
@@ -226,17 +226,17 @@
     <div class="flex flex-col gap-1.5">
       <label for="u-username" class="text-sm font-medium text-slate-700 dark:text-slate-300">ชื่อผู้ใช้</label>
       <input id="u-username" bind:value={form.username} disabled={mode === 'edit'} placeholder="เช่น officer1"
-        class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" />
+        class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" />
     </div>
     <div class="flex flex-col gap-1.5">
       <label for="u-display" class="text-sm font-medium text-slate-700 dark:text-slate-300">ชื่อแสดง</label>
       <input id="u-display" bind:value={form.displayName} placeholder="เช่น พนักงานราชทัณฑ์"
-        class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" />
+        class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" />
     </div>
     <div class="flex flex-col gap-1.5">
       <label for="u-role" class="text-sm font-medium text-slate-700 dark:text-slate-300">บทบาท</label>
       <select id="u-role" bind:value={form.role}
-        class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100">
+        class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100">
         {#each roles as r (r.roleName)}
           <option value={r.roleName}>{r.roleName}</option>
         {/each}
@@ -247,11 +247,11 @@
         {mode === 'create' ? 'รหัสผ่าน' : 'รหัสผ่านใหม่ (ปล่อยว่างถ้าไม่เปลี่ยน)'}
       </label>
       <input id="u-password" type="password" bind:value={form.password} placeholder="อย่างน้อย 6 ตัวอักษร"
-        class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" />
+        class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" />
     </div>
     <div class="flex justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
       <button class="rounded-xl border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" onclick={() => (mode = null)}>ยกเลิก</button>
-      <button class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50" onclick={submit} disabled={busy}>
+      <button class="rounded-xl bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-50" onclick={submit} disabled={busy}>
         {busy ? 'กำลังบันทึก...' : 'บันทึก'}
       </button>
     </div>
@@ -277,14 +277,14 @@
     <div class="flex flex-col gap-1.5">
       <label for="new-role-name" class="text-sm font-medium text-slate-700 dark:text-slate-300">ชื่อบทบาท</label>
       <input id="new-role-name" bind:value={newRoleName} placeholder="เช่น Officer"
-        class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" />
+        class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" />
     </div>
     <div class="flex flex-col gap-1.5">
       <p class="text-sm font-medium text-slate-700 dark:text-slate-300">สิทธิ์</p>
       <div class="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
         {#each AVAILABLE_PERMISSIONS as p (p)}
           <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
-            <input type="checkbox" checked={newRolePerms[p]} onchange={(e) => (newRolePerms[p] = (e.currentTarget as HTMLInputElement).checked)} class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+            <input type="checkbox" checked={newRolePerms[p]} onchange={(e) => (newRolePerms[p] = (e.currentTarget as HTMLInputElement).checked)} class="h-4 w-4 rounded border-slate-300 text-blue-700 focus:ring-blue-600" />
             <span class="font-mono text-xs">{p}</span>
           </label>
         {/each}
@@ -292,7 +292,7 @@
     </div>
     <div class="flex justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
       <button class="rounded-xl border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" onclick={() => (roleModal = false)}>ยกเลิก</button>
-      <button class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50" onclick={submitRole} disabled={roleBusy}>
+      <button class="rounded-xl bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-50" onclick={submitRole} disabled={roleBusy}>
         {roleBusy ? 'กำลังสร้าง...' : 'สร้างบทบาท'}
       </button>
     </div>

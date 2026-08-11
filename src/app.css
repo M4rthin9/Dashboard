@@ -1,10 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&display=swap');
 @import 'tailwindcss';
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --font-sans:
-    ui-sans-serif, system-ui, 'Segoe UI', Roboto, 'Noto Sans Thai', 'Leelawadee UI', Tahoma, sans-serif;
+    'Kanit', ui-sans-serif, system-ui, 'Segoe UI', Roboto, 'Noto Sans Thai', 'Leelawadee UI', Tahoma, sans-serif;
 
   /* ── Color palette ── */
   --color-bg: #f8fafc;
@@ -17,9 +18,37 @@
   --color-text-secondary: #64748b;
   --color-text-tertiary: #94a3b8;
 
-  --color-accent: #6366f1;
-  --color-accent-hover: #4f46e5;
-  --color-accent-bg: #f0f4ff;
+  --color-accent: #a92928;
+  --color-accent-hover: #8e1f1f;
+  --color-accent-bg: #fdf3f3;
+  --color-gold: #ffa000;
+  --color-gold-soft: #fff0c4;
+
+  /* crimson scale (replaces blue) */
+  --color-blue-50: #fdf3f3;
+  --color-blue-100: #fae3e3;
+  --color-blue-200: #f4c5c5;
+  --color-blue-300: #eb9c9c;
+  --color-blue-400: #dd6b6b;
+  --color-blue-500: #cf4545;
+  --color-blue-600: #b92e2e;
+  --color-blue-700: #a92928;
+  --color-blue-800: #8e1f1f;
+  --color-blue-900: #6f1a1a;
+  --color-blue-950: #3f0f0f;
+
+  /* gold scale (replaces amber) */
+  --color-amber-50: #fff9e6;
+  --color-amber-100: #ffefc2;
+  --color-amber-200: #ffdd87;
+  --color-amber-300: #ffc84a;
+  --color-amber-400: #ffb51f;
+  --color-amber-500: #ffa000;
+  --color-amber-600: #db8200;
+  --color-amber-700: #b56600;
+  --color-amber-800: #8a4e00;
+  --color-amber-900: #663c00;
+  --color-amber-950: #3a2200;
 
   /* Dark mode tokens */
   --color-bg-dark: #0f172a;
@@ -182,11 +211,11 @@ input[type="text"]::-webkit-search-cancel-button {
 
 /* ── Selection color ── */
 ::selection {
-  background: #c7d2fe;
-  color: #3730a3;
+  background: #1e3a5f;
+  color: #fff;
 }
 
 .dark ::selection {
-  background: #4338ca;
-  color: #c7d2fe;
+  background: #c9a227;
+  color: #14213d;
 }

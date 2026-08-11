@@ -398,13 +398,13 @@
             type="search"
             bind:value={search}
             placeholder="ค้นหาชื่อผู้เยี่ยม, ผู้ต้องขัง, REF, ปีก, เบอร์โทร"
-            class="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 transition-colors duration-150 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
+            class="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 transition-colors duration-150 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
           />
         </div>
 
         <select
           bind:value={statusFilter}
-          class="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 transition-colors duration-150 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+          class="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 transition-colors duration-150 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
           aria-label="กรองตามสถานะ"
         >
           <option value="">ทุกสถานะ</option>
@@ -415,7 +415,7 @@
 
         <select
           bind:value={dateFilter}
-          class="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 transition-colors duration-150 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+          class="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 transition-colors duration-150 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
           aria-label="กรองตามวันที่"
         >
           <option value="">ทุกวัน</option>
@@ -426,7 +426,7 @@
 
         <select
           bind:value={wingFilter}
-          class="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 transition-colors duration-150 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+          class="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 transition-colors duration-150 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
           aria-label="กรองตามปีก"
         >
           <option value="">ทุกปีก</option>
@@ -455,7 +455,7 @@
         </button>
 
         <button
-          class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-indigo-700 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
+          class="inline-flex items-center gap-1.5 rounded-xl bg-blue-700 px-3.5 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-blue-800 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-blue-700 focus-visible:outline-offset-2"
           onclick={doExport}
           disabled={sorted.length === 0}
         >
@@ -510,7 +510,7 @@
           {/if}
           {#if daySummary.pendingDiscipline > 0 && canApproveDiscipline}
             <button
-              class="inline-flex items-center gap-1 rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors duration-150 hover:bg-indigo-700 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
+              class="inline-flex items-center gap-1 rounded-xl bg-blue-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors duration-150 hover:bg-blue-800 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-blue-700 focus-visible:outline-offset-2"
               onclick={() => runBatch('รอชำระเงิน')}
               disabled={batchRunning !== ''}
             >
@@ -525,8 +525,8 @@
       {/if}
 
       {#if selectedRefs.length > 0}
-        <div class="flex items-center justify-between gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 dark:border-indigo-900 dark:bg-indigo-950/40">
-          <span class="text-sm font-medium text-indigo-700 dark:text-indigo-300">เลือก {selectedRefs.length} รายการ</span>
+        <div class="flex items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-900 dark:bg-blue-950/40">
+          <span class="text-sm font-medium text-blue-800 dark:text-blue-300">เลือก {selectedRefs.length} รายการ</span>
           <div class="flex items-center gap-2">
             {#if canCancel}
               <button
@@ -594,12 +594,12 @@
                       checked={selectedRefs.includes(row.ref)}
                       disabled={archived}
                       onchange={() => toggleSelect(row.ref)}
-                      class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-slate-600"
+                      class="rounded border-slate-300 text-blue-700 focus:ring-blue-600 dark:border-slate-600"
                     />
                   </td>
                   <td class="px-3 py-2.5">
                     <button
-                      class="font-mono text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline dark:text-indigo-400 dark:hover:text-indigo-300"
+                      class="font-mono text-xs font-semibold text-blue-700 hover:text-blue-800 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                       onclick={() => openDetail(row)}
                       title="ดูรายละเอียด"
                     >
@@ -631,7 +631,7 @@
                         case 'รอตรวจสอบผู้เข้าร่วม': return 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300';
                         case 'รอตรวจสอบวินัย': return 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300';
                         case 'รอชำระเงิน': return 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300';
-                        case 'ชำระแล้ว': return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300';
+                        case 'ชำระแล้ว': return 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300';
                         case 'เสร็จสิ้น': return 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300';
                         case 'ไม่อนุมัติ': return 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300';
                         case 'ยกเลิก': return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
@@ -668,7 +668,7 @@
                           {/if}
                         {/if}
                         {#if s === 'รอชำระเงิน' && canConfirmPayment}
-                          <button class="shrink-0 rounded-xl bg-indigo-600 p-1.5 text-white hover:bg-indigo-700" title="ยืนยันชำระเงิน" onclick={() => openPaymentApproval(row, 'ชำระแล้ว')}>
+                          <button class="shrink-0 rounded-xl bg-blue-700 p-1.5 text-white hover:bg-blue-800" title="ยืนยันชำระเงิน" onclick={() => openPaymentApproval(row, 'ชำระแล้ว')}>
                             <Check class="h-4 w-4" />
                           </button>
                         {/if}
@@ -724,7 +724,7 @@
           <div class="flex items-center gap-2">
             <select
               bind:value={pageSize}
-              class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors duration-150 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+              class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors duration-150 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
               aria-label="จำนวนรายการต่อหน้า"
             >
               <option value={5}>5</option>
@@ -758,7 +758,7 @@
         bind:value={cancelReason}
         rows="3"
         placeholder="ระบุเหตุผล..."
-        class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+        class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
       ></textarea>
     </div>
     <div class="flex justify-end gap-2 border-t border-slate-200 pt-5 dark:border-slate-700">

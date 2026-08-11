@@ -39,7 +39,7 @@
 
 <aside class="sticky top-0 z-20 hidden h-screen w-64 shrink-0 flex-col border-r border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 lg:flex">
   <div class="flex h-16 shrink-0 items-center gap-2.5 border-b border-slate-100 px-5 dark:border-slate-800">
-    <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-lg font-bold text-white shadow-sm">
+    <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-700 text-lg font-bold text-white shadow-sm">
       CCC
     </span>
     <div>
@@ -58,17 +58,17 @@
           <a
             href="#{item.path}"
             class="group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 ease-in-out {isActive
-              ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300'
+              ? 'bg-blue-50 text-blue-800 dark:bg-blue-600/15 dark:text-blue-300'
               : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'}"
           >
             <span
-              class="absolute left-0 top-1/2 h-5 -translate-y-1/2 rounded-r-full bg-indigo-600 transition-all duration-150 ease-in-out {isActive
+              class="absolute left-0 top-1/2 h-5 -translate-y-1/2 rounded-r-full bg-blue-700 transition-all duration-150 ease-in-out {isActive
                 ? 'w-1 opacity-100'
                 : 'w-0 opacity-0'}"
             ></span>
             <Icon
               class="h-5 w-5 shrink-0 {isActive
-                ? 'text-indigo-600 dark:text-indigo-400'
+                ? 'text-blue-700 dark:text-blue-400'
                 : 'text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300'}"
             />
             {item.label}
@@ -80,7 +80,7 @@
 
   <div class="shrink-0 border-t border-slate-200 px-4 py-4 dark:border-slate-800">
     <div class="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-slate-800/60">
-      <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
+      <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-800 dark:bg-blue-600/20 dark:text-blue-300">
         {(auth.displayName || '?').slice(0, 1).toUpperCase()}
       </span>
       <div class="min-w-0">

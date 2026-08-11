@@ -77,6 +77,26 @@ const PRINT_SHARED_CSS = `
   th { background: #f0f0f0; font-weight: 700; font-size: 10px; text-transform: uppercase; }
   tr:nth-child(even) { background: #fafafa; }
   .print-footer { text-align: center; font-size: 10px; color: #888; margin-top: 20px; border-top: 1px solid #ccc; padding-top: 6px; }
+  .copy-watermark {
+    position: fixed;
+    top: 45%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-30deg);
+    font-family: 'Kanit', 'Sarabun', sans-serif;
+    font-size: 110px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+    text-align: center;
+    color: rgba(169, 41, 40, 0.14);
+    border: 5px solid rgba(169, 41, 40, 0.32);
+    padding: 18px 56px;
+    border-radius: 16px;
+    z-index: 9999;
+    pointer-events: none;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
   @media print {
     body { padding: 0; font-size: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .no-print { display: none !important; }
@@ -84,8 +104,20 @@ const PRINT_SHARED_CSS = `
     th { background: #e8e8e8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     tr:nth-child(even) { background: #f5f5f5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .tear-off { page-break-inside: avoid; }
+    .copy-watermark { position: fixed; }
   }
 `;
+
+export function wrapWithCopy(content: string, title: string): string {
+  return `
+    ${content}
+    <div class="copy-page" style="page-break-before:always; position:relative;">
+      <div class="copy-watermark">สำเนา</div>
+      <div class="print-title" style="color:#a92928; margin-top:16px;">สำเนา — ${escapeHtml(title)}</div>
+      ${content}
+    </div>
+  `;
+}
 
 export function openPrintWindow(content: string, reportName: string, printerName: string): boolean {
   const now = new Date().toLocaleString('th-TH');

@@ -29,7 +29,7 @@
 
   const dotClasses: Record<string, string> = {
     done: 'bg-emerald-500 text-white',
-    active: 'bg-indigo-600 text-white ring-2 ring-indigo-400/30',
+    active: 'bg-blue-700 text-white ring-2 ring-blue-400/30',
     pending: 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400',
     rejected: 'bg-red-500 text-white',
     skipped: 'bg-slate-100 text-slate-300 dark:bg-slate-800 dark:text-slate-600',

@@ -83,7 +83,7 @@
         <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">สลับธีมสว่าง/มืดทั้งระบบ</p>
       </div>
       <button
-        class="relative h-7 w-12 rounded-full transition-colors {ui.darkMode ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-600'}"
+        class="relative h-7 w-12 rounded-full transition-colors {ui.darkMode ? 'bg-blue-700' : 'bg-slate-300 dark:bg-slate-600'}"
         onclick={() => ui.toggleDarkMode()}
         role="switch"
         aria-checked={ui.darkMode}
@@ -116,7 +116,7 @@
             bind:value={settingsText}
             rows="14"
             spellcheck="false"
-            class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 font-mono text-xs transition-colors duration-150 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
+            class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 font-mono text-xs transition-colors duration-150 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
           ></textarea>
           {#if savedBy}
             <p class="text-xs text-slate-400 dark:text-slate-500">แก้ไขล่าสุดโดย {savedBy} เมื่อ {savedAt}</p>
@@ -125,7 +125,7 @@
             <button class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition-colors duration-150 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" onclick={fetchSettings}>
               <span class="flex items-center gap-1.5"><RefreshCw class="h-4 w-4" /> โหลดใหม่</span>
             </button>
-            <button class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-indigo-700 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2" onclick={save} disabled={saving}>
+            <button class="rounded-xl bg-blue-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-blue-800 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-blue-700 focus-visible:outline-offset-2" onclick={save} disabled={saving}>
               <span class="flex items-center gap-1.5"><Save class="h-4 w-4" /> {saving ? 'กำลังบันทึก...' : 'บันทึก'}</span>
             </button>
           </div>

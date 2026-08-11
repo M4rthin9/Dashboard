@@ -206,13 +206,13 @@
             type="search"
             bind:value={search}
             placeholder="ค้นหาเลขผู้ต้องขัง, ชื่อ, แดน..."
-            class="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 transition-colors duration-150 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
+            class="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 transition-colors duration-150 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
           />
         </div>
         {#if wings.length > 0}
           <select
             bind:value={wingFilter}
-            class="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 transition-colors duration-150 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            class="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 transition-colors duration-150 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
             aria-label="กรองตามแดน"
           >
             <option value="">ทุกแดน</option>
@@ -225,7 +225,7 @@
           <button class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors duration-150 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" onclick={doSyncWings} disabled={syncing}>
             {syncing ? 'กำลังซิงค์...' : 'ซิงค์แดน'}
           </button>
-          <button class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-indigo-700 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2" onclick={openImport}>
+          <button class="inline-flex items-center gap-1.5 rounded-xl bg-blue-700 px-3.5 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-blue-700 focus-visible:outline-offset-2" onclick={openImport}>
             <span class="flex items-center gap-1.5"><Upload class="h-4 w-4" /> นำเข้า CSV</span>
           </button>
           <button class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors duration-150 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" onclick={() => exportPrisonersCSV(rows)}>
@@ -281,7 +281,7 @@
                   <td class="max-w-[220px] truncate px-3 py-2.5 text-xs text-slate-500 dark:text-slate-400">{p.note || ''}</td>
                   {#if isManager}
                     <td class="px-3 py-2.5 text-right">
-                      <button class="rounded-xl p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:hover:bg-slate-800" onclick={() => openEdit(p)} aria-label="แก้ไข">
+                      <button class="rounded-xl p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-blue-700 dark:hover:bg-slate-800" onclick={() => openEdit(p)} aria-label="แก้ไข">
                         <Pencil class="h-4 w-4" />
                       </button>
                     </td>
@@ -334,7 +334,7 @@
     <div>
       <label
         for="csv-file"
-        class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-center transition-colors {dragging ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40' : 'border-slate-300 hover:border-indigo-400 hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800'}"
+        class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-center transition-colors {dragging ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/40' : 'border-slate-300 hover:border-blue-400 hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800'}"
         ondragover={(e) => {
           e.preventDefault();
           dragging = true;
@@ -370,7 +370,7 @@
         rows="6"
         oninput={(e) => parseCSV((e.currentTarget as HTMLTextAreaElement).value)}
         placeholder="เลขผู้ต้องขัง,ชื่อ-นามสกุล,แดน,สถานะ,วันกระทำความผิด/ไถ่ถอน,หมายเหตุ&#10;12345,นายสมชาย ใจดี,แดน 1,,,"
-        class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-mono text-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+        class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-mono text-xs focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
       ></textarea>
     </div>
 
@@ -420,7 +420,7 @@
 
     <div class="flex justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
       <button class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition-colors duration-150 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" onclick={() => (importOpen = false)}>ปิด</button>
-      <button class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-indigo-700 disabled:opacity-50" onclick={submitImport} disabled={importing || parsed.length === 0}>
+      <button class="rounded-xl bg-blue-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-blue-800 disabled:opacity-50" onclick={submitImport} disabled={importing || parsed.length === 0}>
         {importing ? 'กำลังนำเข้า...' : `นำเข้า ${parsed.length} รายการ`}
       </button>
     </div>

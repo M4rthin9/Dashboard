@@ -35,7 +35,7 @@
 
 <header class="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-white/85 dark:border-slate-700/60 dark:bg-slate-900/95 dark:supports-[backdrop-filter]:bg-slate-900/85 lg:h-16 lg:px-6">
   <div class="flex min-w-0 items-center gap-3">
-    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white lg:hidden">
+    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-700 text-sm font-bold text-white lg:hidden">
       CCC
     </span>
     <h1 class="truncate text-base font-semibold text-slate-900 dark:text-slate-100">{route?.title ?? ''}</h1>
@@ -86,7 +86,7 @@
         aria-expanded={menuOpen}
         aria-label="เมนูผู้ใช้"
       >
-        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
+        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-800 dark:bg-blue-600/20 dark:text-blue-300">
           {(auth.displayName || '?').slice(0, 1).toUpperCase()}
         </span>
         <span class="hidden max-w-[9rem] truncate text-sm font-medium text-slate-700 xl:block dark:text-slate-200">
@@ -104,7 +104,7 @@
           role="menu"
         >
           <div class="flex items-center gap-3 rounded-lg px-3 py-2.5">
-            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
+            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-800 dark:bg-blue-600/20 dark:text-blue-300">
               {(auth.displayName || '?').slice(0, 1).toUpperCase()}
             </span>
             <div class="min-w-0">

@@ -117,7 +117,7 @@
       case 'เสร็จสิ้น':
         return { grad: 'from-emerald-500/15 via-emerald-500/5 to-transparent', ring: 'ring-emerald-200 dark:ring-emerald-900/60', dot: 'bg-emerald-500' };
       case 'ชำระแล้ว':
-        return { grad: 'from-indigo-500/15 via-indigo-500/5 to-transparent', ring: 'ring-indigo-200 dark:ring-indigo-900/60', dot: 'bg-indigo-500' };
+        return { grad: 'from-blue-600/15 via-blue-600/5 to-transparent', ring: 'ring-blue-200 dark:ring-blue-900/60', dot: 'bg-blue-600' };
       case 'รอชำระเงิน':
         return { grad: 'from-blue-500/15 via-blue-500/5 to-transparent', ring: 'ring-blue-200 dark:ring-blue-900/60', dot: 'bg-blue-500' };
       case 'รอตรวจสอบวินัย':
@@ -138,7 +138,7 @@
   title={row ? `รายละเอียดการจอง · ${row.ref}` : 'รายละเอียดการจอง'}
   onclose={onclose}
   width="max-w-3xl"
-  accent={s === 'ไม่อนุมัติ' || s === 'ยกเลิก' ? 'red' : s === 'เสร็จสิ้น' ? 'emerald' : 'indigo'}
+  accent={s === 'ไม่อนุมัติ' || s === 'ยกเลิก' ? 'red' : s === 'เสร็จสิ้น' ? 'emerald' : 'blue'}
   icon={ReceiptText}
   subtitle={row ? `สร้างเมื่อ ${formatDateTimeThai(row.createdAt)}` : ''}
 >
@@ -240,7 +240,7 @@
       {#if extras.length > 0}
         <section class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
           <div class="flex items-center gap-2">
-            <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-100 text-violet-600 dark:bg-violet-950 dark:text-violet-400">
+            <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
               <UsersRound class="h-4 w-4" />
             </div>
             <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100">ผู้เยี่ยมร่วม ({extras.length} คน)</h3>
@@ -248,7 +248,7 @@
           <div class="flex flex-col gap-2">
             {#each extras as ex, i (i)}
               <div class="flex flex-wrap items-center gap-3 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800/60">
-                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-purple-500 text-xs font-bold text-white">
+                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-blue-500 text-xs font-bold text-white">
                   {initials(ex.name)}
                 </div>
                 <div class="min-w-0 flex-1">
@@ -334,7 +334,7 @@
           </div>
           {#if slipLoading}
             <div class="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center dark:border-slate-700 dark:bg-slate-900">
-              <span class="h-8 w-8 animate-spin rounded-full border-2 border-indigo-500/30 border-t-indigo-500"></span>
+              <span class="h-8 w-8 animate-spin rounded-full border-2 border-blue-600/30 border-t-blue-600"></span>
               <div class="text-sm font-medium text-slate-500 dark:text-slate-400">กำลังโหลดสลิปชำระเงิน...</div>
             </div>
           {:else}
@@ -350,7 +350,7 @@
                 href={slipUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-950/60"
+                class="inline-flex items-center gap-1.5 rounded-xl bg-blue-50 px-4 py-2 text-sm font-medium text-blue-800 transition-colors hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-950/60"
               >
                 <ExternalLink class="h-4 w-4" />
                 เปิดสลิปชำระเงินเต็มในหน้าต่างใหม่

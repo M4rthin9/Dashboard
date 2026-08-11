@@ -40,7 +40,7 @@
 <div class="flex min-h-screen items-center justify-center bg-slate-50 p-4 dark:bg-slate-950">
   <div class="w-full max-w-md">
     <div class="mb-8 text-center">
-      <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-600 text-xl font-bold text-white shadow-xl shadow-indigo-600/30">
+      <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-950 text-xl font-bold text-amber-400 shadow-xl shadow-blue-950/40 ring-1 ring-amber-400/50">
         CCC
       </div>
       <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">CCC Dashboard</h1>
@@ -49,7 +49,7 @@
 
     <form
       onsubmit={handleSubmit}
-      class="rounded-2xl border border-slate-200/80 bg-white p-8 shadow-xl shadow-slate-200/50 dark:border-slate-700/60 dark:bg-slate-900 dark:shadow-none"
+      class="rounded-2xl border border-slate-200/80 border-t-4 border-t-amber-500 bg-white p-8 shadow-xl shadow-slate-200/50 dark:border-slate-700/60 dark:border-t-amber-500 dark:bg-slate-900 dark:shadow-none"
     >
       <div class="flex flex-col gap-5">
         <div class="relative">
@@ -59,7 +59,7 @@
             bind:value={username}
             placeholder="ชื่อผู้ใช้"
             autocomplete="username"
-            class="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 transition-colors duration-150 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
+            class="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 transition-colors duration-150 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
           />
         </div>
 
@@ -70,7 +70,7 @@
             bind:value={password}
             placeholder="รหัสผ่าน"
             autocomplete="current-password"
-            class="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-10 text-sm text-slate-900 placeholder:text-slate-400 transition-colors duration-150 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
+            class="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-10 text-sm text-slate-900 placeholder:text-slate-400 transition-colors duration-150 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
           />
           <button
             type="button"

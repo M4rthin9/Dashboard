@@ -73,7 +73,7 @@
         </div>
         <div class="flex justify-end border-t border-slate-200 pt-5 dark:border-slate-700">
           <button
-            class="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition-all duration-150 ease-in-out hover:bg-indigo-700 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
+            class="rounded-xl bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white transition-all duration-150 ease-in-out hover:bg-blue-800 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-blue-700 focus-visible:outline-offset-2"
             onclick={handleOkClick}
           >
             {a.okText ?? 'ตกลง'}
