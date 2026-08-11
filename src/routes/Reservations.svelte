@@ -14,7 +14,7 @@
   import { reservations } from '../lib/store/reservations.svelte';
   import { ui } from '../lib/store/ui.svelte';
   import { hasPermission } from '../lib/utils/permissions';
-  import { formatBaht, formatNumber, normalizeStatus, STATUS_COLORS, todayISO } from '../lib/utils/format';
+  import { formatBaht, formatNumber, normalizeStatus, STATUS_COLORS, todayISO, visitDateLabel } from '../lib/utils/format';
   import { exportReservationsCSV } from '../lib/utils/csv';
   import { openPrintWindow, buildSeatingReport } from '../lib/utils/print';
   import { getPrisoners } from '../lib/api/endpoints';
@@ -372,7 +372,7 @@
             `ผู้เยี่ยม: ${String(fields.visitorName ?? '')}`,
             `ผู้ต้องขัง: ${String(fields.prisonerName ?? '')}`,
             `ปีก: ${String(fields.wing ?? '')}`,
-            `วันเข้างาน: ${String(fields.visitDate ?? fields.visitDateISO ?? '')}`,
+            `วันเข้างาน: ${visitDateLabel(String(fields.visitDate ?? ''), String(fields.visitDateISO ?? ''))}`,
             `จำนวน: ${formatNumber(Number(fields.visitorCount) || 0)} คน · ${formatBaht(Number(fields.total) || 0)}`,
           ].join('\n'),
           type: 'success',
@@ -420,7 +420,7 @@
         >
           <option value="">ทุกวัน</option>
           {#each dates as d (d)}
-            <option value={d}>{d}</option>
+            <option value={d}>{visitDateLabel(d)}</option>
           {/each}
         </select>
 
@@ -620,7 +620,7 @@
                     </div>
                   </td>
                   <td class="px-3 py-2.5 font-medium">{row.wing ?? '—'}</td>
-                  <td class="px-3 py-2.5 whitespace-nowrap">{row.visitDateISO ?? row.visitDate ?? '—'}</td>
+                  <td class="px-3 py-2.5 whitespace-nowrap">{visitDateLabel(row.visitDate, row.visitDateISO)}</td>
                   <td class="px-3 py-2.5 text-right whitespace-nowrap">
                     <div>{formatNumber(row.visitorCount)} คน</div>
                     <div class="text-xs text-slate-500 dark:text-slate-400">{formatBaht(row.total)}</div>

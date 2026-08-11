@@ -20,6 +20,7 @@
     shiftMonthISO,
   } from '../lib/utils/dashboard';
   import { buildFinancialReport, openPrintWindow } from '../lib/utils/print';
+  import { visitDateLabel } from '../lib/utils/format';
 
   let rows = $state<Reservation[]>([]);
   let loading = $state(false);
@@ -220,7 +221,7 @@
           <tbody>
             {#each daily as d (d.date)}
               <tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/50 dark:border-slate-800 dark:hover:bg-slate-800/30">
-                <td class="whitespace-nowrap px-3 py-2 text-slate-700 dark:text-slate-200">{monthLabel(d.date.slice(0, 7))} {Number(d.date.slice(8, 10))}</td>
+                <td class="whitespace-nowrap px-3 py-2 text-slate-700 dark:text-slate-200">{visitDateLabel(d.date)}</td>
                 <td class="px-3 py-2 text-right text-slate-700 dark:text-slate-200">{formatNumber(d.bookings)}</td>
                 <td class="px-3 py-2 text-right text-slate-700 dark:text-slate-200">{formatNumber(d.attended)}</td>
                 <td class="px-3 py-2 text-right text-slate-700 dark:text-slate-200">{formatNumber(d.visitors)}</td>

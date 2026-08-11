@@ -3,7 +3,7 @@
   import Modal from './ui/Modal.svelte';
   import Button from './ui/Button.svelte';
   import Badge from './ui/Badge.svelte';
-  import { formatBaht, formatDateTimeThai } from '../utils/format';
+  import { formatBaht, formatDateTimeThai, visitDateLabel } from '../utils/format';
   import type { Reservation } from '../api/types';
   import { getSlipByRef } from '../api/endpoints';
 
@@ -111,7 +111,7 @@
         </div>
         <div class="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-slate-600 dark:text-slate-300">
           <span class="inline-flex items-center gap-1">
-            <CalendarDays class="h-3.5 w-3.5 text-slate-400" /> {row.visitDate ?? row.visitDateISO ?? '—'}
+            <CalendarDays class="h-3.5 w-3.5 text-slate-400" /> {visitDateLabel(row.visitDate, row.visitDateISO)}
           </span>
           <span class="inline-flex items-center gap-1">
             <User class="h-3.5 w-3.5 text-slate-400" /> {totalPersons} ท่าน

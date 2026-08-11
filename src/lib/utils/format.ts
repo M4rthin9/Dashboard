@@ -30,6 +30,17 @@ export function formatDateTimeThai(value: string | Date | undefined): string {
   });
 }
 
+export function visitDateLabel(visitDate?: string, visitDateISO?: string): string {
+  const src = String(visitDateISO && visitDateISO.trim() ? visitDateISO : visitDate ?? '').trim();
+  if (!src) return '—';
+  const m = src.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) {
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    if (!isNaN(d.getTime())) return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  return src.replace(/^วัน.+?\s+ที่\s*/, '');
+}
+
 export function todayISO(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

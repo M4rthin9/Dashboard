@@ -9,7 +9,7 @@
   import { reservations } from '../lib/store/reservations.svelte';
   import { auth } from '../lib/store/auth.svelte';
   import { ui } from '../lib/store/ui.svelte';
-  import { formatBaht, formatNumber, todayISO, STATUS_COLORS, normalizeStatus } from '../lib/utils/format';
+  import { formatBaht, formatNumber, todayISO, STATUS_COLORS, normalizeStatus, visitDateLabel } from '../lib/utils/format';
   import { exportReservationsCSV } from '../lib/utils/csv';
   import {
     computeRevenueSummary, computeStatusDistribution, computeWingCounts,
@@ -338,7 +338,7 @@
               <tr class="border-b border-slate-200 last:border-0 hover:bg-slate-50/50 dark:border-slate-800 dark:hover:bg-slate-800/30">
                 <td class="px-3 py-2 font-mono text-xs text-slate-800 dark:text-slate-200">{r.ref}</td>
                 <td class="px-3 py-2 text-slate-700 dark:text-slate-200">{r.prisonerName}</td>
-                <td class="px-3 py-2 text-xs text-slate-500 dark:text-slate-400">{r.visitDate}</td>
+                <td class="px-3 py-2 text-xs text-slate-500 dark:text-slate-400">{visitDateLabel(r.visitDate, r.visitDateISO)}</td>
                 <td class="px-3 py-2 text-xs text-slate-600 dark:text-slate-300">{r.status}</td>
                 <td class="px-3 py-2 text-right text-xs text-slate-700 dark:text-slate-200">{formatBaht(r.total)}</td>
               </tr>

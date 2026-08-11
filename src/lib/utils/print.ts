@@ -1,4 +1,4 @@
-import { formatNumber } from './format';
+import { formatNumber, visitDateLabel } from './format';
 import { monthLabel } from './dashboard';
 import type { Reservation } from '../api/types';
 import type { FinancialDayRow, FinancialMonthRow, FinancialSummary } from './dashboard';
@@ -169,7 +169,7 @@ export function buildDisciplinaryReport(rows: Reservation[], date: string): stri
   return `
     <div class="print-title">หนังสือขออนุมัติเบิกตัวผู้ต้องขังเข้าร่วมกิจกรรม</div>
     <div style="margin-bottom:12px; line-height:1.8; font-size:13px;">
-      <div style="text-align:right;">วันที่ ${escapeHtml(date)}</div>
+      <div style="text-align:right;">วันที่ ${escapeHtml(thaiDateLabel(date))}</div>
       <br>
       <div><strong>เรื่อง</strong> ขออนุมัติเบิกตัวผู้ต้องขังเข้าร่วมกิจกรรม Chance &amp; Change Cafe</div>
       <div><strong>เรียน</strong> ผู้อำนวยการส่วนปกครองผู้ต้องขัง</div>
@@ -242,7 +242,7 @@ export function buildGateRegistrationReport(rows: Reservation[], date: string): 
   );
 
   return `
-    <div class="print-title">ทะเบียนผู้เข้าเยี่ยม — วันที่ ${escapeHtml(date)}</div>
+    <div class="print-title">ทะเบียนผู้เข้าเยี่ยม — วันที่ ${escapeHtml(thaiDateLabel(date))}</div>
     <table>
       <thead>
         <tr>
@@ -348,7 +348,7 @@ export function buildSeatingReport(rows: Reservation[]): string {
             <span class="table-num">โต๊ะ ${i + 1}</span>
             <span class="table-ref">${escapeHtml(r.ref ?? '—')}</span>
           </div>
-          <span class="table-date">📅 ${escapeHtml(r.visitDate ?? '—')}</span>
+          <span class="table-date">📅 ${escapeHtml(visitDateLabel(r.visitDate, r.visitDateISO))}</span>
         </div>
         <div class="content-grid">
           <div class="info-section prisoner">
@@ -379,7 +379,7 @@ export function buildSeatingReport(rows: Reservation[]): string {
           }
         </div>
         <div class="table-footer">
-          <div class="visit-date-info">วันที่เยี่ยม: <b>${escapeHtml(r.visitDate ?? '—')}</b></div>
+          <div class="visit-date-info">วันที่เยี่ยม: <b>${escapeHtml(visitDateLabel(r.visitDate, r.visitDateISO))}</b></div>
           <div class="people-count">
             <span class="label">จำนวนคน</span>
             <span class="number">${totalPeopleThisTable} คน</span>
@@ -429,7 +429,7 @@ export function buildKitchenReport(rows: Reservation[], date: string): string {
 
   const reportBody = `
     <div class="tear-off" style="border:2px solid #333; padding:12px; margin-bottom:8px; font-size:13px;">
-      <strong style="font-size:15px;">🍽️🍰 ครัว + เบเกอรี่ — วันที่ ${escapeHtml(date)}</strong><br><br>
+      <strong style="font-size:15px;">🍽️🍰 ครัว + เบเกอรี่ — วันที่ ${escapeHtml(thaiDateLabel(date))}</strong><br><br>
       จำนวนโต๊ะ: <strong>${tables} โต๊ะ</strong><br>
       รวมผู้เข้าร่วม: <strong>${relatives + tables} คน</strong> (ญาติ ${relatives} + ผู้ต้องขัง ${tables})<br><br>
       <strong>ผู้ใหญ่ (รวมผู้ต้องขัง):</strong> ${combinedAdults} คน<br>
@@ -440,7 +440,7 @@ export function buildKitchenReport(rows: Reservation[], date: string): string {
   `;
 
   return `
-    <div class="print-title" style="margin-bottom:8px;">🍽️🍰 ครัว + เบเกอรี่ — วันที่ ${escapeHtml(date)}</div>
+    <div class="print-title" style="margin-bottom:8px;">🍽️🍰 ครัว + เบเกอรี่ — วันที่ ${escapeHtml(thaiDateLabel(date))}</div>
     <p style="text-align:center; font-size:12px; color:#555; margin-bottom:12px;">พิมพ์ 1 ครั้ง → ตัดตรงกลาง ส่งครัว 1 ชุด / เบเกอรี่ 1 ชุด</p>
     ${reportBody}
     <div class="tear-off" style="text-align:center; margin:12px 0; border-top:2px dashed #c62828; padding-top:8px; color:#c62828; font-weight:700;">
@@ -450,10 +450,10 @@ export function buildKitchenReport(rows: Reservation[], date: string): string {
   `;
 }
 
-function dayLabelTh(iso: string): string {
+function thaiDateLabel(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
   if (isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 export function buildFinancialReport(
@@ -470,7 +470,7 @@ export function buildFinancialReport(
       (d) => `
       <tr>
         <td style="text-align:center;">${fmt(d.bookings)}</td>
-        <td>${escapeHtml(dayLabelTh(d.date))}</td>
+        <td>${escapeHtml(thaiDateLabel(d.date))}</td>
         <td style="text-align:center;">${fmt(d.attended)}</td>
         <td style="text-align:center;">${fmt(d.visitors)}</td>
         <td style="text-align:center;">${fmt(d.prisoners)}</td>

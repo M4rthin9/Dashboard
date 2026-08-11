@@ -1,7 +1,7 @@
 <script lang="ts">
   import Card from '../ui/Card.svelte';
   import { reservations } from '../../store/reservations.svelte';
-  import { normalizeStatus, todayISO, formatBaht } from '../../utils/format';
+  import { normalizeStatus, todayISO, formatBaht, visitDateLabel } from '../../utils/format';
 
   const wingColors: Record<string, string> = {
     'แดน 1': '#1e40af', 'แดน 2': '#7c3aed', 'แดน 3': '#b91c1c',
@@ -48,14 +48,14 @@
       class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 transition-colors duration-150 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
     >
       {#each dates as d (d)}
-        <option value={d}>{d}</option>
+        <option value={d}>{visitDateLabel(d)}</option>
       {/each}
     </select>
   </div>
 
   {#if dayBookings.length === 0}
     <p class="py-10 text-center text-sm text-slate-400 dark:text-slate-500">
-      🪑 ไม่มีโต๊ะที่มีสถานะ "เสร็จสิ้น" หรือ "รอชำระเงิน" ในวัน {selectedDate}
+      🪑 ไม่มีโต๊ะที่มีสถานะ "เสร็จสิ้น" หรือ "รอชำระเงิน" ในวัน {visitDateLabel(selectedDate)}
     </p>
   {:else}
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
