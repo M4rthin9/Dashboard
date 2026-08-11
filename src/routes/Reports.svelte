@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Download, Printer, RefreshCw } from '@lucide/svelte';
+  import type { Component } from 'svelte';
+  import { ClipboardCheck, Coins, Download, Info, Printer, RefreshCw, ShieldCheck, Users, Utensils } from '@lucide/svelte';
   import type { EChartsOption } from 'echarts';
   import Card from '../lib/components/ui/Card.svelte';
   import Spinner from '../lib/components/ui/Spinner.svelte';
@@ -108,15 +109,77 @@
 
   const printerName = $derived(auth.user?.displayName || auth.user?.username || 'ไม่ระบุ');
 
-  function doPrint(build: (rows: Reservation[], date: string) => string, title: string, withCopy = false): void {
+  interface PrintReportDef {
+    id: string;
+    title: string;
+    desc: string;
+    note: string;
+    copies: string;
+    accent: string;
+    btn: string;
+    icon: Component;
+    build: (rows: Reservation[], date: string) => string;
+    withCopy: boolean;
+  }
+
+  const printReports: PrintReportDef[] = [
+    {
+      id: 'discipline',
+      title: 'ปกครองกลาง / ส่วนทัณฑ์',
+      desc: 'หนังสือขออนุมัติเบิกตัวผู้ต้องขังเข้าร่วมกิจกรรม',
+      note: 'เรียงผู้ต้องขังไม่ซ้ำกัน พร้อมช่องลงนาม 3 ฝ่าย',
+      copies: 'พิมพ์ 1 ชุด',
+      accent: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400',
+      btn: 'bg-red-700 hover:bg-red-800',
+      icon: ShieldCheck,
+      build: buildDisciplinaryReport,
+      withCopy: false,
+    },
+    {
+      id: 'gate',
+      title: 'ทะเบียนผู้เข้าเยี่ยม (ลงชื่อ)',
+      desc: 'รายชื่อผู้เยี่ยมและผู้ต้องขัง พร้อมช่องลงชื่อ',
+      note: 'มีช่องลงชื่อผู้เยี่ยมและเจ้าหน้าที่ประจำจุด',
+      copies: 'พิมพ์ 2 ชุด (สำเนา)',
+      accent: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400',
+      btn: 'bg-blue-700 hover:bg-blue-800',
+      icon: ClipboardCheck,
+      build: buildGateRegistrationReport,
+      withCopy: true,
+    },
+    {
+      id: 'kitchen',
+      title: 'ครัว + เบเกอรี่',
+      desc: 'สรุปจำนวนอาหารสำหรับครัวและเบเกอรี่',
+      note: 'ตัดแบ่งเอกสาร 2 ชุด (ครัว / เบเกอรี่)',
+      copies: 'พิมพ์ 2 ชุด (ตัดกลาง)',
+      accent: 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400',
+      btn: 'bg-green-700 hover:bg-green-800',
+      icon: Utensils,
+      build: buildKitchenReport,
+      withCopy: true,
+    },
+  ];
+
+  const printDaySummary = $derived.by(() => {
+    let visitors = 0;
+    let revenue = 0;
+    for (const r of dayRows) {
+      visitors += Number(r.visitorCount) || 0;
+      revenue += Number(r.total) || 0;
+    }
+    return { tables: dayRows.length, visitors, prisoners: dayRows.length, revenue };
+  });
+
+  function doPrint(report: PrintReportDef): void {
     const rows = dayRows.slice().sort((a, b) => String(a.ref).localeCompare(String(b.ref)));
     if (rows.length === 0) {
       ui.showAlert({ title: 'ไม่มีข้อมูล', message: 'ไม่มีรายการสถานะ เสร็จสิ้น ในวันที่เลือก', type: 'warning' });
       return;
     }
-    let content = build(rows, reportDate);
-    if (withCopy) content = wrapWithCopy(content, title);
-    const ok = openPrintWindow(content, title, printerName);
+    let content = report.build(rows, reportDate);
+    if (report.withCopy) content = wrapWithCopy(content, report.title);
+    const ok = openPrintWindow(content, report.title, printerName);
     if (!ok) ui.showAlert({ title: 'กรุณาอนุญาต Popup', message: 'กรุณาอนุญาต Popup เพื่อเปิดหน้าพิมพ์', type: 'warning' });
   }
 </script>
@@ -151,37 +214,59 @@
   {#if reservations.loading && reservations.rows.length === 0}
     <div class="flex items-center justify-center py-16"><Spinner /></div>
   {:else}
-    <Card title="พิมพ์รายงานประจำวัน">
-      <div class="flex flex-wrap items-end gap-3">
+    <Card title="พิมพ์รายงานประจำวัน" subtitle="เลือกวันที่ และเลือกรายงานที่ต้องการพิมพ์">
+      <div class="flex flex-wrap items-end justify-between gap-4">
         <div class="flex flex-col gap-1.5">
           <label for="rep-print-date" class="text-xs font-medium text-slate-500 dark:text-slate-400">วันที่พิมพ์</label>
           <input id="rep-print-date" type="date" bind:value={reportDate}
             class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" />
         </div>
-        <button
-          class="inline-flex items-center gap-1.5 rounded-xl bg-red-700 px-3 py-2 text-sm font-medium text-white hover:bg-red-800"
-          onclick={() => doPrint(buildDisciplinaryReport, 'รายงานส่วนทัณฑ์ (ปกครองกลาง)')}
-        >
-          <Printer class="h-4 w-4" /> ปกครองกลาง / ส่วนทัณฑ์
-        </button>
-        <button
-          class="inline-flex items-center gap-1.5 rounded-xl bg-blue-700 px-3 py-2 text-sm font-medium text-white hover:bg-blue-800"
-          onclick={() => doPrint(buildGateRegistrationReport, 'ทะเบียนผู้เข้าเยี่ยม', true)}
-        >
-          <Printer class="h-4 w-4" /> ทะเบียนผู้เข้าเยี่ยม (ลงชื่อ)
-        </button>
-        <button
-          class="inline-flex items-center gap-1.5 rounded-xl bg-green-700 px-3 py-2 text-sm font-medium text-white hover:bg-green-800"
-          onclick={() => doPrint(buildKitchenReport, 'ครัว + เบเกอรี่', true)}
-        >
-          <Printer class="h-4 w-4" /> ครัว + เบเกอรี่
-        </button>
-        <span class="text-xs text-slate-400 dark:text-slate-500">
-          {reportDate}: {formatNumber(dayRows.length)} โต๊ะ
-        </span>
-        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-          พิมพ์เฉพาะสถานะ เสร็จสิ้น
-        </span>
+        <div class="flex flex-wrap gap-2">
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+            <Users class="h-3.5 w-3.5 text-slate-400" /> โต๊ะ {formatNumber(printDaySummary.tables)}
+          </span>
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+            <Users class="h-3.5 w-3.5" /> ผู้เยี่ยม {formatNumber(printDaySummary.visitors)}
+          </span>
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-orange-100 px-3 py-1.5 text-xs font-semibold text-orange-700 dark:bg-orange-950 dark:text-orange-300">
+            <ShieldCheck class="h-3.5 w-3.5" /> ผู้ต้องขัง {formatNumber(printDaySummary.prisoners)}
+          </span>
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+            <Coins class="h-3.5 w-3.5" /> {formatBaht(printDaySummary.revenue)}
+          </span>
+        </div>
+      </div>
+
+      <div class="mt-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950/60 dark:text-amber-300">
+        <Info class="mt-0.5 h-4 w-4 shrink-0" />
+        <span>รายงานทั้งหมดพิมพ์จากรายการสถานะ <strong>เสร็จสิ้น</strong> ในวันที่เลือกเท่านั้น</span>
+      </div>
+
+      <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+        {#each printReports as r (r.id)}
+          <div class="flex flex-col rounded-2xl border border-slate-200 bg-slate-50/40 p-4 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg dark:border-slate-700/60 dark:bg-slate-800/30 dark:hover:border-slate-600">
+            <div class="flex items-start gap-3">
+              <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl {r.accent}">
+                <r.icon class="h-5 w-5" />
+              </div>
+              <div class="min-w-0">
+                <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{r.title}</p>
+                <p class="mt-0.5 text-xs leading-snug text-slate-500 dark:text-slate-400">{r.desc}</p>
+              </div>
+            </div>
+            <p class="mt-3 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{r.note}</p>
+            <div class="mt-auto flex items-center justify-between gap-2 pt-4">
+              <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">{r.copies}</span>
+              <button
+                class="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-white transition-colors duration-150 hover:brightness-110 {r.btn}"
+                onclick={() => doPrint(r)}
+              >
+                <Printer class="h-4 w-4" />
+                พิมพ์
+              </button>
+            </div>
+          </div>
+        {/each}
       </div>
     </Card>
 

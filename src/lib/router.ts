@@ -38,7 +38,15 @@ export function navigate(path: string): void {
 }
 
 export function currentPath(): string {
-  return hashState.value.replace(/^#/, '') || '/dashboard';
+  const raw = hashState.value.replace(/^#/, '') || '/dashboard';
+  const qi = raw.indexOf('?');
+  return qi === -1 ? raw : raw.slice(0, qi);
+}
+
+export function currentQuery(): URLSearchParams {
+  const raw = hashState.value.replace(/^#/, '');
+  const qi = raw.indexOf('?');
+  return qi === -1 ? new URLSearchParams() : new URLSearchParams(raw.slice(qi + 1));
 }
 
 export function resolveRoute(): RouteDef {

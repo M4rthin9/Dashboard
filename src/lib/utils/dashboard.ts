@@ -22,6 +22,8 @@ export interface DashboardStats {
   thisWeek: number;
   thisMonth: number;
   uniqueVisitors: number;
+  prevWeek: number;
+  prevMonth: number;
 }
 
 export function computeStats(rows: Reservation[]): DashboardStats {
@@ -29,8 +31,16 @@ export function computeStats(rows: Reservation[]): DashboardStats {
   const weekStart = new Date(now);
   weekStart.setDate(now.getDate() - 6);
   const weekStartISO = toLocalDateStr(weekStart);
+  const prevWeekStart = new Date(now);
+  prevWeekStart.setDate(now.getDate() - 13);
+  const prevWeekEnd = new Date(now);
+  prevWeekEnd.setDate(now.getDate() - 7);
+  const prevWeekStartISO = toLocalDateStr(prevWeekStart);
+  const prevWeekEndISO = toLocalDateStr(prevWeekEnd);
   const monthStartISO = toLocalDateStr(new Date(now.getFullYear(), now.getMonth(), 1));
   const monthEndISO = toLocalDateStr(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+  const prevMonthStartISO = toLocalDateStr(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+  const prevMonthEndISO = toLocalDateStr(new Date(now.getFullYear(), now.getMonth(), 0));
 
   const valid = rows.filter((r) => r.ref && String(r.ref).trim());
   const prisoners = new Set<string>();
@@ -40,6 +50,8 @@ export function computeStats(rows: Reservation[]): DashboardStats {
   let reject = 0;
   let thisWeek = 0;
   let thisMonth = 0;
+  let prevWeek = 0;
+  let prevMonth = 0;
 
   for (const r of valid) {
     const s = normalizeStatus(r.status);
@@ -50,7 +62,9 @@ export function computeStats(rows: Reservation[]): DashboardStats {
     if (s === 'รอชำระเงิน' || s === 'ชำระแล้ว' || s === 'เสร็จสิ้น') ok++;
     const key = visitKeyOf(r);
     if (key >= weekStartISO) thisWeek++;
+    if (key >= prevWeekStartISO && key <= prevWeekEndISO) prevWeek++;
     if (key >= monthStartISO && key <= monthEndISO) thisMonth++;
+    if (key >= prevMonthStartISO && key <= prevMonthEndISO) prevMonth++;
     if (r.prisonerId) prisoners.add(String(r.prisonerId));
     if (r.visitorName) visitors.add(String(r.visitorName));
   }
@@ -64,6 +78,8 @@ export function computeStats(rows: Reservation[]): DashboardStats {
     thisWeek,
     thisMonth,
     uniqueVisitors: visitors.size,
+    prevWeek,
+    prevMonth,
   };
 }
 
