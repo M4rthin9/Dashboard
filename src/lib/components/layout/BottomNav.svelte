@@ -49,6 +49,12 @@
   }
 </script>
 
+<svelte:window
+  onkeydown={(e) => {
+    if (e.key === 'Escape') moreOpen = false;
+  }}
+/>
+
 <div
   class="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 lg:hidden dark:border-slate-700/70 dark:bg-slate-900/95 dark:supports-[backdrop-filter]:bg-slate-900/80"
   style="padding-bottom: env(safe-area-inset-bottom)"

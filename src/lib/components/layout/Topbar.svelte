@@ -1,11 +1,13 @@
 <script lang="ts">
-  import { Moon, Sun, LogOut, Wifi, WifiOff } from '@lucide/svelte';
+  import { Moon, Sun, LogOut, ChevronDown, Wifi, WifiOff } from '@lucide/svelte';
   import { ui } from '../../store/ui.svelte';
   import { auth } from '../../store/auth.svelte';
   import { currentPath, routes, navigate } from '../../router';
+  import { roleLabel } from '../../utils/permissions';
 
   let route = $derived(routes.find((r) => r.path === currentPath()));
   let online = $state(navigator.onLine);
+  let menuOpen = $state(false);
 
   $effect(() => {
     const on = () => (online = true);
@@ -19,12 +21,19 @@
   });
 
   function handleLogout(): void {
+    menuOpen = false;
     auth.logout();
     navigate('/login');
   }
 </script>
 
-<header class="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-white/85 dark:border-slate-700/60 dark:bg-slate-900/95 dark:supports-[backdrop-filter]:bg-slate-900/85 lg:h-16 lg:px-6">
+<svelte:window
+  onkeydown={(e) => {
+    if (e.key === 'Escape') menuOpen = false;
+  }}
+/>
+
+<header class="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-white/85 dark:border-slate-700/60 dark:bg-slate-900/95 dark:supports-[backdrop-filter]:bg-slate-900/85 lg:h-16 lg:px-6">
   <div class="flex min-w-0 items-center gap-3">
     <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white lg:hidden">
       CCC
@@ -47,10 +56,6 @@
           ออฟไลน์
         {/if}
       </span>
-      <span class="hidden h-6 w-px bg-slate-200 dark:bg-slate-700"></span>
-      <span class="hidden h-8 w-8 items-center justify-center rounded-full bg-indigo-500/15 text-xs font-semibold text-indigo-600 dark:text-indigo-400 md:flex lg:hidden">
-        {(auth.displayName || '?').slice(0, 1).toUpperCase()}
-      </span>
     </div>
 
     <button
@@ -66,11 +71,58 @@
     </button>
 
     <button
-      class="rounded-xl p-2 text-slate-500 transition-colors duration-150 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20"
+      class="rounded-xl p-2 text-slate-500 transition-colors duration-150 hover:bg-red-50 hover:text-red-600 lg:hidden dark:hover:bg-red-950/20"
       onclick={handleLogout}
       aria-label="ออกจากระบบ"
     >
       <LogOut class="h-5 w-5" />
     </button>
+
+    <div class="relative hidden lg:block">
+      <button
+        class="flex items-center gap-2 rounded-xl p-1.5 pl-2 pr-1.5 transition-colors duration-150 hover:bg-slate-100 dark:hover:bg-slate-800"
+        onclick={() => (menuOpen = !menuOpen)}
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
+        aria-label="เมนูผู้ใช้"
+      >
+        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
+          {(auth.displayName || '?').slice(0, 1).toUpperCase()}
+        </span>
+        <span class="hidden max-w-[9rem] truncate text-sm font-medium text-slate-700 xl:block dark:text-slate-200">
+          {auth.displayName}
+        </span>
+        <ChevronDown
+          class="h-4 w-4 shrink-0 text-slate-400 transition-transform duration-150 {menuOpen ? 'rotate-180' : ''}"
+        />
+      </button>
+
+      {#if menuOpen}
+        <div class="fixed inset-0 z-10" onclick={() => (menuOpen = false)} role="presentation"></div>
+        <div
+          class="absolute right-0 top-full z-20 mt-2 w-64 animate-slide-down rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-800"
+          role="menu"
+        >
+          <div class="flex items-center gap-3 rounded-lg px-3 py-2.5">
+            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
+              {(auth.displayName || '?').slice(0, 1).toUpperCase()}
+            </span>
+            <div class="min-w-0">
+              <p class="truncate text-sm font-medium text-slate-900 dark:text-slate-100">{auth.displayName}</p>
+              <p class="truncate text-xs text-slate-500 dark:text-slate-400">{roleLabel(auth.user?.role ?? '')}</p>
+            </div>
+          </div>
+          <div class="my-1 h-px bg-slate-200 dark:bg-slate-700"></div>
+          <button
+            class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-red-600 transition-colors duration-150 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+            role="menuitem"
+            onclick={handleLogout}
+          >
+            <LogOut class="h-4 w-4" />
+            ออกจากระบบ
+          </button>
+        </div>
+      {/if}
+    </div>
   </div>
 </header>

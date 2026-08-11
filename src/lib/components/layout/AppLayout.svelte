@@ -7,7 +7,7 @@
   let { children }: { children: Snippet } = $props();
 </script>
 
-<div class="flex min-h-screen w-full bg-slate-50/50 dark:bg-slate-950">
+<div class="flex min-h-screen w-full bg-slate-50 dark:bg-slate-950">
   <Sidebar />
   <div class="flex min-w-0 flex-1 flex-col">
     <Topbar />
