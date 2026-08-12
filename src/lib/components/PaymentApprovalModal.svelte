@@ -1,11 +1,13 @@
 <script lang="ts">
-  import { Banknote, CalendarDays, Check, CreditCard, ExternalLink, ImageOff, Info, ShieldCheck, User } from '@lucide/svelte';
+  import { Banknote, CalendarDays, Check, CreditCard, ImageOff, Info, ShieldCheck, User } from '@lucide/svelte';
   import Modal from './ui/Modal.svelte';
   import Button from './ui/Button.svelte';
   import Badge from './ui/Badge.svelte';
+  import SlipViewerModal from './SlipViewerModal.svelte';
   import { formatBaht, formatDateTimeThai, visitDateLabel } from '../utils/format';
   import type { Reservation } from '../api/types';
   import { getSlipByRef } from '../api/endpoints';
+  import { decodeBase64Image } from '../utils/base64';
 
   let { open, row, mode, onclose, onapprove }: {
     open: boolean;
@@ -18,6 +20,7 @@
   let busy = $state(false);
   let slipLoading = $state(false);
   let fetchedSlip = $state('');
+  let slipViewerOpen = $state(false);
 
   $effect(() => {
     if (!open) {
@@ -49,7 +52,7 @@
   const isDone = $derived(mode === 'เสร็จสิ้น');
   const title = $derived(isDone ? 'ยืนยันการเสร็จสิ้น' : 'ยืนยันการชำระเงิน');
   const totalPersons = $derived(Number(row?.totalPersons) || (Number(row?.visitorCount) || 0) + 1);
-  const slipUrl = $derived(String(row?.slipImage ?? '').trim() || fetchedSlip);
+  const slipUrl = $derived(decodeBase64Image(String(row?.slipImage ?? '').trim() || fetchedSlip));
   const hasSlip = $derived(!!slipUrl && !slipUrl.startsWith('SLIP_UPLOADED:'));
 
   function initials(name: string | undefined): string {
@@ -128,23 +131,18 @@
         </div>
         {#if hasSlip}
           <div class="flex flex-col items-center gap-3">
-            <a href={slipUrl} target="_blank" rel="noopener noreferrer" class="group">
+            <button
+              onclick={() => (slipViewerOpen = true)}
+              class="group max-w-full rounded-2xl border border-slate-200 bg-slate-50 p-2 shadow-sm transition hover:shadow-xl dark:border-slate-700"
+              aria-label="ขยายสลิปชำระเงิน"
+            >
               <img
                 src={slipUrl}
                 alt="สลิปชำระเงิน"
-                class="max-h-72 w-full rounded-2xl border border-slate-200 bg-slate-50 object-contain shadow-sm transition group-hover:shadow-xl dark:border-slate-700"
+                class="max-h-72 w-auto cursor-zoom-in rounded-xl object-contain"
               />
-            </a>
-            <a
-              href={slipUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="inline-flex items-center gap-1.5 rounded-xl bg-blue-50 px-4 py-2 text-sm font-medium text-blue-800 transition-colors hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-950/60"
-            >
-              <ExternalLink class="h-4 w-4" />
-              เปิดสลิปชำระเงินเต็มในหน้าต่างใหม่
-            </a>
-            <p class="text-center text-[11px] text-slate-400">คลิกเพื่อเปิดรูปสลิปขนาดเต็ม</p>
+            </button>
+            <p class="text-center text-[11px] text-slate-400">คลิกเพื่อขยายสลิปขนาดเต็ม</p>
           </div>
         {:else if slipLoading}
           <div class="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center dark:border-slate-700 dark:bg-slate-900">
@@ -169,13 +167,15 @@
   {/if}
   {#snippet footer()}
     <Button variant="outline" onclick={onclose} disabled={busy}>กลับ</Button>
-    <Button variant={isDone ? 'success' : 'primary'} onclick={confirm} loading={busy}>
-      {#if busy}
-        กำลังบันทึก...
-      {:else}
-        <Check class="h-4 w-4" />
-        {isDone ? 'ยืนยันเสร็จสิ้น' : 'ยืนยันชำระเงิน'}
-      {/if}
-    </Button>
-  {/snippet}
+      <Button variant={isDone ? 'success' : 'primary'} onclick={confirm} loading={busy}>
+        {#if busy}
+          กำลังบันทึก...
+        {:else}
+          <Check class="h-4 w-4" />
+          {isDone ? 'ยืนยันเสร็จสิ้น' : 'ยืนยันชำระเงิน'}
+        {/if}
+      </Button>
+    {/snippet}
 </Modal>
+
+<SlipViewerModal open={slipViewerOpen} slipUrl={slipUrl} ref={row?.ref} onclose={() => (slipViewerOpen = false)} />

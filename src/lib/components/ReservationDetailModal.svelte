@@ -14,7 +14,6 @@
     QrCode,
     ReceiptText,
     ShieldCheck,
-    ExternalLink,
     User,
     UsersRound,
   } from '@lucide/svelte';
@@ -22,11 +21,13 @@
   import Modal from './ui/Modal.svelte';
   import Button from './ui/Button.svelte';
   import Badge from './ui/Badge.svelte';
+  import SlipViewerModal from './SlipViewerModal.svelte';
   import { formatBaht, formatNumber, formatDateTimeThai, normalizeStatus, visitDateLabel } from '../utils/format';
   import type { Reservation } from '../api/types';
   import { getSlipByRef } from '../api/endpoints';
   import { promptpayStore } from '../store/promptpay.svelte';
   import { buildBillerPayload } from '../utils/promptpay';
+  import { decodeBase64Image } from '../utils/base64';
 
   let { open, row, onclose, canViewSlip }: {
     open: boolean;
@@ -37,6 +38,7 @@
 
   let slipLoading = $state(false);
   let fetchedSlip = $state('');
+  let slipViewerOpen = $state(false);
 
   let paymentPayload = $state('');
   let paymentQr = $state('');
@@ -100,7 +102,8 @@
     };
   });
 
-  const slipUrl = $derived(String(row?.slipImage ?? '').trim() || fetchedSlip);
+  const slipUrl = $derived(decodeBase64Image(String(row?.slipImage ?? '').trim() || fetchedSlip));
+  const hasSlip = $derived(!!slipUrl && !slipUrl.startsWith('SLIP_UPLOADED:'));
 
   interface ExtraVisitor {
     name: string;
@@ -436,7 +439,7 @@
         </section>
       {/if}
 
-      {#if canViewSlip && slipUrl}
+      {#if canViewSlip && hasSlip}
         <section class="flex flex-col gap-2">
           <div class="flex items-center gap-2">
             <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
@@ -451,23 +454,18 @@
             </div>
           {:else}
             <div class="flex flex-col items-center gap-3">
-              <a href={slipUrl} target="_blank" rel="noopener noreferrer" class="group">
+              <button
+                onclick={() => (slipViewerOpen = true)}
+                class="group max-w-full rounded-2xl border border-slate-200 bg-slate-50 p-2 shadow-sm transition hover:shadow-xl dark:border-slate-700"
+                aria-label="ขยายสลิปชำระเงิน"
+              >
                 <img
                   src={slipUrl}
                   alt="สลิปชำระเงิน"
-                  class="max-h-80 w-full rounded-2xl border border-slate-200 bg-slate-50 object-contain shadow-sm transition group-hover:shadow-xl dark:border-slate-700"
+                  class="max-h-80 w-auto cursor-zoom-in rounded-xl object-contain"
                 />
-              </a>
-              <a
-                href={slipUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="inline-flex items-center gap-1.5 rounded-xl bg-blue-50 px-4 py-2 text-sm font-medium text-blue-800 transition-colors hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-950/60"
-              >
-                <ExternalLink class="h-4 w-4" />
-                เปิดสลิปชำระเงินเต็มในหน้าต่างใหม่
-              </a>
-              <p class="text-center text-[11px] text-slate-400">คลิกเพื่อเปิดรูปสลิปขนาดเต็ม</p>
+              </button>
+              <p class="text-center text-[11px] text-slate-400">คลิกเพื่อขยายสลิปขนาดเต็ม</p>
             </div>
           {/if}
         </section>
@@ -486,3 +484,5 @@
     <Button variant="outline" onclick={onclose}>ปิด</Button>
   {/snippet}
 </Modal>
+
+<SlipViewerModal open={slipViewerOpen} slipUrl={slipUrl} ref={row?.ref} onclose={() => (slipViewerOpen = false)} />
