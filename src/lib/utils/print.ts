@@ -358,21 +358,22 @@ export function buildSeatingReport(rows: Reservation[]): string {
 }
 
 const KITCHEN_TICKET_CSS = `
-  .kt-ticket { border:3px solid #1e1b4b; border-radius:10px; padding:14px 16px; margin-bottom:10px; }
-  .kt-head { display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid #1e1b4b; padding-bottom:8px; margin-bottom:10px; }
-  .kt-head-title { font-size:18px; font-weight:800; color:#1e1b4b; }
-  .kt-head-date { font-size:13px; font-weight:600; color:#333; }
-  .kt-summary { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin-bottom:10px; }
-  .kt-box { border:2px solid #1e1b4b; border-radius:8px; text-align:center; padding:8px 4px; }
-  .kt-box .kt-num { font-size:26px; font-weight:900; color:#1e1b4b; line-height:1.1; }
-  .kt-box .kt-label { font-size:11px; font-weight:600; color:#444; margin-top:2px; }
-  .kt-box.kt-highlight { background:#fff8e7; border-color:#d97706; }
-  .kt-box.kt-highlight .kt-num { color:#b45309; }
-  .kt-table { width:100%; border-collapse:collapse; font-size:12px; }
-  .kt-table th { background:#1e1b4b; color:#fff; padding:5px 7px; font-size:11px; text-align:left; }
-  .kt-table td { border:1px solid #ccc; padding:5px 7px; }
+  .kt-ticket { border:3px solid #1e1b4b; border-radius:10px; padding:16px 18px; margin-bottom:10px; }
+  .kt-head { text-align:center; border-bottom:2px solid #1e1b4b; padding-bottom:10px; margin-bottom:14px; }
+  .kt-head-title { font-size:20px; font-weight:800; color:#1e1b4b; display:block; }
+  .kt-head-date { font-size:15px; font-weight:600; color:#333; display:block; margin-top:2px; }
+  .kt-summary { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:14px; }
+  .kt-box { border:2px solid #1e1b4b; border-radius:8px; text-align:center; padding:12px 4px; }
+  .kt-box .kt-num { font-size:36px; font-weight:900; color:#1e1b4b; line-height:1.1; }
+  .kt-box .kt-label { font-size:13px; font-weight:600; color:#444; margin-top:4px; }
+  .kt-box.kt-highlight { background:#fff8e7; border-color:#d97706; grid-column:1 / -1; }
+  .kt-box.kt-highlight .kt-num { color:#b45309; font-size:44px; }
+  .kt-box.kt-highlight .kt-label { font-size:14px; }
+  .kt-table { width:100%; border-collapse:collapse; font-size:15px; }
+  .kt-table th { background:#1e1b4b; color:#fff; padding:8px; font-size:13px; text-align:center; }
+  .kt-table td { border:1px solid #ccc; padding:8px; text-align:center; font-size:15px; }
+  .kt-table td.kt-total-cell { font-weight:800; font-size:17px; }
   .kt-table tr:nth-child(even) td { background:#f5f5f5; }
-  .kt-note { text-align:center; font-size:12px; color:#555; margin-bottom:10px; }
   .kt-cut { text-align:center; margin:14px 0; border-top:3px dashed #c62828; padding-top:8px; color:#c62828; font-weight:800; font-size:14px; }
 `;
 
@@ -380,13 +381,11 @@ export function buildKitchenReport(rows: Reservation[], date: string): string {
   let totalAdults = 0;
   let totalKids5_8 = 0;
   let totalKidsUnder5 = 0;
-  let totalPrice = 0;
   rows.forEach((r) => {
     const d = computeDeptReportData(r);
     totalAdults += d.adults;
     totalKids5_8 += d.kids5_8;
     totalKidsUnder5 += d.kidsUnder5;
-    totalPrice += Number(r.total) || 0;
   });
   const tables = rows.length;
   const combinedAdults = totalAdults + tables;
@@ -395,17 +394,15 @@ export function buildKitchenReport(rows: Reservation[], date: string): string {
   const tableRows = rows
     .map((r, i) => {
       const d = computeDeptReportData(r);
-      const headcount = d.adults + d.kids5_8 + d.kidsUnder5;
+      const adults = d.adults + 1;
+      const headcount = adults + d.kids5_8 + d.kidsUnder5;
       return `
       <tr>
-        <td style="text-align:center;">${i + 1}</td>
-        <td>${escapeHtml(r.ref)}</td>
-        <td><strong>น.ช. ${escapeHtml(r.prisonerName ?? '—')}</strong></td>
-        <td style="text-align:center;">${escapeHtml(r.wing ?? '—')}</td>
-        <td style="text-align:center;">${d.adults}</td>
-        <td style="text-align:center;">${d.kids5_8}</td>
-        <td style="text-align:center;">${d.kidsUnder5}</td>
-        <td style="text-align:center; font-weight:700;">${headcount}</td>
+        <td>${i + 1}</td>
+        <td>${adults}</td>
+        <td>${d.kids5_8}</td>
+        <td>${d.kidsUnder5}</td>
+        <td class="kt-total-cell">${headcount}</td>
       </tr>`;
     })
     .join('');
@@ -413,43 +410,34 @@ export function buildKitchenReport(rows: Reservation[], date: string): string {
   const reportBody = `
     <div class="tear-off kt-ticket">
       <div class="kt-head">
-        <span class="kt-head-title">🍽️🍰 ใบสั่งครัว + เบเกอรี่</span>
+        <span class="kt-head-title">🍽️ ใบสั่งอาหาร — ครัว</span>
         <span class="kt-head-date">📅 ${escapeHtml(thaiDateLabel(date))}</span>
       </div>
       <div class="kt-summary">
-        <div class="kt-box"><div class="kt-num">${tables}</div><div class="kt-label">โต๊ะ</div></div>
-        <div class="kt-box"><div class="kt-num">${combinedAdults}</div><div class="kt-label">ผู้ใหญ่ (รวมผู้ต้องขัง)</div></div>
+        <div class="kt-box"><div class="kt-num">${combinedAdults}</div><div class="kt-label">ผู้ใหญ่</div></div>
         <div class="kt-box"><div class="kt-num">${totalKids5_8}</div><div class="kt-label">เด็ก 5-8 ปี</div></div>
         <div class="kt-box"><div class="kt-num">${totalKidsUnder5}</div><div class="kt-label">เด็กต่ำกว่า 5 ปี</div></div>
-      </div>
-      <div class="kt-summary" style="grid-template-columns:1fr 1fr;">
-        <div class="kt-box kt-highlight"><div class="kt-num">${totalPeople}</div><div class="kt-label">รวมทั้งหมด (คน)</div></div>
-        <div class="kt-box kt-highlight"><div class="kt-num">${formatNumber(totalPrice)}</div><div class="kt-label">ยอดชำระรวม (บาท)</div></div>
+        <div class="kt-box kt-highlight"><div class="kt-num">${totalPeople}</div><div class="kt-label">รวมทั้งหมด (คน) · ${tables} โต๊ะ</div></div>
       </div>
       <table class="kt-table">
         <thead>
           <tr>
-            <th style="width:30px;">#</th>
-            <th style="width:90px;">Ref</th>
-            <th>ผู้ต้องขัง</th>
-            <th style="width:50px;">แดน</th>
-            <th style="width:55px;">ผู้ใหญ่</th>
-            <th style="width:55px;">5-8 ปี</th>
-            <th style="width:55px;">&lt;5 ปี</th>
-            <th style="width:55px;">รวม</th>
+            <th>โต๊ะ</th>
+            <th>ผู้ใหญ่</th>
+            <th>เด็ก 5-8 ปี</th>
+            <th>เด็ก&lt;5 ปี</th>
+            <th>รวม</th>
           </tr>
         </thead>
-        <tbody>${tableRows || '<tr><td colspan="8" style="text-align:center;color:#888;">ไม่มีข้อมูล</td></tr>'}</tbody>
+        <tbody>${tableRows || '<tr><td colspan="5" style="text-align:center;color:#888;">ไม่มีข้อมูล</td></tr>'}</tbody>
       </table>
     </div>
   `;
 
   return `
     <style>${KITCHEN_TICKET_CSS}</style>
-    <div class="print-title" style="margin-bottom:4px;">🍽️🍰 ใบสั่งครัว + เบเกอรี่ — วันที่ ${escapeHtml(thaiDateLabel(date))}</div>
-    <p class="kt-note">พิมพ์ 1 ครั้ง → ตัดตรงกลาง ส่งครัว 1 ชุด / เบเกอรี่ 1 ชุด</p>
     ${reportBody}
-    <div class="tear-off kt-cut">✂️ ตัดตรงนี้ — ส่งครัว</div>
+    <div class="tear-off kt-cut">✂️ ตัดตรงนี้ — ส่งเบเกอรี่</div>
     ${reportBody}
   `;
 }
@@ -476,10 +464,12 @@ export function buildFinancialReport(
         <td style="text-align:center;">${i + 1}</td>
         <td>${escapeHtml(thaiDateLabel(d.date))}</td>
         <td style="text-align:center;">${fmt(d.attended)}</td>
-        <td style="text-align:center;">${fmt(d.visitors)}</td>
-        <td style="text-align:center;">${fmt(d.prisoners)}</td>
+        <td style="text-align:center;">${fmt(d.adults)}</td>
         <td style="text-align:center;">${fmt(d.kidsUnder5)}</td>
         <td style="text-align:center;">${fmt(d.kids5_8)}</td>
+        <td style="text-align:center;">${fmt(d.visitors)}</td>
+        <td style="text-align:center;">${fmt(d.prisoners)}</td>
+        <td style="text-align:center; font-weight:700;">${fmt(d.people)}</td>
         <td style="text-align:right;">${fmt(d.paid)}</td>
         <td style="text-align:right;">${fmt(d.pending)}</td>
         <td style="text-align:right;">${fmt(d.total)}</td>
@@ -494,10 +484,12 @@ export function buildFinancialReport(
         <td style="text-align:center;">${i + 1}</td>
         <td>${escapeHtml(monthLabel(m.month))}</td>
         <td style="text-align:center;">${fmt(m.attended)}</td>
-        <td style="text-align:center;">${fmt(m.visitors)}</td>
-        <td style="text-align:center;">${fmt(m.prisoners)}</td>
+        <td style="text-align:center;">${fmt(m.adults)}</td>
         <td style="text-align:center;">${fmt(m.kidsUnder5)}</td>
         <td style="text-align:center;">${fmt(m.kids5_8)}</td>
+        <td style="text-align:center;">${fmt(m.visitors)}</td>
+        <td style="text-align:center;">${fmt(m.prisoners)}</td>
+        <td style="text-align:center; font-weight:700;">${fmt(m.people)}</td>
         <td style="text-align:right;">${fmt(m.paid)}</td>
         <td style="text-align:right;">${fmt(m.pending)}</td>
         <td style="text-align:right;">${fmt(m.total)}</td>
@@ -505,7 +497,6 @@ export function buildFinancialReport(
     )
     .join('');
 
-  const people = summary.visitors + summary.prisoners;
   const now = new Date();
   const issuedLabel = now.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -536,8 +527,8 @@ export function buildFinancialReport(
       ${statBox('จำนวนการจอง', fmt(summary.bookings) + ' โต๊ะ')}
     </div>
     <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px;">
-      ${statBox('ผู้เข้าร่วมทั้งหมด', fmt(people) + ' คน')}
-      ${statBox('ผู้เยี่ยมที่เข้าร่วม', fmt(summary.visitors) + ' คน')}
+      ${statBox('รวมผู้เข้าร่วมทั้งหมด', fmt(summary.people) + ' คน')}
+      ${statBox('ผู้เข้าร่วม (ผู้เยี่ยม)', fmt(summary.visitors) + ' คน')}
       ${statBox('ผู้ต้องขังที่เข้าร่วม', fmt(summary.prisoners) + ' คน')}
       ${statBox('ผู้ต้องขัง (ไม่ซ้ำ)', fmt(summary.distinctPrisoners) + ' คน')}
     </div>
@@ -548,17 +539,19 @@ export function buildFinancialReport(
         <tr>
           <th style="width:40px; text-align:center;">ลำดับ</th>
           <th>วันที่</th>
-          <th style="width:55px; text-align:center;">เข้าร่วม</th>
-          <th style="width:55px; text-align:center;">ผู้เยี่ยม</th>
-          <th style="width:55px; text-align:center;">ผู้ต้องขัง</th>
+          <th style="width:50px; text-align:center;">โต๊ะที่เข้าร่วม</th>
+          <th style="width:55px; text-align:center;">ผู้ใหญ่</th>
           <th style="width:55px; text-align:center;">เด็ก&lt;5 ปี</th>
           <th style="width:55px; text-align:center;">เด็ก 5-8 ปี</th>
+          <th style="width:55px; text-align:center;">ผู้เข้าร่วม</th>
+          <th style="width:55px; text-align:center;">ผู้ต้องขัง</th>
+          <th style="width:55px; text-align:center;">รวมคน</th>
           <th style="width:90px; text-align:right;">ชำระแล้ว</th>
           <th style="width:90px; text-align:right;">ค้างชำระ</th>
           <th style="width:90px; text-align:right;">ยอดรวม</th>
         </tr>
       </thead>
-      <tbody>${dailyRows || '<tr><td colspan="10" style="text-align:center;color:#888;">ไม่มีข้อมูล</td></tr>'}</tbody>
+      <tbody>${dailyRows || '<tr><td colspan="11" style="text-align:center;color:#888;">ไม่มีข้อมูล</td></tr>'}</tbody>
     </table>
 
     <h3 style="font-size:12.5px; font-weight:700; margin:16px 0 6px; page-break-before:avoid;">3. รายละเอียดสรุปรายเดือน</h3>
@@ -567,17 +560,19 @@ export function buildFinancialReport(
         <tr>
           <th style="width:40px; text-align:center;">ลำดับ</th>
           <th>เดือน</th>
-          <th style="width:55px; text-align:center;">เข้าร่วม</th>
-          <th style="width:55px; text-align:center;">ผู้เยี่ยม</th>
-          <th style="width:55px; text-align:center;">ผู้ต้องขัง</th>
+          <th style="width:50px; text-align:center;">โต๊ะที่เข้าร่วม</th>
+          <th style="width:55px; text-align:center;">ผู้ใหญ่</th>
           <th style="width:55px; text-align:center;">เด็ก&lt;5 ปี</th>
           <th style="width:55px; text-align:center;">เด็ก 5-8 ปี</th>
+          <th style="width:55px; text-align:center;">ผู้เข้าร่วม</th>
+          <th style="width:55px; text-align:center;">ผู้ต้องขัง</th>
+          <th style="width:55px; text-align:center;">รวมคน</th>
           <th style="width:90px; text-align:right;">ชำระแล้ว</th>
           <th style="width:90px; text-align:right;">ค้างชำระ</th>
           <th style="width:90px; text-align:right;">ยอดรวม</th>
         </tr>
       </thead>
-      <tbody>${monthlyRows || '<tr><td colspan="10" style="text-align:center;color:#888;">ไม่มีข้อมูล</td></tr>'}</tbody>
+      <tbody>${monthlyRows || '<tr><td colspan="11" style="text-align:center;color:#888;">ไม่มีข้อมูล</td></tr>'}</tbody>
     </table>
 
     <p style="font-size:11px; color:#555; margin-top:16px; text-align:justify;">

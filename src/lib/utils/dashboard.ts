@@ -311,10 +311,12 @@ export function computeTodaysVisits(rows: Reservation[]): Reservation[] {
 export interface FinancialAgg {
   bookings: number;
   attended: number;
+  adults: number;
   visitors: number;
   prisoners: number;
   kidsUnder5: number;
   kids5_8: number;
+  people: number;
   paid: number;
   pending: number;
   total: number;
@@ -348,7 +350,10 @@ function isFinancialExcluded(r: Reservation): boolean {
 }
 
 function aggregateFinancial(rows: Reservation[]): FinancialAgg {
-  const agg: FinancialAgg = { bookings: 0, attended: 0, visitors: 0, prisoners: 0, kidsUnder5: 0, kids5_8: 0, paid: 0, pending: 0, total: 0 };
+  const agg: FinancialAgg = {
+    bookings: 0, attended: 0, adults: 0, visitors: 0, prisoners: 0,
+    kidsUnder5: 0, kids5_8: 0, people: 0, paid: 0, pending: 0, total: 0,
+  };
   for (const r of rows) {
     if (isFinancialExcluded(r)) continue;
     const amt = Number(r.total) || 0;
@@ -356,16 +361,18 @@ function aggregateFinancial(rows: Reservation[]): FinancialAgg {
     agg.total += amt;
     if (isFinancialAttended(r)) {
       agg.attended++;
-      agg.visitors += Number(r.visitorCount) || 0;
       agg.prisoners += 1;
       agg.paid += amt;
       const d = computeDeptReportData(r);
+      agg.adults += d.adults;
       agg.kidsUnder5 += d.kidsUnder5;
       agg.kids5_8 += d.kids5_8;
+      agg.visitors += d.adults + d.kids5_8 + d.kidsUnder5;
     } else if (normalizeStatus(r.status) === 'รอชำระเงิน') {
       agg.pending += amt;
     }
   }
+  agg.people = agg.visitors + agg.prisoners;
   return agg;
 }
 
