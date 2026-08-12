@@ -10,7 +10,7 @@
   import { ui } from '../lib/store/ui.svelte';
   import { generatePromptPayQr } from '../lib/api/endpoints';
   import type { PromptPayDefaults } from '../lib/utils/promptpay';
-  import { PROMPTPAY_DEFAULTS, crc16, validateEmvCoPayload, parsePayloadValues } from '../lib/utils/promptpay';
+  import { PROMPTPAY_DEFAULTS, buildSamplePayload, validateEmvCoPayload, parsePayloadValues } from '../lib/utils/promptpay';
 
   let loadingDefaults = $state(true);
   let serverDefaults = $state<PromptPayDefaults>({ ...PROMPTPAY_DEFAULTS });
@@ -32,11 +32,12 @@
   function defaultsFromPayload(p: string): PromptPayDefaults {
     const outer = parsePayloadValues(p);
     const biller = parsePayloadValues(outer['30'] ?? '');
+    const additional = parsePayloadValues(outer['62'] ?? '');
     return {
       billerId: biller['01'] ?? PROMPTPAY_DEFAULTS.billerId,
-      ref1: biller['00'] ?? '',
-      ref2: biller['02'] ?? 'CIDA',
-      ref3: biller['03'] ?? '0000',
+      ref1: biller['02'] ?? PROMPTPAY_DEFAULTS.ref1,
+      ref2: biller['03'] ?? PROMPTPAY_DEFAULTS.ref2,
+      ref3: additional['07'] ?? PROMPTPAY_DEFAULTS.ref3,
       pointOfInitiation: outer['01'] === '12' ? '12' : '11',
     };
   }
@@ -116,11 +117,7 @@
   }
 
   function sampleLocalPayload(): string {
-    const base =
-      '0002010102113013' +
-      serverDefaults.billerId +
-      '53037645802TH5914CIDA FOUNDATION6304';
-    return base + crc16(base);
+    return buildSamplePayload(serverDefaults);
   }
 
   async function inspectLocalSample(): Promise<void> {

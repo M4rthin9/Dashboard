@@ -8,7 +8,7 @@ export interface PromptPayDefaults {
 
 export const PROMPTPAY_DEFAULTS: PromptPayDefaults = {
   billerId: '010753700088205',
-  ref1: '',
+  ref1: 'ML099400ZO0160208VX',
   ref2: 'CIDA',
   ref3: '0000',
   pointOfInitiation: '11',
@@ -34,9 +34,6 @@ export function validateEmvCoPayload(payload: string): PromptPayValidation {
   if (!payload || typeof payload !== 'string') {
     return { ok: false, message: 'ไม่พบ payload' };
   }
-  if (payload.length % 2 !== 0) {
-    return { ok: false, message: 'ความยาว payload ไม่ถูกต้อง (ต้องเป็นคู่)' };
-  }
   if (!payload.startsWith('000201')) {
     return { ok: false, message: 'Payload ต้องเริ่มต้นด้วย 000201 (Payload Format + POI)' };
   }
@@ -53,6 +50,29 @@ export function validateEmvCoPayload(payload: string): PromptPayValidation {
     return { ok: false, message: `CRC ไม่ตรงกัน (คำนวณได้ ${recomputed}, ที่ได้มา ${expected.toUpperCase()})` };
   }
   return { ok: true, message: 'QR payload ถูกต้อง ใช้งานได้' };
+}
+
+function tpl(tag: string, value: string): string {
+  return tag + String(value.length).padStart(2, '0') + value;
+}
+
+/** Build an EMVCo biller payload mirroring the backend structure. */
+export function buildSamplePayload(d: PromptPayDefaults): string {
+  const biller =
+    tpl('00', 'A000000677010112') +
+    tpl('01', d.billerId) +
+    tpl('02', d.ref1) +
+    tpl('03', d.ref2);
+  const additional = tpl('07', d.ref3);
+  const base =
+    '000201' +
+    tpl('01', d.pointOfInitiation) +
+    tpl('30', biller) +
+    tpl('53', '764') +
+    tpl('58', 'TH') +
+    tpl('62', additional) +
+    '6304';
+  return base + crc16(base);
 }
 
 export function parsePayloadValues(payload: string): Record<string, string> {
