@@ -6,6 +6,8 @@ export interface PromptPayDefaults {
   pointOfInitiation: '11' | '12';
 }
 
+export type PromptPayConfig = PromptPayDefaults;
+
 export const PROMPTPAY_DEFAULTS: PromptPayDefaults = {
   billerId: '010753700088205',
   ref1: 'ML099400ZO0160208VX',
@@ -13,6 +15,8 @@ export const PROMPTPAY_DEFAULTS: PromptPayDefaults = {
   ref3: '0000',
   pointOfInitiation: '11',
 };
+
+export const PROMPTPAY_STORAGE_KEY = 'ccc_promptpay_config';
 
 export function crc16(data: string): string {
   let crc = 0xffff;
@@ -56,23 +60,35 @@ function tpl(tag: string, value: string): string {
   return tag + String(value.length).padStart(2, '0') + value;
 }
 
+function formatAmount(amount: string | number): string {
+  const n = typeof amount === 'number' ? amount : parseFloat(String(amount).replace(/[^\d.]/g, ''));
+  return Number.isFinite(n) ? n.toFixed(2) : '0.00';
+}
+
 /** Build an EMVCo biller payload mirroring the backend structure. */
-export function buildSamplePayload(d: PromptPayDefaults): string {
+export function buildBillerPayload(d: PromptPayConfig, opts: { amount?: string | number } = {}): string {
+  const amountStr = opts.amount !== undefined && opts.amount !== '' ? formatAmount(opts.amount) : '';
+  const hasAmount = amountStr !== '' && Number(amountStr) > 0;
+  const poi: '11' | '12' = hasAmount ? '12' : d.pointOfInitiation;
   const biller =
     tpl('00', 'A000000677010112') +
     tpl('01', d.billerId) +
     tpl('02', d.ref1) +
     tpl('03', d.ref2);
   const additional = tpl('07', d.ref3);
-  const base =
+  let base =
     '000201' +
-    tpl('01', d.pointOfInitiation) +
+    tpl('01', poi) +
     tpl('30', biller) +
-    tpl('53', '764') +
-    tpl('58', 'TH') +
-    tpl('62', additional) +
-    '6304';
+    tpl('53', '764');
+  if (hasAmount) base += tpl('54', amountStr);
+  base += tpl('58', 'TH') + tpl('62', additional) + '6304';
   return base + crc16(base);
+}
+
+/** Build a sample payload from config without an amount (POI from config). */
+export function buildSamplePayload(d: PromptPayConfig): string {
+  return buildBillerPayload(d);
 }
 
 export function parsePayloadValues(payload: string): Record<string, string> {

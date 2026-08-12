@@ -1,27 +1,33 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import QRCode from 'qrcode';
-  import { CheckCircle2, ClipboardCopy, Download, QrCode as QrIcon, RefreshCw, ScanLine, XCircle } from '@lucide/svelte';
+  import { CheckCircle2, ClipboardCopy, Download, QrCode as QrIcon, RefreshCw, Save, ScanLine, XCircle } from '@lucide/svelte';
   import Card from '../lib/components/ui/Card.svelte';
   import Button from '../lib/components/ui/Button.svelte';
   import Input from '../lib/components/ui/Input.svelte';
   import Select from '../lib/components/ui/Select.svelte';
   import Spinner from '../lib/components/ui/Spinner.svelte';
   import { ui } from '../lib/store/ui.svelte';
+  import { promptpayStore } from '../lib/store/promptpay.svelte';
   import { generatePromptPayQr } from '../lib/api/endpoints';
-  import type { PromptPayDefaults } from '../lib/utils/promptpay';
-  import { PROMPTPAY_DEFAULTS, buildSamplePayload, validateEmvCoPayload, parsePayloadValues } from '../lib/utils/promptpay';
+  import type { PromptPayConfig } from '../lib/utils/promptpay';
+  import { buildBillerPayload, validateEmvCoPayload, parsePayloadValues } from '../lib/utils/promptpay';
 
-  let loadingDefaults = $state(true);
-  let serverDefaults = $state<PromptPayDefaults>({ ...PROMPTPAY_DEFAULTS });
+  let saving = $state(false);
   let serverSamplePayload = $state('');
 
-  let billerId = $state(PROMPTPAY_DEFAULTS.billerId);
-  let ref1 = $state(PROMPTPAY_DEFAULTS.ref1);
-  let ref2 = $state(PROMPTPAY_DEFAULTS.ref2);
-  let ref3 = $state(PROMPTPAY_DEFAULTS.ref3);
+  let draftBillerId = $state(promptpayStore.config.billerId);
+  let draftRef1 = $state(promptpayStore.config.ref1);
+  let draftRef2 = $state(promptpayStore.config.ref2);
+  let draftRef3 = $state(promptpayStore.config.ref3);
+  let draftPoi = $state<'11' | '12'>(promptpayStore.config.pointOfInitiation);
+
+  let billerId = $state(promptpayStore.config.billerId);
+  let ref1 = $state(promptpayStore.config.ref1);
+  let ref2 = $state(promptpayStore.config.ref2);
+  let ref3 = $state(promptpayStore.config.ref3);
   let amount = $state('');
-  let poi = $state<'11' | '12'>(PROMPTPAY_DEFAULTS.pointOfInitiation);
+  let poi = $state<'11' | '12'>(promptpayStore.config.pointOfInitiation);
 
   let generating = $state(false);
   let payload = $state('');
@@ -29,50 +35,65 @@
   let validation = $state<ReturnType<typeof validateEmvCoPayload> | null>(null);
   let parsed = $state<Record<string, string>>({});
 
-  function defaultsFromPayload(p: string): PromptPayDefaults {
-    const outer = parsePayloadValues(p);
-    const biller = parsePayloadValues(outer['30'] ?? '');
-    const additional = parsePayloadValues(outer['62'] ?? '');
-    return {
-      billerId: biller['01'] ?? PROMPTPAY_DEFAULTS.billerId,
-      ref1: biller['02'] ?? PROMPTPAY_DEFAULTS.ref1,
-      ref2: biller['03'] ?? PROMPTPAY_DEFAULTS.ref2,
-      ref3: additional['07'] ?? PROMPTPAY_DEFAULTS.ref3,
-      pointOfInitiation: outer['01'] === '12' ? '12' : '11',
-    };
+  onMount(async () => {
+    await promptpayStore.hydrateFromServer();
+    syncFromStore();
+    await loadBackendSample();
+  });
+
+  function syncFromStore(): void {
+    const c = promptpayStore.config;
+    draftBillerId = c.billerId;
+    draftRef1 = c.ref1;
+    draftRef2 = c.ref2;
+    draftRef3 = c.ref3;
+    draftPoi = c.pointOfInitiation;
+    billerId = c.billerId;
+    ref1 = c.ref1;
+    ref2 = c.ref2;
+    ref3 = c.ref3;
+    poi = c.pointOfInitiation;
+    amount = '';
   }
 
-  onMount(loadDefaults);
-
-  async function loadDefaults(): Promise<void> {
-    loadingDefaults = true;
+  async function loadBackendSample(): Promise<void> {
     try {
       const res = await generatePromptPayQr({});
       if (res.status === 'ok' && res.payload) {
         serverSamplePayload = res.payload;
-        serverDefaults = defaultsFromPayload(res.payload);
       }
     } catch {
-      serverDefaults = { ...PROMPTPAY_DEFAULTS };
-      ui.showAlert({ title: 'โหลดค่าเริ่มต้นไม่สำเร็จ', message: 'ใช้ค่าเริ่มต้นในเครื่องแทน โปรดตรวจสอบการเชื่อมต่อ', type: 'warning' });
-    } finally {
-      loadingDefaults = false;
+      serverSamplePayload = '';
     }
   }
 
-  function applyDefaults(): void {
-    billerId = serverDefaults.billerId;
-    ref1 = serverDefaults.ref1;
-    ref2 = serverDefaults.ref2;
-    ref3 = serverDefaults.ref3;
-    poi = serverDefaults.pointOfInitiation;
-    amount = '';
-    ui.showToast('นำค่าเริ่มต้นมาใช้ในฟอร์มแล้ว', 'success');
+  async function saveConfig(): Promise<void> {
+    if (!draftBillerId.trim()) {
+      ui.showAlert({ title: 'กรุณากรอก Biller ID', message: 'ต้องระบุเลขผู้ประกอบการรับชำระเงิน (15 หลัก)', type: 'error' });
+      return;
+    }
+    saving = true;
+    const next: PromptPayConfig = {
+      billerId: draftBillerId.trim(),
+      ref1: draftRef1.trim(),
+      ref2: draftRef2.trim(),
+      ref3: draftRef3.trim(),
+      pointOfInitiation: draftPoi,
+    };
+    try {
+      const ok = await promptpayStore.save(next);
+      syncFromStore();
+      ui.showToast(ok ? 'บันทึกตั้งค่า QR สำเร็จ (เครื่อง + เซิร์ฟเวอร์)' : 'บันทึกในเครื่องแล้ว แต่เซิร์ฟเวอร์ล้มเหลว', ok ? 'success' : 'warning');
+    } catch (err) {
+      ui.showAlert({ title: 'บันทึกตั้งค่าไม่สำเร็จ', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
+    } finally {
+      saving = false;
+    }
   }
 
   async function generate(): Promise<void> {
     if (!billerId.trim()) {
-      ui.showAlert({ title: 'กรุณากรอก Biller ID', message: 'ต้องระบุเลขผู้ประกอบการรับชำระเงิน (13 หลัก)', type: 'error' });
+      ui.showAlert({ title: 'กรุณากรอก Biller ID', message: 'ต้องระบุเลขผู้ประกอบการรับชำระเงิน (15 หลัก)', type: 'error' });
       return;
     }
     generating = true;
@@ -117,7 +138,10 @@
   }
 
   function sampleLocalPayload(): string {
-    return buildSamplePayload(serverDefaults);
+    return buildBillerPayload(
+      { billerId: billerId.trim(), ref1: ref1.trim(), ref2: ref2.trim(), ref3: ref3.trim(), pointOfInitiation: poi },
+      { amount: amount.trim() || undefined }
+    );
   }
 
   async function inspectLocalSample(): Promise<void> {
@@ -148,51 +172,39 @@
 </script>
 
 <div class="flex flex-col gap-4">
-  <Card title="ค่าเริ่มต้นจากระบบ" subtitle="ค่าที่กำหนดไว้บนเซิร์ฟเวอร์ (backend) สำหรับสร้าง PromptPay QR">
-    {#if loadingDefaults}
-      <div class="flex items-center justify-center py-10"><Spinner /></div>
-    {:else}
-      <div class="flex flex-col gap-4">
-        <dl class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          <div>
-            <dt class="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">Biller ID</dt>
-            <dd class="mt-1 font-mono text-sm text-slate-800 dark:text-slate-100">{serverDefaults.billerId}</dd>
-          </div>
-          <div>
-            <dt class="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">Ref1</dt>
-            <dd class="mt-1 font-mono text-sm text-slate-800 dark:text-slate-100">{serverDefaults.ref1 || '-'}</dd>
-          </div>
-          <div>
-            <dt class="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">Ref2</dt>
-            <dd class="mt-1 font-mono text-sm text-slate-800 dark:text-slate-100">{serverDefaults.ref2}</dd>
-          </div>
-          <div>
-            <dt class="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">Ref3</dt>
-            <dd class="mt-1 font-mono text-sm text-slate-800 dark:text-slate-100">{serverDefaults.ref3}</dd>
-          </div>
-          <div>
-            <dt class="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">Point of Initiation</dt>
-            <dd class="mt-1 font-mono text-sm text-slate-800 dark:text-slate-100">{serverDefaults.pointOfInitiation}</dd>
-          </div>
-        </dl>
-        <div class="flex flex-wrap justify-end gap-2">
-          <Button variant="outline" onclick={loadDefaults}>
-            <RefreshCw class="h-4 w-4" /> โหลดใหม่
-          </Button>
-          <Button variant="outline" onclick={inspectSample}>
-            <ScanLine class="h-4 w-4" /> ตรวจสอบตัวอย่างจากระบบ
-          </Button>
-          <Button onclick={applyDefaults}>
-            <QrIcon class="h-4 w-4" /> ใช้ค่าเริ่มต้นในฟอร์ม
-          </Button>
+  <Card title="ตั้งค่า QR ชำระเงิน" subtitle="ค่าที่ใช้สร้าง PromptPay QR ตอนสถานะชำระเงิน — บันทึกในเครื่องและเซิร์ฟเวอร์">
+    <div class="flex flex-col gap-4">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Input label="Biller ID (15 หลัก)" placeholder="010753700088205" value={draftBillerId} oninput={(e) => (draftBillerId = e.currentTarget.value)} />
+        <Input label="Ref1" value={draftRef1} oninput={(e) => (draftRef1 = e.currentTarget.value)} />
+        <Input label="Ref2" value={draftRef2} oninput={(e) => (draftRef2 = e.currentTarget.value)} />
+        <Input label="Ref3" value={draftRef3} oninput={(e) => (draftRef3 = e.currentTarget.value)} />
+        <div>
+          <Select
+            label="Point of Initiation"
+            value={draftPoi}
+            onchange={(v) => (draftPoi = v as '11' | '12')}
+            options={[
+              { value: '11', label: 'Static (ไม่ระบุจำนวนเงิน)' },
+              { value: '12', label: 'Dynamic (ระบุจำนวนเงิน)' },
+            ]}
+          />
         </div>
       </div>
-    {/if}
+      <div class="flex flex-wrap justify-end gap-2">
+        <Button variant="outline" onclick={syncFromStore} disabled={saving}>
+          <RefreshCw class="h-4 w-4" /> คืนค่าเดิม
+        </Button>
+        <Button onclick={saveConfig} loading={saving} disabled={saving}>
+          <Save class="h-4 w-4" /> {saving ? 'กำลังบันทึก...' : 'บันทึกตั้งค่า'}
+        </Button>
+      </div>
+    </div>
   </Card>
 
-  <Card title="สร้าง QR สำหรับทดสอบ" subtitle="กรอกข้อมูลแล้วกดสร้าง เพื่อให้ backend สร้าง EMVCo payload และแสดง QR">
+  <Card title="สร้าง QR สำหรับทดสอบ" subtitle="สร้าง EMVCo payload และแสดง QR จากค่าที่ตั้งไว้ (หรือกรอกใหม่เพื่อทดสอบ)">
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <Input label="Biller ID (13 หลัก)" placeholder="010753700088205" value={billerId} oninput={(e) => (billerId = e.currentTarget.value)} />
+      <Input label="Biller ID (15 หลัก)" placeholder="010753700088205" value={billerId} oninput={(e) => (billerId = e.currentTarget.value)} />
       <Input label="จำนวนเงิน (บาท, ว่าง = QR แบบไม่ระบุจำนวน)" type="number" placeholder="เช่น 100.00" value={amount} oninput={(e) => (amount = e.currentTarget.value)} />
       <Input label="Ref1" placeholder="เช่น เลขใบแจ้งหนี้" value={ref1} oninput={(e) => (ref1 = e.currentTarget.value)} />
       <Input label="Ref2" value={ref2} oninput={(e) => (ref2 = e.currentTarget.value)} />
@@ -210,6 +222,9 @@
       </div>
     </div>
     <div class="mt-4 flex flex-wrap justify-end gap-2">
+      <Button variant="outline" onclick={inspectSample}>
+        <RefreshCw class="h-4 w-4" /> ตรวจสอบตัวอย่างจากระบบ
+      </Button>
       <Button variant="outline" onclick={inspectLocalSample}>
         <ScanLine class="h-4 w-4" /> ตรวจสอบตัวอย่างในเครื่อง
       </Button>

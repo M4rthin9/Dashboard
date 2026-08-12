@@ -5,22 +5,28 @@
     Building2,
     CalendarDays,
     Clock3,
+    ClipboardCopy,
     CreditCard,
+    Download,
     Hash,
     Info,
-     Phone,
-     ReceiptText,
-     ShieldCheck,
-     ExternalLink,
-     User,
-     UsersRound,
-   } from '@lucide/svelte';
+    Phone,
+    QrCode,
+    ReceiptText,
+    ShieldCheck,
+    ExternalLink,
+    User,
+    UsersRound,
+  } from '@lucide/svelte';
+  import QRCode from 'qrcode';
   import Modal from './ui/Modal.svelte';
   import Button from './ui/Button.svelte';
   import Badge from './ui/Badge.svelte';
   import { formatBaht, formatNumber, formatDateTimeThai, normalizeStatus, visitDateLabel } from '../utils/format';
   import type { Reservation } from '../api/types';
   import { getSlipByRef } from '../api/endpoints';
+  import { promptpayStore } from '../store/promptpay.svelte';
+  import { buildBillerPayload } from '../utils/promptpay';
 
   let { open, row, onclose, canViewSlip }: {
     open: boolean;
@@ -31,6 +37,41 @@
 
   let slipLoading = $state(false);
   let fetchedSlip = $state('');
+
+  let paymentPayload = $state('');
+  let paymentQr = $state('');
+
+  $effect(() => {
+    if (!open || !row) {
+      paymentPayload = '';
+      paymentQr = '';
+      return;
+    }
+    promptpayStore.hydrateFromServer();
+    if (normalizeStatus(row.status) !== 'รอชำระเงิน') {
+      paymentPayload = '';
+      paymentQr = '';
+      return;
+    }
+    const cfg = promptpayStore.config;
+    if (!cfg.billerId) {
+      paymentPayload = '';
+      paymentQr = '';
+      return;
+    }
+    const total = Number(row.total) || 0;
+    const payload = buildBillerPayload(cfg, { amount: total });
+    paymentPayload = payload;
+    let cancelled = false;
+    QRCode.toDataURL(payload, { width: 280, margin: 2, errorCorrectionLevel: 'M' })
+      .then((img) => {
+        if (!cancelled) paymentQr = img;
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  });
 
   $effect(() => {
     if (!open || !canViewSlip) {
@@ -131,6 +172,22 @@
   function initials(name: string | undefined): string {
     const parts = String(name ?? '').trim().split(/\s+/).filter(Boolean);
     return (parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '');
+  }
+
+  async function copyPaymentPayload(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(paymentPayload);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function downloadPaymentQr(): void {
+    if (!paymentQr) return;
+    const a = document.createElement('a');
+    a.href = paymentQr;
+    a.download = `promptpay-${String(row?.ref ?? 'qr').replace(/[^\w-]+/g, '_')}.png`;
+    a.click();
   }
 </script>
 
@@ -314,6 +371,60 @@
           </div>
         </div>
       </section>
+
+      {#if s === 'รอชำระเงิน'}
+        <section class="flex flex-col gap-3 rounded-2xl border border-blue-200 bg-white p-4 dark:border-blue-900 dark:bg-slate-900">
+          <div class="flex items-center gap-2">
+            <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
+              <QrCode class="h-4 w-4" />
+            </div>
+            <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100">ชำระเงินด้วย PromptPay</h3>
+            <span class="ml-auto inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+              <Banknote class="h-3.5 w-3.5" /> {formatBaht(row.total)}
+            </span>
+          </div>
+          <div class="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+            <div class="shrink-0 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm dark:border-slate-700">
+              {#if paymentQr}
+                <img src={paymentQr} alt="PromptPay QR สำหรับชำระเงิน" width="280" height="280" class="h-44 w-44 object-contain md:h-52 md:w-52" />
+              {:else}
+                <div class="flex h-44 w-44 items-center justify-center rounded-xl border border-dashed border-slate-300 dark:border-slate-600">
+                  <span class="h-7 w-7 animate-spin rounded-full border-2 border-blue-600/30 border-t-blue-600"></span>
+                </div>
+              {/if}
+            </div>
+            <div class="flex min-w-0 flex-1 flex-col gap-2.5">
+              <p class="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                ให้ผู้เยี่ยมชมสแกน QR นี้เพื่อชำระเงินตามยอดรวมการจอง แล้วอัปโหลดสลิปเพื่อให้เจ้าหน้าที่ยืนยันการชำระเงิน
+              </p>
+              {#if paymentPayload}
+                <div class="flex items-start gap-2">
+                  <code class="min-w-0 flex-1 break-all rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 font-mono text-[11px] leading-relaxed text-slate-700 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-200">{paymentPayload}</code>
+                  <button
+                    class="shrink-0 rounded-xl border border-slate-300 p-2 text-slate-500 transition-colors duration-150 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800"
+                    onclick={copyPaymentPayload}
+                    aria-label="คัดลอก payload"
+                  >
+                    <ClipboardCopy class="h-4 w-4" />
+                  </button>
+                </div>
+              {/if}
+              <div class="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onclick={downloadPaymentQr} disabled={!paymentQr}>
+                  <Download class="h-4 w-4" /> ดาวน์โหลด QR
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onclick={() => (location.href = '#/promptpay')}
+                >
+                  ตั้งค่า QR
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+      {/if}
 
       {#if row.cancelReason}
         <section class="flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
