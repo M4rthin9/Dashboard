@@ -26,26 +26,6 @@ const PRINT_SHARED_CSS = `
   th { background: #f0f0f0; font-weight: 700; font-size: 10px; text-transform: uppercase; }
   tr:nth-child(even) { background: #fafafa; }
   .print-footer { text-align: center; font-size: 10px; color: #888; margin-top: 20px; border-top: 1px solid #ccc; padding-top: 6px; }
-  .copy-watermark {
-    position: absolute;
-    top: 45%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(-30deg);
-    font-family: 'Kanit', 'Sarabun', sans-serif;
-    font-size: 110px;
-    font-weight: 900;
-    letter-spacing: 0.08em;
-    white-space: nowrap;
-    text-align: center;
-    color: rgba(169, 41, 40, 0.14);
-    border: 5px solid rgba(169, 41, 40, 0.32);
-    padding: 18px 56px;
-    border-radius: 16px;
-    z-index: 9999;
-    pointer-events: none;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
   @media print {
     body { padding: 0; font-size: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .no-print { display: none !important; }
@@ -55,18 +35,6 @@ const PRINT_SHARED_CSS = `
     .tear-off { page-break-inside: avoid; }
   }
 `;
-
-export function wrapWithCopy(content: string, title: string): string {
-  return `
-    <style>@page { size: landscape; margin: 10mm; }</style>
-    ${content}
-    <div class="copy-page" style="page-break-before:always; position:relative;">
-      <div class="copy-watermark">สำเนา</div>
-      <div class="print-title" style="color:#a92928; margin-top:16px;">สำเนา — ${escapeHtml(title)}</div>
-      ${content}
-    </div>
-  `;
-}
 
 export function openPrintWindow(content: string, reportName: string, printerName: string): boolean {
   const now = new Date().toLocaleString('th-TH');
@@ -188,6 +156,7 @@ export function buildGateRegistrationReport(rows: Reservation[], date: string): 
   );
 
   return `
+    <style>@page { size: landscape; margin: 10mm; }</style>
     <div class="print-title">ทะเบียนผู้เข้าเยี่ยม — วันที่ ${escapeHtml(thaiDateLabel(date))}</div>
     <table>
       <thead>
@@ -402,6 +371,7 @@ export function buildKitchenReport(rows: Reservation[], date: string): string {
   `;
 
   return `
+    <style>@page { size: landscape; margin: 10mm; }</style>
     <style>${KITCHEN_TICKET_CSS}</style>
     ${reportBody}
     <div class="tear-off kt-cut">✂️ ตัดตรงนี้ — ส่งเบเกอรี่</div>

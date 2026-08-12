@@ -15,7 +15,7 @@
     computeRevenueSummary, computeStatusDistribution, computeWingCounts,
     computeDailyRevenue, computeMonthlyRevenue, computeVisitorTypes,
   } from '../lib/utils/dashboard';
-  import { openPrintWindow, wrapWithCopy, buildDisciplinaryReport, buildGateRegistrationReport, buildKitchenReport } from '../lib/utils/print';
+  import { openPrintWindow, buildDisciplinaryReport, buildGateRegistrationReport, buildKitchenReport } from '../lib/utils/print';
   import type { Reservation } from '../lib/api/types';
 
   let from = $state(todayISO());
@@ -119,7 +119,6 @@
     btn: string;
     icon: Component;
     build: (rows: Reservation[], date: string) => string;
-    withCopy: boolean;
   }
 
   const printReports: PrintReportDef[] = [
@@ -133,19 +132,17 @@
       btn: 'bg-red-700 hover:bg-red-800',
       icon: ShieldCheck,
       build: buildDisciplinaryReport,
-      withCopy: false,
     },
     {
       id: 'gate',
       title: 'ทะเบียนผู้เข้าเยี่ยม (ลงชื่อ)',
       desc: 'รายชื่อผู้เยี่ยมและผู้ต้องขัง พร้อมช่องลงชื่อ',
       note: 'มีช่องลงชื่อผู้เยี่ยมและเจ้าหน้าที่ประจำจุด',
-      copies: 'พิมพ์ 2 ชุด (สำเนา)',
+      copies: 'พิมพ์ 1 ชุด',
       accent: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400',
       btn: 'bg-blue-700 hover:bg-blue-800',
       icon: ClipboardCheck,
       build: buildGateRegistrationReport,
-      withCopy: true,
     },
     {
       id: 'kitchen',
@@ -157,7 +154,6 @@
       btn: 'bg-green-700 hover:bg-green-800',
       icon: Utensils,
       build: buildKitchenReport,
-      withCopy: true,
     },
   ];
 
@@ -177,8 +173,7 @@
       ui.showAlert({ title: 'ไม่มีข้อมูล', message: 'ไม่มีรายการสถานะ เสร็จสิ้น ในวันที่เลือก', type: 'warning' });
       return;
     }
-    let content = report.build(rows, reportDate);
-    if (report.withCopy) content = wrapWithCopy(content, report.title);
+    const content = report.build(rows, reportDate);
     const ok = openPrintWindow(content, report.title, printerName);
     if (!ok) ui.showAlert({ title: 'กรุณาอนุญาต Popup', message: 'กรุณาอนุญาต Popup เพื่อเปิดหน้าพิมพ์', type: 'warning' });
   }
