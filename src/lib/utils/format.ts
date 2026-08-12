@@ -1,3 +1,58 @@
+import type { Reservation } from '../api/types';
+
+export interface ExtraVisitor {
+  name: string;
+  id: string;
+  relation: string;
+  age: string;
+  approved: string;
+}
+
+export function parseExtraVisitors(row: Reservation): ExtraVisitor[] {
+  const str = String(row.extraVisitorNames ?? '').trim();
+  if (!str) return [];
+  const isNew = str.includes(';;') || str.includes('|');
+  let items: Array<{ name: string; id: string; relation: string; age: string }>;
+  if (isNew) {
+    items = str.split(';;').map((e) => {
+      const p = e.split('|');
+      return { name: (p[0] ?? '').trim(), id: (p[1] ?? '').trim(), relation: (p[2] ?? '').trim(), age: (p[3] ?? '').trim() };
+    });
+  } else {
+    items = str.split(/,(?![^(]*\))/).map((e) => {
+      const m = e.trim().match(/^(.+?)\s*\(/);
+      return { name: m ? m[1].trim() : e.trim(), id: '', relation: m ? e.trim().slice(m[0].length, -1) : '', age: '' };
+    });
+  }
+  const appr = String(row.extraVisitorApproved ?? '').split(';;');
+  return items
+    .filter((v) => v.name)
+    .map((v, i) => ({ ...v, approved: (appr[i] ?? '').trim() }));
+}
+
+export function computeDeptReportData(row: Reservation): { adults: number; kids5_8: number; kidsUnder5: number } {
+  const extras = parseExtraVisitors(row);
+  let adults = 1;
+  let kids5_8 = 0;
+  let kidsUnder5 = 0;
+  extras.forEach((v) => {
+    if (v.approved === 'no') return;
+    if (v.relation === 'บุตร / ธิดา') {
+      const a = parseInt(v.age, 10);
+      if (!isNaN(a)) {
+        if (a < 5) kidsUnder5++;
+        else if (a <= 8) kids5_8++;
+        else adults++;
+      } else {
+        adults++;
+      }
+    } else {
+      adults++;
+    }
+  });
+  return { adults, kids5_8, kidsUnder5 };
+}
+
 export function formatBaht(value: unknown): string {
   const n = Number(value ?? 0);
   if (isNaN(n)) return '0 บาท';

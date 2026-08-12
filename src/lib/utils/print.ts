@@ -1,4 +1,4 @@
-import { formatNumber, visitDateLabel } from './format';
+import { formatNumber, visitDateLabel, parseExtraVisitors, computeDeptReportData } from './format';
 import { monthLabel } from './dashboard';
 import type { Reservation } from '../api/types';
 import type { FinancialDayRow, FinancialMonthRow, FinancialSummary } from './dashboard';
@@ -10,59 +10,6 @@ export function escapeHtml(value: unknown): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
-}
-
-export interface ExtraVisitor {
-  name: string;
-  id: string;
-  relation: string;
-  age: string;
-  approved: string;
-}
-
-export function parseExtraVisitors(row: Reservation): ExtraVisitor[] {
-  const str = String(row.extraVisitorNames ?? '').trim();
-  if (!str) return [];
-  const isNew = str.includes(';;') || str.includes('|');
-  let items: Array<{ name: string; id: string; relation: string; age: string }>;
-  if (isNew) {
-    items = str.split(';;').map((e) => {
-      const p = e.split('|');
-      return { name: (p[0] ?? '').trim(), id: (p[1] ?? '').trim(), relation: (p[2] ?? '').trim(), age: (p[3] ?? '').trim() };
-    });
-  } else {
-    items = str.split(/,(?![^(]*\))/).map((e) => {
-      const m = e.trim().match(/^(.+?)\s*\(/);
-      return { name: m ? m[1].trim() : e.trim(), id: '', relation: m ? e.trim().slice(m[0].length, -1) : '', age: '' };
-    });
-  }
-  const appr = String(row.extraVisitorApproved ?? '').split(';;');
-  return items
-    .filter((v) => v.name)
-    .map((v, i) => ({ ...v, approved: (appr[i] ?? '').trim() }));
-}
-
-export function computeDeptReportData(row: Reservation): { adults: number; kids5_8: number; kidsUnder5: number } {
-  const extras = parseExtraVisitors(row);
-  let adults = 1;
-  let kids5_8 = 0;
-  let kidsUnder5 = 0;
-  extras.forEach((v) => {
-    if (v.approved === 'no') return;
-    if (v.relation === 'บุตร / ธิดา') {
-      const a = parseInt(v.age, 10);
-      if (!isNaN(a)) {
-        if (a < 5) kidsUnder5++;
-        else if (a <= 8) kids5_8++;
-        else adults++;
-      } else {
-        adults++;
-      }
-    } else {
-      adults++;
-    }
-  });
-  return { adults, kids5_8, kidsUnder5 };
 }
 
 const PRINT_SHARED_CSS = `
@@ -192,17 +139,15 @@ export function buildDisciplinaryReport(rows: Reservation[], date: string): stri
     <table style="width:80%; margin:28px auto 0; border:none;">
       <tbody>
         <tr>
-          <td style="border:none; width:33%; text-align:center; height:70px; vertical-align:bottom;">
-            <div>ลงชื่อ.............................................. ผู้เสนอ</div>
+          <td style="border:none; width:50%; text-align:center; height:70px; vertical-align:bottom;">
+            <div>ลงชื่อ.............................................. ผู้จัดทำรายงาน</div>
             <div style="font-size:10px; color:#555; margin-top:2px;">(..................................................)</div>
+            <div style="font-size:10px; color:#555; margin-top:2px;">วันที่........./........./.........</div>
           </td>
-          <td style="border:none; width:33%; text-align:center; vertical-align:bottom;">
-            <div>ลงชื่อ.............................................. ผู้เห็นชอบ</div>
+          <td style="border:none; width:50%; text-align:center; vertical-align:bottom;">
+            <div>ลงชื่อ.............................................. ผู้อนุมัติรายงาน</div>
             <div style="font-size:10px; color:#555; margin-top:2px;">(..................................................)</div>
-          </td>
-          <td style="border:none; width:33%; text-align:center; vertical-align:bottom;">
-            <div>ลงชื่อ.............................................. ผู้อนุมัติ</div>
-            <div style="font-size:10px; color:#555; margin-top:2px;">(..................................................)</div>
+            <div style="font-size:10px; color:#555; margin-top:2px;">วันที่........./........./.........</div>
           </td>
         </tr>
       </tbody>
@@ -526,13 +471,15 @@ export function buildFinancialReport(
   const dailyRows = daily
     .filter((d) => d.bookings > 0 || d.attended > 0)
     .map(
-      (d) => `
+      (d, i) => `
       <tr>
-        <td style="text-align:center;">${fmt(d.bookings)}</td>
+        <td style="text-align:center;">${i + 1}</td>
         <td>${escapeHtml(thaiDateLabel(d.date))}</td>
         <td style="text-align:center;">${fmt(d.attended)}</td>
         <td style="text-align:center;">${fmt(d.visitors)}</td>
         <td style="text-align:center;">${fmt(d.prisoners)}</td>
+        <td style="text-align:center;">${fmt(d.kidsUnder5)}</td>
+        <td style="text-align:center;">${fmt(d.kids5_8)}</td>
         <td style="text-align:right;">${fmt(d.paid)}</td>
         <td style="text-align:right;">${fmt(d.pending)}</td>
         <td style="text-align:right;">${fmt(d.total)}</td>
@@ -542,13 +489,15 @@ export function buildFinancialReport(
 
   const monthlyRows = monthly
     .map(
-      (m) => `
+      (m, i) => `
       <tr>
+        <td style="text-align:center;">${i + 1}</td>
         <td>${escapeHtml(monthLabel(m.month))}</td>
-        <td style="text-align:center;">${fmt(m.bookings)}</td>
         <td style="text-align:center;">${fmt(m.attended)}</td>
         <td style="text-align:center;">${fmt(m.visitors)}</td>
         <td style="text-align:center;">${fmt(m.prisoners)}</td>
+        <td style="text-align:center;">${fmt(m.kidsUnder5)}</td>
+        <td style="text-align:center;">${fmt(m.kids5_8)}</td>
         <td style="text-align:right;">${fmt(m.paid)}</td>
         <td style="text-align:right;">${fmt(m.pending)}</td>
         <td style="text-align:right;">${fmt(m.total)}</td>
@@ -597,34 +546,38 @@ export function buildFinancialReport(
     <table>
       <thead>
         <tr>
-          <th style="width:55px; text-align:center;">การจอง</th>
+          <th style="width:40px; text-align:center;">ลำดับ</th>
           <th>วันที่</th>
           <th style="width:55px; text-align:center;">เข้าร่วม</th>
           <th style="width:55px; text-align:center;">ผู้เยี่ยม</th>
           <th style="width:55px; text-align:center;">ผู้ต้องขัง</th>
+          <th style="width:55px; text-align:center;">เด็ก&lt;5 ปี</th>
+          <th style="width:55px; text-align:center;">เด็ก 5-8 ปี</th>
           <th style="width:90px; text-align:right;">ชำระแล้ว</th>
           <th style="width:90px; text-align:right;">ค้างชำระ</th>
           <th style="width:90px; text-align:right;">ยอดรวม</th>
         </tr>
       </thead>
-      <tbody>${dailyRows || '<tr><td colspan="8" style="text-align:center;color:#888;">ไม่มีข้อมูล</td></tr>'}</tbody>
+      <tbody>${dailyRows || '<tr><td colspan="10" style="text-align:center;color:#888;">ไม่มีข้อมูล</td></tr>'}</tbody>
     </table>
 
     <h3 style="font-size:12.5px; font-weight:700; margin:16px 0 6px; page-break-before:avoid;">3. รายละเอียดสรุปรายเดือน</h3>
     <table>
       <thead>
         <tr>
+          <th style="width:40px; text-align:center;">ลำดับ</th>
           <th>เดือน</th>
-          <th style="width:55px; text-align:center;">การจอง</th>
           <th style="width:55px; text-align:center;">เข้าร่วม</th>
           <th style="width:55px; text-align:center;">ผู้เยี่ยม</th>
           <th style="width:55px; text-align:center;">ผู้ต้องขัง</th>
+          <th style="width:55px; text-align:center;">เด็ก&lt;5 ปี</th>
+          <th style="width:55px; text-align:center;">เด็ก 5-8 ปี</th>
           <th style="width:90px; text-align:right;">ชำระแล้ว</th>
           <th style="width:90px; text-align:right;">ค้างชำระ</th>
           <th style="width:90px; text-align:right;">ยอดรวม</th>
         </tr>
       </thead>
-      <tbody>${monthlyRows || '<tr><td colspan="8" style="text-align:center;color:#888;">ไม่มีข้อมูล</td></tr>'}</tbody>
+      <tbody>${monthlyRows || '<tr><td colspan="10" style="text-align:center;color:#888;">ไม่มีข้อมูล</td></tr>'}</tbody>
     </table>
 
     <p style="font-size:11px; color:#555; margin-top:16px; text-align:justify;">

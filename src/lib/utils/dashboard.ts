@@ -1,5 +1,5 @@
 import type { Reservation } from '../api/types';
-import { normalizeStatus } from './format';
+import { normalizeStatus, computeDeptReportData } from './format';
 
 export function toLocalDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -313,6 +313,8 @@ export interface FinancialAgg {
   attended: number;
   visitors: number;
   prisoners: number;
+  kidsUnder5: number;
+  kids5_8: number;
   paid: number;
   pending: number;
   total: number;
@@ -346,7 +348,7 @@ function isFinancialExcluded(r: Reservation): boolean {
 }
 
 function aggregateFinancial(rows: Reservation[]): FinancialAgg {
-  const agg: FinancialAgg = { bookings: 0, attended: 0, visitors: 0, prisoners: 0, paid: 0, pending: 0, total: 0 };
+  const agg: FinancialAgg = { bookings: 0, attended: 0, visitors: 0, prisoners: 0, kidsUnder5: 0, kids5_8: 0, paid: 0, pending: 0, total: 0 };
   for (const r of rows) {
     if (isFinancialExcluded(r)) continue;
     const amt = Number(r.total) || 0;
@@ -357,6 +359,9 @@ function aggregateFinancial(rows: Reservation[]): FinancialAgg {
       agg.visitors += Number(r.visitorCount) || 0;
       agg.prisoners += 1;
       agg.paid += amt;
+      const d = computeDeptReportData(r);
+      agg.kidsUnder5 += d.kidsUnder5;
+      agg.kids5_8 += d.kids5_8;
     } else if (normalizeStatus(r.status) === 'รอชำระเงิน') {
       agg.pending += amt;
     }

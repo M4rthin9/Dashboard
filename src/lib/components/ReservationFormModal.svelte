@@ -14,12 +14,13 @@
     X,
   } from '@lucide/svelte';
   import Modal from './ui/Modal.svelte';
-  import { formatBaht, formatNumber } from '../utils/format';
+  import { formatBaht, formatNumber, normalizeStatus, STATUS_STEPS, statusColor } from '../utils/format';
   import { ui } from '../store/ui.svelte';
   import type { Prisoner, Reservation } from '../api/types';
 
   const RELATION_OPTIONS = ['บิดา / มารดา', 'แฟน/ภรรยา', 'บุตร / ธิดา', 'พี่ / น้อง', 'ญาติ', 'เพื่อน', 'ทนายความ', 'อื่น ๆ'];
   const RELIGION_OPTIONS = ['พุทธ', 'อิสลาม', 'คริสต์', 'อื่น ๆ'];
+  const STATUS_OPTIONS = [...STATUS_STEPS, 'ไม่อนุมัติ', 'ยกเลิก'];
 
   const DISCIPLINE_STATUS = 'ติดวินัย งดเยี่ยม';
 
@@ -96,6 +97,7 @@
   let adultCount = $state(1);
   let child5to8Count = $state(0);
   let childUnder5Count = $state(0);
+  let status = $state('');
 
   const extraCount = $derived(extras.filter((e) => e.name.trim()).length);
   const visitorCount = $derived(1 + extraCount);
@@ -207,6 +209,7 @@
       adultCount = Number(row.adultCount ?? 1) || 1;
       child5to8Count = Number(row.child5to8Count ?? 0) || 0;
       childUnder5Count = Number(row.childUnder5Count ?? 0) || 0;
+      status = normalizeStatus(String(row.status ?? ''));
     } else if (mode === 'create') {
       const now = new Date();
       visitDateISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -225,6 +228,7 @@
       adultCount = 1;
       child5to8Count = 0;
       childUnder5Count = 0;
+      status = '';
     }
   });
 
@@ -291,6 +295,7 @@
       adultCount,
       child5to8Count,
       childUnder5Count,
+      ...(mode === 'edit' ? { status } : {}),
     };
   }
 
@@ -603,6 +608,30 @@
         </div>
       </div>
     </section>
+
+    {#if mode === 'edit'}
+      <div class="border-t border-dashed border-slate-200 dark:border-slate-700"></div>
+
+      <section class="flex flex-col gap-3">
+        <div class="flex items-center gap-2">
+          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-600 dark:bg-violet-950 dark:text-violet-400">
+            <Check class="h-4 w-4" />
+          </div>
+          <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100">สถานะการจอง</h3>
+          {#if status}
+            <span class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold {statusColor(status)}">{status}</span>
+          {/if}
+        </div>
+        <div class="flex flex-col gap-1">
+          <label for="rf-status" class={labelCls}>เปลี่ยนสถานะ</label>
+          <select id="rf-status" bind:value={status} class={inputCls}>
+            {#each STATUS_OPTIONS as s (s)}
+              <option value={s}>{s}</option>
+            {/each}
+          </select>
+        </div>
+      </section>
+    {/if}
 
     <div class="flex justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
       <button

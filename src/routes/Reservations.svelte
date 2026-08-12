@@ -360,10 +360,15 @@
     formSaving = true;
     try {
       if (formMode === 'edit' && detailRow) {
-        await reservations.updateBooking(detailRow.ref, fields);
+        const fieldsForBooking: Record<string, unknown> = { ...fields };
+        const newStatus = typeof fieldsForBooking.status === 'string' ? fieldsForBooking.status : '';
+        delete fieldsForBooking.status;
+        const statusChanged = newStatus && normalizeStatus(detailRow.status) !== newStatus;
+        await reservations.updateBooking(detailRow.ref, fieldsForBooking);
+        if (statusChanged) await reservations.updateStatus(detailRow.ref, newStatus);
         ui.showAlert({
           title: 'บันทึกการแก้ไขสำเร็จ',
-          message: `${detailRow.ref} · ${String(fields.prisonerName ?? '')} / ${String(fields.visitorName ?? '')}`,
+          message: `${detailRow.ref} · ${String(fieldsForBooking.prisonerName ?? '')} / ${String(fieldsForBooking.visitorName ?? '')}${statusChanged ? ` · สถานะ → ${newStatus}` : ''}`,
           type: 'success',
         });
       } else if (formMode === 'create') {

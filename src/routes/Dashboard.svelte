@@ -3,16 +3,12 @@
   import type { EChartsOption } from 'echarts';
   import type { Reservation } from '../lib/api/types';
   import {
-    AlertTriangle,
     ArrowRight,
-    CalendarDays,
     Check,
     CheckCircle2,
     Coins,
     CreditCard,
     Crown,
-    LayoutDashboard,
-    PartyPopper,
     ReceiptText,
     RefreshCw,
     Sparkles,
@@ -34,7 +30,6 @@
   import { hasPermission } from '../lib/utils/permissions';
   import { formatBaht, formatNumber, formatDateThai, normalizeStatus, STATUS_COLORS } from '../lib/utils/format';
   import {
-    computeStats,
     computeRevenueKpis,
     computeTrend,
     computeRevenueSummary,
@@ -56,7 +51,6 @@
   const canViewSlip = $derived(hasPermission(role, 'view_slip'));
 
   const rows = $derived(reservations.rows);
-  const stats = $derived(computeStats(rows));
   const revenue = $derived(computeRevenueKpis(rows));
   const trend = $derived(computeTrend(rows));
   const revSum = $derived(computeRevenueSummary(rows));
@@ -69,29 +63,6 @@
   const alerts = $derived(computeAlerts(rows));
   const paymentQueue = $derived(computePaymentQueue(rows));
   const todaysVisits = $derived(computeTodaysVisits(rows));
-
-  const statCards = $derived.by(() => {
-    const base = [
-      { id: 'statTotal', label: 'การจองทั้งหมด', value: formatNumber(stats.total), icon: LayoutDashboard, color: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400' },
-      { id: 'statWait', label: 'รอตรวจสอบวินัย', value: formatNumber(stats.wait), icon: Crown, color: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400' },
-      { id: 'statOk', label: 'ผ่านการอนุมัติ/ชำระแล้ว', value: formatNumber(stats.ok), icon: PartyPopper, color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' },
-      { id: 'statReject', label: 'ไม่อนุมัติ', value: formatNumber(stats.reject), icon: AlertTriangle, color: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400' },
-      { id: 'statUniquePrisoners', label: 'ผู้ต้องขังที่ถูกจอง', value: formatNumber(stats.uniquePrisoners), icon: Users, color: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300' },
-      { id: 'statThisWeek', label: 'การจอง 7 วันนี้', value: formatNumber(stats.thisWeek), icon: CalendarDays, color: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400' },
-      { id: 'statThisMonth', label: 'การจองเดือนนี้', value: formatNumber(stats.thisMonth), icon: TrendingUp, color: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400' },
-      { id: 'statUniqueVisitors', label: 'ผู้เยี่ยมทั้งหมด', value: formatNumber(stats.uniqueVisitors), icon: Sparkles, color: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400' },
-    ];
-    const visibleByRole: Record<string, string[]> = {
-      Superadmin: base.map((c) => c.id),
-      Admin: base.map((c) => c.id),
-      Vinai: ['statWait', 'statThisWeek'],
-      Tadtel: ['statOk', 'statThisWeek'],
-      Finance: ['statOk', 'statThisWeek', 'statUniqueVisitors'],
-      User: [],
-    };
-    const visible = visibleByRole[role] ?? [];
-    return base.filter((c) => visible.includes(c.id));
-  });
 
   const statusFilterCards = $derived.by(() => {
     const defs = [
@@ -441,23 +412,6 @@
         </div>
       {/each}
     </div>
-
-    {#if statCards.length > 0}
-      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-        {#each statCards as c (c.id)}
-          {@const CIcon = c.icon}
-          <div class="flex flex-col items-center gap-2 rounded-2xl border border-slate-200/80 bg-white p-4 text-center transition-all duration-200 ease-out hover:shadow-md dark:border-slate-700/60 dark:bg-slate-900 dark:hover:shadow-lg">
-            <div class="flex h-9 w-9 items-center justify-center rounded-xl {c.color}">
-              <CIcon class="h-4 w-4" />
-            </div>
-            <div>
-              <p class="text-lg font-bold text-slate-900 dark:text-white">{c.value}</p>
-              <p class="mt-0.5 text-[11px] leading-tight text-slate-500 dark:text-slate-400">{c.label}</p>
-            </div>
-          </div>
-        {/each}
-      </div>
-    {/if}
 
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
       <Card title="ชำระแล้ว" subtitle="รายการที่ชำระเงินแล้ว" interactive>
