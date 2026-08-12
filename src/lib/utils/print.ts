@@ -111,6 +111,7 @@ const PRINT_SHARED_CSS = `
 
 export function wrapWithCopy(content: string, title: string): string {
   return `
+    <style>@page { size: landscape; margin: 10mm; }</style>
     ${content}
     <div class="copy-page" style="page-break-before:always; position:relative;">
       <div class="copy-watermark">สำเนา</div>
@@ -411,6 +412,25 @@ export function buildSeatingReport(rows: Reservation[]): string {
   `;
 }
 
+const KITCHEN_TICKET_CSS = `
+  .kt-ticket { border:3px solid #1e1b4b; border-radius:10px; padding:14px 16px; margin-bottom:10px; }
+  .kt-head { display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid #1e1b4b; padding-bottom:8px; margin-bottom:10px; }
+  .kt-head-title { font-size:18px; font-weight:800; color:#1e1b4b; }
+  .kt-head-date { font-size:13px; font-weight:600; color:#333; }
+  .kt-summary { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin-bottom:10px; }
+  .kt-box { border:2px solid #1e1b4b; border-radius:8px; text-align:center; padding:8px 4px; }
+  .kt-box .kt-num { font-size:26px; font-weight:900; color:#1e1b4b; line-height:1.1; }
+  .kt-box .kt-label { font-size:11px; font-weight:600; color:#444; margin-top:2px; }
+  .kt-box.kt-highlight { background:#fff8e7; border-color:#d97706; }
+  .kt-box.kt-highlight .kt-num { color:#b45309; }
+  .kt-table { width:100%; border-collapse:collapse; font-size:12px; }
+  .kt-table th { background:#1e1b4b; color:#fff; padding:5px 7px; font-size:11px; text-align:left; }
+  .kt-table td { border:1px solid #ccc; padding:5px 7px; }
+  .kt-table tr:nth-child(even) td { background:#f5f5f5; }
+  .kt-note { text-align:center; font-size:12px; color:#555; margin-bottom:10px; }
+  .kt-cut { text-align:center; margin:14px 0; border-top:3px dashed #c62828; padding-top:8px; color:#c62828; font-weight:800; font-size:14px; }
+`;
+
 export function buildKitchenReport(rows: Reservation[], date: string): string {
   let totalAdults = 0;
   let totalKids5_8 = 0;
@@ -424,28 +444,67 @@ export function buildKitchenReport(rows: Reservation[], date: string): string {
     totalPrice += Number(r.total) || 0;
   });
   const tables = rows.length;
-  const relatives = rows.reduce((s, r) => s + (Number(r.visitorCount) || 1), 0);
   const combinedAdults = totalAdults + tables;
+  const totalPeople = combinedAdults + totalKids5_8 + totalKidsUnder5;
+
+  const tableRows = rows
+    .map((r, i) => {
+      const d = computeDeptReportData(r);
+      const headcount = d.adults + d.kids5_8 + d.kidsUnder5;
+      return `
+      <tr>
+        <td style="text-align:center;">${i + 1}</td>
+        <td>${escapeHtml(r.ref)}</td>
+        <td><strong>น.ช. ${escapeHtml(r.prisonerName ?? '—')}</strong></td>
+        <td style="text-align:center;">${escapeHtml(r.wing ?? '—')}</td>
+        <td style="text-align:center;">${d.adults}</td>
+        <td style="text-align:center;">${d.kids5_8}</td>
+        <td style="text-align:center;">${d.kidsUnder5}</td>
+        <td style="text-align:center; font-weight:700;">${headcount}</td>
+      </tr>`;
+    })
+    .join('');
 
   const reportBody = `
-    <div class="tear-off" style="border:2px solid #333; padding:12px; margin-bottom:8px; font-size:13px;">
-      <strong style="font-size:15px;">🍽️🍰 ครัว + เบเกอรี่ — วันที่ ${escapeHtml(thaiDateLabel(date))}</strong><br><br>
-      จำนวนโต๊ะ: <strong>${tables} โต๊ะ</strong><br>
-      รวมผู้เข้าร่วม: <strong>${relatives + tables} คน</strong> (ญาติ ${relatives} + ผู้ต้องขัง ${tables})<br><br>
-      <strong>ผู้ใหญ่ (รวมผู้ต้องขัง):</strong> ${combinedAdults} คน<br>
-      <strong>เด็ก 5-8 ปี:</strong> ${totalKids5_8} คน<br>
-      <strong>ต่ำกว่า 5 ปี:</strong> ${totalKidsUnder5} คน<br><br>
-      <strong>ยอดชำระรวม: ${formatNumber(totalPrice)} บาท</strong>
+    <div class="tear-off kt-ticket">
+      <div class="kt-head">
+        <span class="kt-head-title">🍽️🍰 ใบสั่งครัว + เบเกอรี่</span>
+        <span class="kt-head-date">📅 ${escapeHtml(thaiDateLabel(date))}</span>
+      </div>
+      <div class="kt-summary">
+        <div class="kt-box"><div class="kt-num">${tables}</div><div class="kt-label">โต๊ะ</div></div>
+        <div class="kt-box"><div class="kt-num">${combinedAdults}</div><div class="kt-label">ผู้ใหญ่ (รวมผู้ต้องขัง)</div></div>
+        <div class="kt-box"><div class="kt-num">${totalKids5_8}</div><div class="kt-label">เด็ก 5-8 ปี</div></div>
+        <div class="kt-box"><div class="kt-num">${totalKidsUnder5}</div><div class="kt-label">เด็กต่ำกว่า 5 ปี</div></div>
+      </div>
+      <div class="kt-summary" style="grid-template-columns:1fr 1fr;">
+        <div class="kt-box kt-highlight"><div class="kt-num">${totalPeople}</div><div class="kt-label">รวมทั้งหมด (คน)</div></div>
+        <div class="kt-box kt-highlight"><div class="kt-num">${formatNumber(totalPrice)}</div><div class="kt-label">ยอดชำระรวม (บาท)</div></div>
+      </div>
+      <table class="kt-table">
+        <thead>
+          <tr>
+            <th style="width:30px;">#</th>
+            <th style="width:90px;">Ref</th>
+            <th>ผู้ต้องขัง</th>
+            <th style="width:50px;">แดน</th>
+            <th style="width:55px;">ผู้ใหญ่</th>
+            <th style="width:55px;">5-8 ปี</th>
+            <th style="width:55px;">&lt;5 ปี</th>
+            <th style="width:55px;">รวม</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows || '<tr><td colspan="8" style="text-align:center;color:#888;">ไม่มีข้อมูล</td></tr>'}</tbody>
+      </table>
     </div>
   `;
 
   return `
-    <div class="print-title" style="margin-bottom:8px;">🍽️🍰 ครัว + เบเกอรี่ — วันที่ ${escapeHtml(thaiDateLabel(date))}</div>
-    <p style="text-align:center; font-size:12px; color:#555; margin-bottom:12px;">พิมพ์ 1 ครั้ง → ตัดตรงกลาง ส่งครัว 1 ชุด / เบเกอรี่ 1 ชุด</p>
+    <style>${KITCHEN_TICKET_CSS}</style>
+    <div class="print-title" style="margin-bottom:4px;">🍽️🍰 ใบสั่งครัว + เบเกอรี่ — วันที่ ${escapeHtml(thaiDateLabel(date))}</div>
+    <p class="kt-note">พิมพ์ 1 ครั้ง → ตัดตรงกลาง ส่งครัว 1 ชุด / เบเกอรี่ 1 ชุด</p>
     ${reportBody}
-    <div class="tear-off" style="text-align:center; margin:12px 0; border-top:2px dashed #c62828; padding-top:8px; color:#c62828; font-weight:700;">
-      ✂️ ตัดตรงนี้ — ส่งครัว
-    </div>
+    <div class="tear-off kt-cut">✂️ ตัดตรงนี้ — ส่งครัว</div>
     ${reportBody}
   `;
 }
@@ -498,52 +557,43 @@ export function buildFinancialReport(
     .join('');
 
   const people = summary.visitors + summary.prisoners;
+  const now = new Date();
+  const issuedLabel = now.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  const statBox = (label: string, value: string): string => `
+      <div style="flex:1; min-width:130px; border:1px solid #444; padding:10px; text-align:center;">
+        <div style="font-size:10px; color:#555; text-transform:uppercase; letter-spacing:0.03em;">${escapeHtml(label)}</div>
+        <div style="font-size:17px; font-weight:700; color:#1a1a1a; margin-top:2px;">${value}</div>
+      </div>`;
 
   return `
-    <div class="print-title">รายงานสรุปการเงินภาพรวม</div>
-    <div style="text-align:center; margin-bottom:14px; font-size:12px;">
-      ช่วงเวลา: ${escapeHtml(periodLabel)} &nbsp;·&nbsp; ระบบจองเยี่ยม Chance &amp; Change Cafe
+    <div style="text-align:center; border-bottom:2px solid #1a1a1a; padding-bottom:10px; margin-bottom:14px;">
+      <div style="font-size:15px; font-weight:700;">รายงานสรุปผลการดำเนินงานด้านการเงิน</div>
+      <div style="font-size:13px; font-weight:600; margin-top:2px;">ร้าน Chance &amp; Change Cafe · ทัณฑสถานบำบัดพิเศษกลาง</div>
+      <div style="font-size:11px; color:#555; margin-top:4px;">ช่วงเวลารายงาน: ${escapeHtml(periodLabel)} &nbsp;|&nbsp; จัดทำเมื่อวันที่ ${escapeHtml(issuedLabel)}</div>
     </div>
 
-    <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px;">
-      <div style="flex:1; min-width:130px; border:2px solid #166534; border-radius:8px; padding:10px; text-align:center;">
-        <div style="font-size:10px; color:#555;">ยอดชำระแล้ว</div>
-        <div style="font-size:18px; font-weight:800; color:#166534;">${fmt(summary.paid)} บาท</div>
-      </div>
-      <div style="flex:1; min-width:130px; border:2px solid #b45309; border-radius:8px; padding:10px; text-align:center;">
-        <div style="font-size:10px; color:#555;">ยอดค้างชำระ</div>
-        <div style="font-size:18px; font-weight:800; color:#b45309;">${fmt(summary.pending)} บาท</div>
-      </div>
-      <div style="flex:1; min-width:130px; border:2px solid #1e3a5f; border-radius:8px; padding:10px; text-align:center;">
-        <div style="font-size:10px; color:#555;">ยอดรวม</div>
-        <div style="font-size:18px; font-weight:800; color:#1e3a5f;">${fmt(summary.total)} บาท</div>
-      </div>
-      <div style="flex:1; min-width:130px; border:2px solid #312e81; border-radius:8px; padding:10px; text-align:center;">
-        <div style="font-size:10px; color:#555;">การจองทั้งหมด</div>
-        <div style="font-size:18px; font-weight:800; color:#312e81;">${fmt(summary.bookings)} โต๊ะ</div>
-      </div>
+    <p style="font-size:12px; line-height:1.7; margin-bottom:14px; text-align:justify;">
+      รายงานฉบับนี้จัดทำขึ้นเพื่อสรุปผลการดำเนินงานด้านการเงินของร้าน Chance &amp; Change Cafe
+      ในช่วงเวลา ${escapeHtml(periodLabel)} ประกอบด้วยข้อมูลจำนวนการจอง ยอดชำระเงิน ยอดค้างชำระ
+      และจำนวนผู้เข้าร่วมกิจกรรม โดยมีรายละเอียดดังต่อไปนี้
+    </p>
+
+    <h3 style="font-size:12.5px; font-weight:700; margin:0 0 8px;">1. สรุปข้อมูลทางการเงินและผู้เข้าร่วม</h3>
+    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
+      ${statBox('ยอดชำระแล้ว', fmt(summary.paid) + ' บาท')}
+      ${statBox('ยอดค้างชำระ', fmt(summary.pending) + ' บาท')}
+      ${statBox('ยอดรวมทั้งสิ้น', fmt(summary.total) + ' บาท')}
+      ${statBox('จำนวนการจอง', fmt(summary.bookings) + ' โต๊ะ')}
+    </div>
+    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px;">
+      ${statBox('ผู้เข้าร่วมทั้งหมด', fmt(people) + ' คน')}
+      ${statBox('ผู้เยี่ยมที่เข้าร่วม', fmt(summary.visitors) + ' คน')}
+      ${statBox('ผู้ต้องขังที่เข้าร่วม', fmt(summary.prisoners) + ' คน')}
+      ${statBox('ผู้ต้องขัง (ไม่ซ้ำ)', fmt(summary.distinctPrisoners) + ' คน')}
     </div>
 
-    <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;">
-      <div style="flex:1; min-width:130px; border:2px solid #15803d; border-radius:8px; padding:10px; text-align:center;">
-        <div style="font-size:10px; color:#555;">ผู้เข้าร่วมทั้งหมด</div>
-        <div style="font-size:18px; font-weight:800; color:#15803d;">${fmt(people)} คน</div>
-      </div>
-      <div style="flex:1; min-width:130px; border:2px solid #0f766e; border-radius:8px; padding:10px; text-align:center;">
-        <div style="font-size:10px; color:#555;">ผู้เยี่ยมที่เข้าร่วม</div>
-        <div style="font-size:18px; font-weight:800; color:#0f766e;">${fmt(summary.visitors)} คน</div>
-      </div>
-      <div style="flex:1; min-width:130px; border:2px solid #7c2d12; border-radius:8px; padding:10px; text-align:center;">
-        <div style="font-size:10px; color:#555;">ผู้ต้องขังเข้าร่วม</div>
-        <div style="font-size:18px; font-weight:800; color:#7c2d12;">${fmt(summary.prisoners)} คน</div>
-      </div>
-      <div style="flex:1; min-width:130px; border:2px solid #44403c; border-radius:8px; padding:10px; text-align:center;">
-        <div style="font-size:10px; color:#555;">ผู้ต้องขัง (ไม่ซ้ำ)</div>
-        <div style="font-size:18px; font-weight:800; color:#44403c;">${fmt(summary.distinctPrisoners)} คน</div>
-      </div>
-    </div>
-
-    <h3 style="font-size:13px; font-weight:700; margin:16px 0 6px;">สรุปรายวัน</h3>
+    <h3 style="font-size:12.5px; font-weight:700; margin:16px 0 6px;">2. รายละเอียดสรุปรายวัน</h3>
     <table>
       <thead>
         <tr>
@@ -560,7 +610,7 @@ export function buildFinancialReport(
       <tbody>${dailyRows || '<tr><td colspan="8" style="text-align:center;color:#888;">ไม่มีข้อมูล</td></tr>'}</tbody>
     </table>
 
-    <h3 style="font-size:13px; font-weight:700; margin:16px 0 6px; page-break-before:avoid;">สรุปรายเดือน</h3>
+    <h3 style="font-size:12.5px; font-weight:700; margin:16px 0 6px; page-break-before:avoid;">3. รายละเอียดสรุปรายเดือน</h3>
     <table>
       <thead>
         <tr>
@@ -577,16 +627,23 @@ export function buildFinancialReport(
       <tbody>${monthlyRows || '<tr><td colspan="8" style="text-align:center;color:#888;">ไม่มีข้อมูล</td></tr>'}</tbody>
     </table>
 
-    <table style="width:80%; margin:28px auto 0; border:none;">
+    <p style="font-size:11px; color:#555; margin-top:16px; text-align:justify;">
+      จึงเรียนมาเพื่อโปรดทราบและพิจารณา ทั้งนี้ ข้อมูลข้างต้นสรุปจากระบบจองเยี่ยม Chance &amp; Change Cafe
+      ณ วันที่จัดทำรายงาน
+    </p>
+
+    <table style="width:80%; margin:32px auto 0; border:none;">
       <tbody>
         <tr>
           <td style="border:none; width:50%; text-align:center; height:70px; vertical-align:bottom;">
-            <div>ลงชื่อ.............................................. ผู้จัดทำ</div>
+            <div>ลงชื่อ.............................................. ผู้จัดทำรายงาน</div>
             <div style="font-size:10px; color:#555; margin-top:2px;">(..................................................)</div>
+            <div style="font-size:10px; color:#555; margin-top:2px;">วันที่........./........./.........</div>
           </td>
           <td style="border:none; width:50%; text-align:center; vertical-align:bottom;">
-            <div>ลงชื่อ.............................................. ผู้อนุมัติ</div>
+            <div>ลงชื่อ.............................................. ผู้อนุมัติรายงาน</div>
             <div style="font-size:10px; color:#555; margin-top:2px;">(..................................................)</div>
+            <div style="font-size:10px; color:#555; margin-top:2px;">วันที่........./........./.........</div>
           </td>
         </tr>
       </tbody>

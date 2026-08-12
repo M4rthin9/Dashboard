@@ -13,6 +13,7 @@
     Crown,
     LayoutDashboard,
     PartyPopper,
+    ReceiptText,
     RefreshCw,
     Sparkles,
     TrendingUp,
@@ -91,6 +92,20 @@
     const visible = visibleByRole[role] ?? [];
     return base.filter((c) => visible.includes(c.id));
   });
+
+  const statusFilterCards = $derived.by(() => {
+    const defs = [
+      { status: 'รอตรวจสอบวินัย', label: 'รอตรวจสอบวินัย', icon: Crown, color: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400', bar: 'from-amber-500 to-amber-600' },
+      { status: 'รอชำระเงิน', label: 'รอชำระเงิน', icon: ReceiptText, color: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400', bar: 'from-blue-600 to-blue-700' },
+      { status: 'ชำระแล้ว', label: 'ชำระแล้ว', icon: Wallet, color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400', bar: 'from-emerald-600 to-teal-700' },
+      { status: 'เสร็จสิ้น', label: 'เสร็จสิ้น', icon: CheckCircle2, color: 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400', bar: 'from-green-600 to-green-700' },
+    ];
+    return defs.map((d) => ({ ...d, count: statusDist[d.status] ?? 0 }));
+  });
+
+  function goToStatus(status: string): void {
+    navigate(`/reservations?status=${encodeURIComponent(status)}`);
+  }
 
   const textColor = $derived(ui.darkMode ? '#cbd5e1' : '#475569');
   const axisLine = $derived(ui.darkMode ? '#334155' : '#e2e8f0');
@@ -397,6 +412,32 @@
               <KIcon class="h-5 w-5" />
             </div>
           </div>
+        </div>
+      {/each}
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {#each statusFilterCards as s (s.status)}
+        {@const SIcon = s.icon}
+        <div class="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 transition-all duration-200 ease-out hover:shadow-lg dark:border-slate-700/60 dark:bg-slate-900 dark:hover:shadow-xl">
+          <div class="pointer-events-none absolute inset-x-0 top-0 z-0 h-1 bg-gradient-to-r {s.bar}" aria-hidden="true"></div>
+          <div class="flex items-center justify-between gap-3">
+            <div class="min-w-0 flex-1">
+              <p class="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">{s.label}</p>
+              <p class="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{formatNumber(s.count)}</p>
+              <p class="mt-0.5 text-xs text-slate-400 dark:text-slate-500">รายการ</p>
+            </div>
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl {s.color}">
+              <SIcon class="h-5 w-5" />
+            </div>
+          </div>
+          <button
+            class="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition-colors duration-150 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            onclick={() => goToStatus(s.status)}
+          >
+            ดูรายการ
+            <ArrowRight class="h-3.5 w-3.5" />
+          </button>
         </div>
       {/each}
     </div>

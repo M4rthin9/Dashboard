@@ -14,6 +14,7 @@
   import { reservations } from '../lib/store/reservations.svelte';
   import { ui } from '../lib/store/ui.svelte';
   import { hasPermission } from '../lib/utils/permissions';
+  import { currentQuery } from '../lib/router';
   import { formatBaht, formatNumber, normalizeStatus, STATUS_COLORS, todayISO, visitDateLabel } from '../lib/utils/format';
   import { exportReservationsCSV } from '../lib/utils/csv';
   import { openPrintWindow, buildSeatingReport } from '../lib/utils/print';
@@ -136,6 +137,8 @@
   });
 
   onMount(() => {
+    const qStatus = currentQuery().get('status');
+    if (qStatus) statusFilter = qStatus;
     reservations.load();
     getPrisoners()
       .then((res) => {
