@@ -22,6 +22,7 @@
   import Button from './ui/Button.svelte';
   import Badge from './ui/Badge.svelte';
   import SlipViewerModal from './SlipViewerModal.svelte';
+  import SlipVerifyPanel from './SlipVerifyPanel.svelte';
   import { formatBaht, formatNumber, formatDateTimeThai, normalizeStatus, visitDateLabel } from '../utils/format';
   import type { Reservation } from '../api/types';
   import { getSlipByRef } from '../api/endpoints';
@@ -467,6 +468,11 @@
               </button>
               <p class="text-center text-[11px] text-slate-400">คลิกเพื่อขยายสลิปขนาดเต็ม</p>
             </div>
+            <SlipVerifyPanel
+              ref={row.ref}
+              status={String(row.slip_verify_status ?? '')}
+              json={String(row.slip_verify_json ?? '')}
+            />
           {/if}
         </section>
       {/if}

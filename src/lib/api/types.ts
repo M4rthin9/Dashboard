@@ -4,6 +4,19 @@ export interface AuthUser {
   displayName: string;
 }
 
+export type SlipVerifyStatus = 'ok' | 'mismatch' | 'slip_verify' | 'unreadable';
+
+/** Result of scanning + parsing the slip QR against the booking. */
+export interface SlipVerifyResult {
+  status: SlipVerifyStatus;
+  kind: 'paymentQr' | 'slipVerify' | 'trueMoneySlipVerify' | 'none';
+  qrCount: number;
+  at: string;
+  detail?: Record<string, unknown> | null;
+  match?: Record<string, unknown> | null;
+  mismatch?: string[];
+}
+
 export interface LoginResponse {
   status: string;
   user: AuthUser;
@@ -49,6 +62,9 @@ export interface Reservation {
   childUnder5Count?: number;
   status?: string;
   slipImage?: string;
+  slip_verify_status?: string;
+  slip_verify_json?: string;
+  slip_verify_at?: string;
   cancelReason?: string;
   createdAt?: string;
   updatedAt?: string;

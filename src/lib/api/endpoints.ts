@@ -7,6 +7,7 @@ import type {
   PublicUser,
   Reservation,
   RolePermission,
+  SlipVerifyResult,
 } from './types';
 
 export interface ReservationFilters {
@@ -50,6 +51,11 @@ export function lookupByRef(ref: string): Promise<ApiResult & { rows?: Reservati
 
 export function getSlipByRef(ref: string): Promise<ApiResult & { slipImage?: string }> {
   return callAction('getSlipByRef', { ref }, { auth: true });
+}
+
+/** Re-scan + re-parse the stored slip QR against the booking config. */
+export function verifySlip(ref: string): Promise<ApiResult & { result?: SlipVerifyResult }> {
+  return callAction('verifySlip', { ref }, { auth: true });
 }
 
 export async function getPrisoners(): Promise<ApiResult & { prisoners?: Prisoner[] }> {
