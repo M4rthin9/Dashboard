@@ -161,6 +161,25 @@ export function syncPrisonerWings(): Promise<ApiResult & { updated?: number }> {
   return callAction('syncPrisonerWings', {}, { auth: true });
 }
 
+export interface PromptPayQrParams {
+  billerId: string;
+  ref1: string;
+  ref2?: string;
+  ref3?: string;
+  amount?: string | number;
+  pointOfInitiation?: '11' | '12';
+}
+
+export interface PromptPayQrResponse {
+  status: string;
+  payload?: string;
+  message?: string;
+}
+
+export function generatePromptPayQr(params: Partial<PromptPayQrParams> = {}): Promise<PromptPayQrResponse> {
+  return callGet<PromptPayQrResponse>('/api/promptpay/qr', params);
+}
+
 export function getSettings(): Promise<ApiResult & { settings?: Record<string, unknown> }> {
   return callAction('getSettings', {}, { auth: true });
 }

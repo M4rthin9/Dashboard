@@ -1,5 +1,6 @@
 import type { AuthUser, ApiResult } from '../api/types';
 import { ApiError, AuthExpiredError } from '../api/errors';
+import { SvelteURLSearchParams } from 'svelte/reactivity';
 
 export const API_BASE: string =
   (import.meta.env.VITE_API_BASE as string | undefined) ??
@@ -148,11 +149,17 @@ export function callAction<T extends object = ApiResult>(action: string, body: R
 }
 
 /** GET a REST alias endpoint (e.g. /api/prisoners) with Bearer auth + refresh fallback. */
-async function getAction<T extends object = ApiResult>(path: string): Promise<T> {
+async function getAction<T extends object = ApiResult>(path: string, query: Record<string, unknown> = {}): Promise<T> {
   const headers: Record<string, string> = {};
   if (auth.accessToken) headers['Authorization'] = `Bearer ${auth.accessToken}`;
 
-  const res = await fetch(`${API_BASE}${path}`, { method: 'GET', headers });
+  const qs = new SvelteURLSearchParams();
+  for (const [k, v] of Object.entries(query)) {
+    if (v !== undefined && v !== null && String(v) !== '') qs.set(k, String(v));
+  }
+  const url = `${API_BASE}${path}${qs.toString() ? `?${qs.toString()}` : ''}`;
+
+  const res = await fetch(url, { method: 'GET', headers });
 
   const data = (await res.json().catch(() => ({}))) as ApiResult;
   if (typeof data !== 'object' || data === null || !('status' in data)) {
@@ -162,7 +169,7 @@ async function getAction<T extends object = ApiResult>(path: string): Promise<T>
   if (data.status === 'error') {
     if (String(data.message ?? '').toLowerCase().includes('unauthorized')) {
       const refreshed = await refreshAccessToken();
-      if (refreshed) return getAction<T>(path);
+      if (refreshed) return getAction<T>(path, query);
       auth.logout();
       throw new AuthExpiredError();
     }
@@ -172,6 +179,6 @@ async function getAction<T extends object = ApiResult>(path: string): Promise<T>
   return data as T;
 }
 
-export function callGet<T extends object = ApiResult>(path: string): Promise<T> {
-  return getAction<T>(path);
+export function callGet<T extends object = ApiResult>(path: string, query: Record<string, unknown> = {}): Promise<T> {
+  return getAction<T>(path, query);
 }

@@ -9,6 +9,7 @@
     Users,
     UserRound,
     Link2,
+    QrCode,
     Settings,
   } from '@lucide/svelte';
   import { auth } from '../../store/auth.svelte';
@@ -30,6 +31,7 @@
     users: { path: '/users', label: 'ผู้ใช้', icon: Users },
     prisoners: { path: '/prisoners', label: 'ผู้ต้องขัง', icon: UserRound },
     connection: { path: '/connection', label: 'การเชื่อมต่อ', icon: Link2 },
+    promptpay: { path: '/promptpay', label: 'PromptPay QR', icon: QrCode },
     settings: { path: '/settings', label: 'ตั้งค่า', icon: Settings },
   };
 

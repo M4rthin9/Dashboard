@@ -29,6 +29,7 @@ export const routes: RouteDef[] = [
   { path: '/users', key: 'users', title: 'ผู้ใช้', component: Users, roles: ['Superadmin'] },
   { path: '/prisoners', key: 'prisoners', title: 'ผู้ต้องขัง', component: Prisoners },
   { path: '/connection', key: 'connection', title: 'การเชื่อมต่อ', component: Connection },
+  { path: '/promptpay', key: 'promptpay', title: 'PromptPay QR', loader: () => import('../routes/PromptPay.svelte') },
   { path: '/settings', key: 'settings', title: 'ตั้งค่า', component: Settings },
 ];
 
