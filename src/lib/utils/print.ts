@@ -362,18 +362,13 @@ const KITCHEN_TICKET_CSS = `
   .kt-head { text-align:center; border-bottom:2px solid #1e1b4b; padding-bottom:10px; margin-bottom:14px; }
   .kt-head-title { font-size:20px; font-weight:800; color:#1e1b4b; display:block; }
   .kt-head-date { font-size:15px; font-weight:600; color:#333; display:block; margin-top:2px; }
-  .kt-summary { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:14px; }
+  .kt-summary { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:0; }
   .kt-box { border:2px solid #1e1b4b; border-radius:8px; text-align:center; padding:12px 4px; }
   .kt-box .kt-num { font-size:36px; font-weight:900; color:#1e1b4b; line-height:1.1; }
   .kt-box .kt-label { font-size:13px; font-weight:600; color:#444; margin-top:4px; }
-  .kt-box.kt-highlight { background:#fff8e7; border-color:#d97706; grid-column:1 / -1; }
+  .kt-box.kt-highlight { background:#fff8e7; border-color:#d97706; }
   .kt-box.kt-highlight .kt-num { color:#b45309; font-size:44px; }
   .kt-box.kt-highlight .kt-label { font-size:14px; }
-  .kt-table { width:100%; border-collapse:collapse; font-size:15px; }
-  .kt-table th { background:#1e1b4b; color:#fff; padding:8px; font-size:13px; text-align:center; }
-  .kt-table td { border:1px solid #ccc; padding:8px; text-align:center; font-size:15px; }
-  .kt-table td.kt-total-cell { font-weight:800; font-size:17px; }
-  .kt-table tr:nth-child(even) td { background:#f5f5f5; }
   .kt-cut { text-align:center; margin:14px 0; border-top:3px dashed #c62828; padding-top:8px; color:#c62828; font-weight:800; font-size:14px; }
 `;
 
@@ -391,22 +386,6 @@ export function buildKitchenReport(rows: Reservation[], date: string): string {
   const combinedAdults = totalAdults + tables;
   const totalPeople = combinedAdults + totalKids5_8 + totalKidsUnder5;
 
-  const tableRows = rows
-    .map((r, i) => {
-      const d = computeDeptReportData(r);
-      const adults = d.adults + 1;
-      const headcount = adults + d.kids5_8 + d.kidsUnder5;
-      return `
-      <tr>
-        <td>${i + 1}</td>
-        <td>${adults}</td>
-        <td>${d.kids5_8}</td>
-        <td>${d.kidsUnder5}</td>
-        <td class="kt-total-cell">${headcount}</td>
-      </tr>`;
-    })
-    .join('');
-
   const reportBody = `
     <div class="tear-off kt-ticket">
       <div class="kt-head">
@@ -417,20 +396,8 @@ export function buildKitchenReport(rows: Reservation[], date: string): string {
         <div class="kt-box"><div class="kt-num">${combinedAdults}</div><div class="kt-label">ผู้ใหญ่</div></div>
         <div class="kt-box"><div class="kt-num">${totalKids5_8}</div><div class="kt-label">เด็ก 5-8 ปี</div></div>
         <div class="kt-box"><div class="kt-num">${totalKidsUnder5}</div><div class="kt-label">เด็กต่ำกว่า 5 ปี</div></div>
-        <div class="kt-box kt-highlight"><div class="kt-num">${totalPeople}</div><div class="kt-label">รวมทั้งหมด (คน) · ${tables} โต๊ะ</div></div>
+        <div class="kt-box kt-highlight"><div class="kt-num">${totalPeople}</div><div class="kt-label">รวมทั้งหมด</div></div>
       </div>
-      <table class="kt-table">
-        <thead>
-          <tr>
-            <th>โต๊ะ</th>
-            <th>ผู้ใหญ่</th>
-            <th>เด็ก 5-8 ปี</th>
-            <th>เด็ก&lt;5 ปี</th>
-            <th>รวม</th>
-          </tr>
-        </thead>
-        <tbody>${tableRows || '<tr><td colspan="5" style="text-align:center;color:#888;">ไม่มีข้อมูล</td></tr>'}</tbody>
-      </table>
     </div>
   `;
 
