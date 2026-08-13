@@ -168,8 +168,9 @@ export function syncPrisonerWings(): Promise<ApiResult & { updated?: number }> {
 }
 
 export interface PromptPayQrParams {
-  billerId: string;
-  ref1: string;
+  ref?: string;
+  billerId?: string;
+  ref1?: string;
   ref2?: string;
   ref3?: string;
   amount?: string | number;
@@ -179,6 +180,12 @@ export interface PromptPayQrParams {
 export interface PromptPayQrResponse {
   status: string;
   payload?: string;
+  qrDataUrl?: string;
+  amount?: number;
+  billerId?: string;
+  ref1?: string;
+  ref2?: string;
+  ref3?: string;
   message?: string;
 }
 

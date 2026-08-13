@@ -1,20 +1,70 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import QRCode from 'qrcode';
-  import { CheckCircle2, ClipboardCopy, Download, QrCode as QrIcon, RefreshCw, Save, ScanLine, XCircle } from '@lucide/svelte';
+  import { CheckCircle2, ClipboardCopy, Download, QrCode as QrIcon, RefreshCw, Save, XCircle } from '@lucide/svelte';
   import Card from '../lib/components/ui/Card.svelte';
   import Button from '../lib/components/ui/Button.svelte';
   import Input from '../lib/components/ui/Input.svelte';
   import Select from '../lib/components/ui/Select.svelte';
   import Spinner from '../lib/components/ui/Spinner.svelte';
   import { ui } from '../lib/store/ui.svelte';
-  import { promptpayStore } from '../lib/store/promptpay.svelte';
+  import { promptpayStore, type PromptPayConfig } from '../lib/store/promptpay.svelte';
   import { generatePromptPayQr } from '../lib/api/endpoints';
-  import type { PromptPayConfig } from '../lib/utils/promptpay';
-  import { buildBillerPayload, validateEmvCoPayload, parsePayloadValues } from '../lib/utils/promptpay';
+
+  function crc16(data: string): string {
+    let crc = 0xffff;
+    for (let i = 0; i < data.length; i += 1) {
+      crc ^= data.charCodeAt(i) << 8;
+      for (let bit = 0; bit < 8; bit += 1) {
+        crc = crc & 0x8000 ? (crc << 1) ^ 0x1021 : crc << 1;
+      }
+    }
+    return (crc & 0xffff).toString(16).toUpperCase().padStart(4, '0');
+  }
+
+  interface PromptPayValidation {
+    ok: boolean;
+    message: string;
+  }
+
+  function validateEmvCoPayload(payload: string): PromptPayValidation {
+    if (!payload || typeof payload !== 'string') {
+      return { ok: false, message: 'ไม่พบ payload' };
+    }
+    if (!payload.startsWith('000201')) {
+      return { ok: false, message: 'Payload ต้องเริ่มต้นด้วย 000201 (Payload Format + POI)' };
+    }
+    const crcIdx = payload.indexOf('6304', payload.length - 10);
+    if (crcIdx === -1 || payload.length - crcIdx !== 8) {
+      return { ok: false, message: 'ไม่พบ CRC (6304) ท้าย payload' };
+    }
+    const expected = payload.slice(crcIdx + 4);
+    if (!/^[0-9A-Fa-f]{4}$/.test(expected)) {
+      return { ok: false, message: 'ค่า CRC ไม่ใช่เลขฐาน 16 4 หลัก' };
+    }
+    const recomputed = crc16(payload.slice(0, crcIdx + 4));
+    if (recomputed !== expected.toUpperCase()) {
+      return { ok: false, message: `CRC ไม่ตรงกัน (คำนวณได้ ${recomputed}, ที่ได้มา ${expected.toUpperCase()})` };
+    }
+    return { ok: true, message: 'QR payload ถูกต้อง ใช้งานได้' };
+  }
+
+  function parsePayloadValues(payload: string): Record<string, string> {
+    const values: Record<string, string> = {};
+    let i = 0;
+    while (i + 4 <= payload.length) {
+      const tag = payload.slice(i, i + 2);
+      const len = parseInt(payload.slice(i + 2, i + 4), 10);
+      if (isNaN(len)) break;
+      const value = payload.slice(i + 4, i + 4 + len);
+      values[tag] = value;
+      i += 4 + len;
+    }
+    return values;
+  }
 
   let saving = $state(false);
   let serverSamplePayload = $state('');
+  let serverSampleQr = $state('');
 
   let draftBillerId = $state(promptpayStore.config.billerId);
   let draftRef1 = $state(promptpayStore.config.ref1);
@@ -61,9 +111,11 @@
       const res = await generatePromptPayQr({});
       if (res.status === 'ok' && res.payload) {
         serverSamplePayload = res.payload;
+        serverSampleQr = res.qrDataUrl ?? '';
       }
     } catch {
       serverSamplePayload = '';
+      serverSampleQr = '';
     }
   }
 
@@ -116,7 +168,7 @@
       payload = res.payload;
       parsed = parsePayloadValues(payload);
       validation = validateEmvCoPayload(payload);
-      qrImage = await QRCode.toDataURL(payload, { width: 320, margin: 2, errorCorrectionLevel: 'M' });
+      qrImage = res.qrDataUrl ?? '';
       ui.showToast(validation.ok ? 'สร้าง QR สำเร็จ' : 'สร้าง QR แล้ว แต่ payload มีปัญหา', validation.ok ? 'success' : 'error');
     } catch (err) {
       ui.showAlert({ title: 'สร้าง QR ไม่สำเร็จ', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
@@ -133,24 +185,8 @@
     payload = serverSamplePayload;
     parsed = parsePayloadValues(payload);
     validation = validateEmvCoPayload(payload);
-    qrImage = await QRCode.toDataURL(payload, { width: 320, margin: 2, errorCorrectionLevel: 'M' });
+    qrImage = serverSampleQr;
     ui.showToast(validation.ok ? 'ตรวจสอบตัวอย่างผ่าน' : 'ตัวอย่างจากระบบมีปัญหา', validation.ok ? 'success' : 'error');
-  }
-
-  function sampleLocalPayload(): string {
-    return buildBillerPayload(
-      { billerId: billerId.trim(), ref1: ref1.trim(), ref2: ref2.trim(), ref3: ref3.trim(), pointOfInitiation: poi },
-      { amount: amount.trim() || undefined }
-    );
-  }
-
-  async function inspectLocalSample(): Promise<void> {
-    const p = sampleLocalPayload();
-    payload = p;
-    parsed = parsePayloadValues(p);
-    validation = validateEmvCoPayload(p);
-    qrImage = await QRCode.toDataURL(p, { width: 320, margin: 2, errorCorrectionLevel: 'M' });
-    ui.showToast(validation.ok ? 'ตรวจสอบตัวอย่างผ่าน' : 'ตัวอย่างมีปัญหา', validation.ok ? 'success' : 'error');
   }
 
   async function copyPayload(): Promise<void> {
@@ -224,9 +260,6 @@
     <div class="mt-4 flex flex-wrap justify-end gap-2">
       <Button variant="outline" onclick={inspectSample}>
         <RefreshCw class="h-4 w-4" /> ตรวจสอบตัวอย่างจากระบบ
-      </Button>
-      <Button variant="outline" onclick={inspectLocalSample}>
-        <ScanLine class="h-4 w-4" /> ตรวจสอบตัวอย่างในเครื่อง
       </Button>
       <Button onclick={generate} loading={generating} disabled={generating}>
         <QrIcon class="h-4 w-4" /> {generating ? 'กำลังสร้าง...' : 'สร้าง QR'}

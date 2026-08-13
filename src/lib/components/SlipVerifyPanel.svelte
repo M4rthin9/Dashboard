@@ -35,6 +35,8 @@
 
   const mismatchLabels: Record<string, string> = {
     amount: 'ยอดเงิน',
+    ref1: 'รหัสอ้างอิง 1',
+    ref2: 'รหัสอ้างอิง 2',
     refs: 'รหัสอ้างอิง',
     biller: 'รหัสผู้รับเงิน',
   };

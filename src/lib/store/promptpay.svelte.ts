@@ -1,6 +1,22 @@
 import { getSettings, saveSettings } from '../api/endpoints';
-import type { PromptPayConfig } from '../utils/promptpay';
-import { PROMPTPAY_DEFAULTS, PROMPTPAY_STORAGE_KEY } from '../utils/promptpay';
+
+export interface PromptPayConfig {
+  billerId: string;
+  ref1: string;
+  ref2: string;
+  ref3: string;
+  pointOfInitiation: '11' | '12';
+}
+
+export const PROMPTPAY_DEFAULTS: PromptPayConfig = {
+  billerId: '010753700088205',
+  ref1: 'ML099400ZO0160208VX',
+  ref2: 'CIDA',
+  ref3: '0000',
+  pointOfInitiation: '11',
+};
+
+export const PROMPTPAY_STORAGE_KEY = 'ccc_promptpay_config';
 
 function sanitize(raw: unknown): PromptPayConfig {
   const o = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;

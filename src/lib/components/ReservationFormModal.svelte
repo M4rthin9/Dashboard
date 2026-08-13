@@ -58,6 +58,12 @@
     return PRICING.EXTRA_VISITOR;
   }
 
+  function computeMainFee(relation: string, age: string): number {
+    return CHILD_RELATIONS.includes(relation) && computeExtraFee(relation, age) !== PRICING.EXTRA_VISITOR
+      ? computeExtraFee(relation, age)
+      : PRICING.MAIN_VISITOR;
+  }
+
   let { open, mode, row, prisoners, onclose, onsubmit, saving, width = 'max-w-3xl' }: {
     open: boolean;
     mode: 'edit' | 'create';
@@ -86,6 +92,7 @@
   let visitorId = $state('');
   let visitorPhone = $state('');
   let relation = $state('');
+  let visitorAge = $state('');
   let religion = $state('');
   let allergy = $state('');
   let prisonerQuery = $state('');
@@ -107,7 +114,7 @@
     const extraFees = extras
       .filter((e) => e.name.trim())
       .reduce((sum, e) => sum + computeExtraFee(e.relation, e.age), 0);
-    return PRICING.MAIN_VISITOR + PRICING.PRISONER + extraFees;
+    return PRICING.PRISONER + computeMainFee(relation, visitorAge) + extraFees;
   });
 
   const extraFeeTotal = $derived(
@@ -197,6 +204,7 @@
       visitorId = String(row.visitorId ?? '');
       visitorPhone = String(row.visitorPhone ?? '');
       relation = String(row.relation ?? '');
+      visitorAge = String(row.visitorAge ?? '');
       religion = String(row.religion ?? '');
       allergy = String(row.allergy ?? '');
       prisonerId = String(row.prisonerId ?? '');
@@ -217,6 +225,7 @@
       visitorId = '';
       visitorPhone = '';
       relation = '';
+      visitorAge = '';
       religion = '';
       allergy = '';
       prisonerQuery = '';
@@ -250,11 +259,12 @@
   }
 
   function recomputeCounts(): void {
-    let adults = 1;
+    const mainFee = computeMainFee(relation, visitorAge);
+    const fees = [mainFee, ...extras.filter((x) => x.name.trim()).map((e) => computeExtraFee(e.relation, e.age))];
+    let adults = 0;
     let kids5_8 = 0;
     let kidsUnder5 = 0;
-    for (const e of extras.filter((x) => x.name.trim())) {
-      const fee = computeExtraFee(e.relation, e.age);
+    for (const fee of fees) {
       if (fee === PRICING.EXTRA_VISITOR) adults++;
       else if (fee === PRICING.CHILD_HALF_PRICE) kids5_8++;
       else kidsUnder5++;
@@ -279,6 +289,7 @@
       visitorId,
       visitorPhone,
       relation,
+      visitorAge,
       religion,
       allergy,
       extraVisitorNames: extraNamesStr,
@@ -362,6 +373,10 @@
             <option value="">-- เลือก --</option>
             {#each RELATION_OPTIONS as o (o)}<option value={o}>{o}</option>{/each}
           </select>
+        </div>
+        <div class="flex flex-col gap-1">
+          <label for="rf-visitor-age" class={labelCls}>อายุผู้เยี่ยมหลัก (ปี)</label>
+          <input id="rf-visitor-age" bind:value={visitorAge} class={inputCls} type="number" min="0" max="120" placeholder="ว่าง = ไม่ทราบ (คิดเป็นผู้ใหญ่)" />
         </div>
         <div class="flex flex-col gap-1">
           <label for="rf-religion" class={labelCls}>ศาสนา *</label>

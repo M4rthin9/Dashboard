@@ -17,7 +17,6 @@
     User,
     UsersRound,
   } from '@lucide/svelte';
-  import QRCode from 'qrcode';
   import Modal from './ui/Modal.svelte';
   import Button from './ui/Button.svelte';
   import Badge from './ui/Badge.svelte';
@@ -25,9 +24,7 @@
   import SlipVerifyPanel from './SlipVerifyPanel.svelte';
   import { formatBaht, formatNumber, formatDateTimeThai, normalizeStatus, visitDateLabel } from '../utils/format';
   import type { Reservation } from '../api/types';
-  import { getSlipByRef } from '../api/endpoints';
-  import { promptpayStore } from '../store/promptpay.svelte';
-  import { buildBillerPayload } from '../utils/promptpay';
+  import { getSlipByRef, generatePromptPayQr } from '../api/endpoints';
   import { decodeBase64Image } from '../utils/base64';
 
   let { open, row, onclose, canViewSlip }: {
@@ -44,33 +41,39 @@
   let paymentPayload = $state('');
   let paymentQr = $state('');
 
+  // Fetch the per-booking bill-payment QR from the backend by ref (Pillar 1).
+  // The worker mints this booking's stable ref1; nothing is built client-side.
   $effect(() => {
     if (!open || !row) {
       paymentPayload = '';
       paymentQr = '';
       return;
     }
-    promptpayStore.hydrateFromServer();
     if (normalizeStatus(row.status) !== 'รอชำระเงิน') {
       paymentPayload = '';
       paymentQr = '';
       return;
     }
-    const cfg = promptpayStore.config;
-    if (!cfg.billerId) {
-      paymentPayload = '';
-      paymentQr = '';
-      return;
-    }
-    const total = Number(row.total) || 0;
-    const payload = buildBillerPayload(cfg, { amount: total });
-    paymentPayload = payload;
+    const ref = row.ref;
     let cancelled = false;
-    QRCode.toDataURL(payload, { width: 280, margin: 2, errorCorrectionLevel: 'M' })
-      .then((img) => {
-        if (!cancelled) paymentQr = img;
+    paymentQr = '';
+    generatePromptPayQr({ ref })
+      .then((res) => {
+        if (cancelled) return;
+        if (res.status === 'ok' && res.qrDataUrl) {
+          paymentQr = String(res.qrDataUrl);
+          paymentPayload = res.payload ?? '';
+        } else {
+          paymentQr = '';
+          paymentPayload = '';
+        }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) {
+          paymentQr = '';
+          paymentPayload = '';
+        }
+      });
     return () => {
       cancelled = true;
     };
