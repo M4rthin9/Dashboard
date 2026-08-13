@@ -5,6 +5,7 @@
   import Badge from './ui/Badge.svelte';
   import { reservations } from '../store/reservations.svelte';
   import { ui } from '../store/ui.svelte';
+  import { formatBaht, parseExtraVisitors } from '../utils/format';
   import type { Reservation } from '../api/types';
 
   let { open, row, onclose }: {
@@ -15,39 +16,69 @@
 
   let busy = $state(false);
 
-  interface ExtraVisitor {
-    name: string;
-    relation: string;
-    approved: string;
+  const CHILD_RELATIONS = ['บุตร / ธิดา', 'Child', '子女', 'Son/Daughter'];
+  const PRISONER_FEE = 1000;
+  const VISITOR_FULL_FEE = 1000;
+
+  // Age ladder: <5 free, 5-8 half (500), 9+ full — mirrors the server's
+  // childFee() in the backend pricing service (discount needs a child
+  // relation, matching the booking form).
+  function visitorFee(relation: string, age: string): number {
+    if (CHILD_RELATIONS.includes(String(relation || '').trim())) {
+      const a = parseInt(String(age), 10);
+      if (!isNaN(a)) {
+        if (a < 5) return 0;
+        if (a <= 8) return 500;
+      }
+    }
+    return VISITOR_FULL_FEE;
   }
 
-  const extras = $derived.by<ExtraVisitor[]>(() => {
-    if (!row || !String(row.extraVisitorNames ?? '').trim()) return [];
-    const str = String(row.extraVisitorNames);
-    const isNew = str.includes(';;') || str.includes('|');
-    let items: Array<{ name: string; relation: string }>;
-    if (isNew) {
-      items = str.split(';;').map((e) => {
-        const p = e.split('|');
-        return { name: (p[0] ?? '').trim(), relation: (p[2] ?? '').trim() };
-      });
-    } else {
-      items = str.split(/,(?![^(]*\))/).map((e) => {
-        const m = e.trim().match(/^(.+?)\s*\(/);
-        return { name: m ? m[1].trim() : e.trim(), relation: m ? e.trim().slice(m[0].length, -1) : '' };
-      });
-    }
-    const appr = String(row.extraVisitorApproved ?? '').split(';;');
-    return items
-      .filter((v) => v.name)
-      .map((v, i) => ({ ...v, approved: (appr[i] ?? '').trim() }));
-  });
+  function feeLabel(fee: number): string {
+    if (fee === 0) return 'ฟรี';
+    return '฿' + fee.toLocaleString('th-TH');
+  }
+
+  function feeTone(fee: number): 'default' | 'success' | 'warning' {
+    if (fee === 0) return 'success';
+    if (fee < VISITOR_FULL_FEE) return 'warning';
+    return 'default';
+  }
+
+  const extras = $derived.by(() => (row ? parseExtraVisitors(row) : []));
 
   const mainApproved = $derived(String(row?.visitorApproved ?? '').trim());
   const approvedCount = $derived(
     extras.reduce((n, e) => n + (e.approved === 'yes' ? 1 : 0), 0) + (mainApproved === 'yes' ? 1 : 0)
   );
   const totalPeople = $derived(extras.length + 1);
+
+  const mainFee = $derived(visitorFee(String(row?.relation ?? ''), String(row?.visitorAge ?? '')));
+
+  // Live recalc of the booking fee from the currently-approved visitors only —
+  // mirrors computeApprovalTotals() on the backend (approved visitors keep
+  // their age-based discount; rejected/pending ones are excluded).
+  const charged = $derived.by(() => {
+    let total = PRISONER_FEE;
+    let adults = 0;
+    let kids5_8 = 0;
+    let kidsUnder5 = 0;
+    if (mainApproved === 'yes') {
+      total += mainFee;
+      if (mainFee === 0) kidsUnder5 += 1;
+      else if (mainFee < VISITOR_FULL_FEE) kids5_8 += 1;
+      else adults += 1;
+    }
+    extras.forEach((e) => {
+      if (e.approved !== 'yes') return;
+      const fee = visitorFee(e.relation, e.age);
+      total += fee;
+      if (fee === 0) kidsUnder5 += 1;
+      else if (fee < VISITOR_FULL_FEE) kids5_8 += 1;
+      else adults += 1;
+    });
+    return { total, adults, kids5_8, kidsUnder5 };
+  });
 
   function approvalLabel(v: string): string {
     if (v === 'yes') return 'เข้าได้';
@@ -119,6 +150,16 @@
         </div>
       </div>
 
+      <div class="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-emerald-50 px-4 py-3 ring-1 ring-emerald-100 dark:bg-emerald-950/40 dark:ring-emerald-900/60">
+        <div class="text-sm font-semibold text-emerald-700 dark:text-emerald-300">ค่าบริการ (ผู้อนุมัติแล้ว)</div>
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-emerald-700 dark:text-emerald-300">
+          <span class="text-sm font-bold">{formatBaht(charged.total)}</span>
+          <span>ผู้ใหญ่ {charged.adults}</span>
+          <span>5-8 ปี {charged.kids5_8}</span>
+          <span>&lt;5 ปี {charged.kidsUnder5}</span>
+        </div>
+      </div>
+
       <section class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
         <div class="flex items-center gap-2">
           <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
@@ -129,6 +170,7 @@
             label={approvalLabel(mainApproved)}
             tone={mainApproved === 'yes' ? 'success' : mainApproved === 'no' ? 'danger' : 'warning'}
           />
+          <Badge label={feeLabel(mainFee)} tone={feeTone(mainFee)} />
         </div>
         <div class="flex items-center justify-between gap-3">
           <div class="flex min-w-0 items-center gap-3">
@@ -137,7 +179,10 @@
             </div>
             <div class="min-w-0">
               <div class="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{row.visitorName ?? '—'}</div>
-              <div class="text-xs text-slate-400">ผู้เยี่ยมหลัก {row.relation ? `· ${row.relation}` : ''}</div>
+              <div class="text-xs text-slate-400">
+                ผู้เยี่ยมหลัก {row.relation ? `· ${row.relation}` : ''}
+                {row.visitorAge ? `· อายุ ${row.visitorAge} ปี` : ''}
+              </div>
             </div>
           </div>
           <div class="flex shrink-0 items-center gap-2">
@@ -176,10 +221,13 @@
                   </div>
                   <div class="min-w-0">
                     <div class="truncate text-sm font-medium text-slate-800 dark:text-slate-100">{ex.name}</div>
-                    <div class="text-xs text-slate-400">{ex.relation ? `(${ex.relation})` : ''}</div>
+                    <div class="text-xs text-slate-400">
+                      {ex.relation ? `(${ex.relation})` : ''}{ex.age ? ` อายุ ${ex.age} ปี` : ''}
+                    </div>
                   </div>
                 </div>
                 <div class="flex shrink-0 items-center gap-2">
+                  <Badge label={feeLabel(visitorFee(ex.relation, ex.age))} tone={feeTone(visitorFee(ex.relation, ex.age))} />
                   <Badge
                     label={approvalLabel(ex.approved)}
                     tone={ex.approved === 'yes' ? 'success' : ex.approved === 'no' ? 'danger' : 'warning'}
