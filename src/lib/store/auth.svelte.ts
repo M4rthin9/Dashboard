@@ -16,6 +16,24 @@ interface RequestOptions {
 
 let refreshInFlight: Promise<boolean> | null = null;
 
+/** Fetch with one retry on network failure or transient 5xx (Worker cold start / brief outage). */
+async function resilientFetch(url: string, init: RequestInit, attempt = 0): Promise<Response> {
+  try {
+    const res = await fetch(url, init);
+    if (res.status >= 500 && attempt < 1) {
+      await new Promise((r) => setTimeout(r, 800));
+      return resilientFetch(url, init, attempt + 1);
+    }
+    return res;
+  } catch {
+    if (attempt < 1) {
+      await new Promise((r) => setTimeout(r, 800));
+      return resilientFetch(url, init, attempt + 1);
+    }
+    throw new ApiError('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง');
+  }
+}
+
 class AuthStore {
   user = $state<AuthUser | null>(null);
   accessToken = $state('');
@@ -86,7 +104,7 @@ async function postAction(action: string, body: Record<string, unknown> = {}, op
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (opts.auth && auth.accessToken) headers['Authorization'] = `Bearer ${auth.accessToken}`;
 
-  const res = await fetch(`${API_BASE}/`, {
+  const res = await resilientFetch(`${API_BASE}/`, {
     method: 'POST',
     headers,
     body: JSON.stringify({ action, ...body }),
@@ -94,6 +112,7 @@ async function postAction(action: string, body: Record<string, unknown> = {}, op
 
   const data = (await res.json().catch(() => ({}))) as ApiResult;
   if (typeof data !== 'object' || data === null || !('status' in data)) {
+    if (!res.ok) throw new ApiError(`เซิร์ฟเวอร์ขัดข้องชั่วคราว (HTTP ${res.status}) กรุณาลองใหม่อีกครั้ง`);
     throw new ApiError('การตอบสนองจากเซิร์ฟเวอร์ไม่ถูกต้อง');
   }
 
@@ -117,7 +136,7 @@ async function refreshAccessToken(): Promise<boolean> {
     const rt = sessionStorage.getItem(REFRESH_KEY);
     if (!rt) return false;
     try {
-      const res = await fetch(`${API_BASE}/`, {
+      const res = await resilientFetch(`${API_BASE}/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'refresh', refreshToken: rt }),
@@ -159,10 +178,11 @@ async function getAction<T extends object = ApiResult>(path: string, query: Reco
   }
   const url = `${API_BASE}${path}${qs.toString() ? `?${qs.toString()}` : ''}`;
 
-  const res = await fetch(url, { method: 'GET', headers });
+  const res = await resilientFetch(url, { method: 'GET', headers });
 
   const data = (await res.json().catch(() => ({}))) as ApiResult;
   if (typeof data !== 'object' || data === null || !('status' in data)) {
+    if (!res.ok) throw new ApiError(`เซิร์ฟเวอร์ขัดข้องชั่วคราว (HTTP ${res.status}) กรุณาลองใหม่อีกครั้ง`);
     throw new ApiError('การตอบสนองจากเซิร์ฟเวอร์ไม่ถูกต้อง');
   }
 
