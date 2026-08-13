@@ -41,7 +41,13 @@
   const mismatchText = $derived((result?.mismatch ?? []).map((f) => mismatchLabels[f] || f).join(', '));
 
   const tone = $derived(
-    st === 'ok' ? 'success' : st === 'slip_verify' ? 'warning' : st === 'mismatch' || st === 'unreadable' ? 'danger' : 'default'
+    st === 'ok'
+      ? 'success'
+      : st === 'slip_verify'
+        ? 'warning'
+        : st === 'mismatch' || st === 'unreadable' || st === 'duplicate'
+          ? 'danger'
+          : 'default'
   );
 
   const badge = $derived.by(() => {
@@ -54,6 +60,8 @@
         return `QR ไม่ตรงกับข้อมูลการจอง (${mismatchText})`;
       case 'unreadable':
         return 'อ่าน QR ในสลิปไม่ได้';
+      case 'duplicate':
+        return `สลิปซ้ำ — ใช้ยืนยันการจอง ${result?.duplicateOfRef ?? '-'} ไปแล้ว`;
       default:
         return 'ยังไม่ได้ตรวจสอบสลิปอัตโนมัติ';
     }
@@ -109,7 +117,7 @@
         <CheckCircle2 class="h-4 w-4 text-emerald-500" />
       {:else if st === 'slip_verify'}
         <Info class="h-4 w-4 text-amber-500" />
-      {:else if st === 'mismatch' || st === 'unreadable'}
+      {:else if st === 'mismatch' || st === 'unreadable' || st === 'duplicate'}
         <XCircle class="h-4 w-4 text-red-500" />
       {:else}
         <ScanLine class="h-4 w-4 text-slate-400" />
