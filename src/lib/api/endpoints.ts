@@ -159,7 +159,7 @@ export function createRole(roleName: string, permissions: string[]): Promise<Api
   return callAction('createRole', { roleName, permissions }, { auth: true });
 }
 
-export function importPrisoners(prisoners: Record<string, unknown>[]): Promise<ApiResult & { added?: number; updated?: number; errors?: string[] }> {
+export function importPrisoners(prisoners: Record<string, unknown>[]): Promise<ApiResult & { added?: number; updated?: number; removed?: number; wingChanged?: number; errors?: string[] }> {
   return callAction('importPrisoners', { prisoners }, { auth: true });
 }
 

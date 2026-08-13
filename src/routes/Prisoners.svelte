@@ -136,9 +136,9 @@
         isNew,
       });
     });
-    parsed = cleaned.slice(0, 5000);
+    parsed = cleaned.slice(0, 20000);
     importErrors = errs;
-    if (cleaned.length > 5000) importErrors.push('ข้อมูลเกิน 5000 รายการ ระบบจะนำเข้าเพียง 5000 รายการแรก');
+    if (cleaned.length > 20000) importErrors.push('ข้อมูลเกิน 20000 รายการ ระบบจะนำเข้าเพียง 20000 รายการแรก');
     if (parsed.length === 0) {
       ui.showAlert({ title: 'ไม่พบข้อมูลที่นำเข้าได้', message: 'ไม่พบข้อมูลที่สามารถนำเข้าได้ (ควรมีคอลัมน์ เลขผู้ต้องขัง และ ชื่อ-นามสกุล)', type: 'warning' });
     }
@@ -326,7 +326,10 @@
         <span class="font-mono">แดน</span>, <span class="font-mono">สถานะ</span>, <span class="font-mono">วันกระทำความผิด/ไถ่ถอน</span>, <span class="font-mono">หมายเหตุ</span>
         (หรือชื่อคอลัมน์ภาษาอังกฤษ <span class="font-mono">prisonerId</span>, <span class="font-mono">prisonerName</span>, <span class="font-mono">wing</span>, <span class="font-mono">status</span>, <span class="font-mono">vinaiDate</span>, <span class="font-mono">note</span>)
       </p>
-      <p class="mt-2 text-emerald-600 dark:text-emerald-400">
+      <p class="mt-2 text-amber-600 dark:text-amber-400">
+        คำเตือน: ไฟล์ที่อัปโหลดจะแทนที่รายชื่อผู้ต้องขังทั้งหมด (สูงสุด 20,000 รายการ) — ผู้ต้องขังที่ไม่อยู่ในไฟล์จะถูกลบ (เช่น พ้นโทษแล้ว) และผู้ต้องขังเดิมจะอัปเดตชื่อ/แดน/สถานะ/วันตามไฟล์ล่าสุด
+      </p>
+      <p class="mt-1 text-emerald-600 dark:text-emerald-400">
         เซลล์ที่เว้นว่างสำหรับผู้ต้องขังที่มีอยู่แล้วจะคงค่าเดิมไว้ (ไม่ลบทับ) — ผู้ต้องขังใหม่จะได้ค่าว่าง
       </p>
     </div>
