@@ -163,6 +163,19 @@
     return sortDir === 'asc' ? ' ↑' : ' ↓';
   }
 
+  function statusBadgeClass(s: string): string {
+    switch (s) {
+      case 'รอตรวจสอบผู้เข้าร่วม': return 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300';
+      case 'รอตรวจสอบวินัย': return 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300';
+      case 'รอชำระเงิน': return 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300';
+      case 'ชำระแล้ว': return 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300';
+      case 'เสร็จสิ้น': return 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300';
+      case 'ไม่อนุมัติ': return 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300';
+      case 'ยกเลิก': return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+      default: return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+    }
+  }
+
   function toggleSelect(ref: string): void {
     if (selectedRefs.includes(ref)) {
       selectedRefs = selectedRefs.filter((r) => r !== ref);
@@ -284,7 +297,13 @@
     }
     const rows = sorted.slice().sort((a, b) => String(a.ref).localeCompare(String(b.ref)));
     const printerName = auth.user?.displayName || auth.user?.username || 'ไม่ระบุ';
-    const ok = openPrintWindow(buildSeatingReport(rows), 'รายงานการจัดโต๊ะ', printerName);
+    const filterParts: string[] = [];
+    if (dateFilter) filterParts.push(`วันที่ ${visitDateLabel(dateFilter)}`);
+    if (statusFilter) filterParts.push(`สถานะ ${statusFilter}`);
+    if (wingFilter) filterParts.push(`แดน ${wingFilter}`);
+    if (search.trim()) filterParts.push(`ค้นหา "${search.trim()}"`);
+    const filterLabel = filterParts.length > 0 ? `ตัวกรอง: ${filterParts.join(' · ')}` : undefined;
+    const ok = openPrintWindow(buildSeatingReport(rows, filterLabel), 'รายงานการจัดโต๊ะ', printerName);
     if (!ok) ui.showAlert({ title: 'กรุณาอนุญาต Popup', message: 'กรุณาอนุญาต Popup เพื่อเปิดหน้าพิมพ์', type: 'warning' });
   }
 
@@ -396,11 +415,71 @@
   }
 </script>
 
+{#snippet rowActions(row: Reservation, s: string, terminal: boolean, expired: boolean)}
+  {#if s === 'รอตรวจสอบผู้เข้าร่วม' && canApproveParticipant}
+    <button class="shrink-0 rounded-xl border border-green-200 bg-white p-1.5 text-green-600 hover:bg-green-50 dark:border-green-900 dark:bg-slate-800 dark:hover:bg-green-950/30" title="อนุมัติผู้เข้าร่วม" onclick={() => doUpdateStatus(row, 'รอตรวจสอบวินัย')}>
+      <Check class="h-4 w-4" />
+    </button>
+    {#if canReject && !expired}
+      <button class="shrink-0 rounded-xl border border-red-200 bg-white p-1.5 text-red-600 hover:bg-red-50 dark:border-red-900 dark:bg-slate-800 dark:hover:bg-red-950/30" title="ปฏิเสธ" onclick={() => doUpdateStatus(row, 'ไม่อนุมัติ')}>
+        <X class="h-4 w-4" />
+      </button>
+    {/if}
+  {/if}
+  {#if s === 'รอตรวจสอบวินัย' && canApproveDiscipline}
+    <button class="shrink-0 rounded-xl border border-green-200 bg-white p-1.5 text-green-600 hover:bg-green-50 dark:border-green-900 dark:bg-slate-800 dark:hover:bg-green-950/30" title="อนุมัติวินัย" onclick={() => doUpdateStatus(row, 'รอชำระเงิน')}>
+      <Check class="h-4 w-4" />
+    </button>
+    {#if canReject && !expired}
+      <button class="shrink-0 rounded-xl border border-red-200 bg-white p-1.5 text-red-600 hover:bg-red-50 dark:border-red-900 dark:bg-slate-800 dark:hover:bg-red-950/30" title="ปฏิเสธวินัย" onclick={() => doUpdateStatus(row, 'ไม่อนุมัติ')}>
+        <X class="h-4 w-4" />
+      </button>
+    {/if}
+  {/if}
+  {#if s === 'รอชำระเงิน' && canConfirmPayment}
+    <button class="shrink-0 rounded-xl bg-blue-700 p-1.5 text-white hover:bg-blue-800" title="ยืนยันชำระเงิน" onclick={() => openPaymentApproval(row, 'ชำระแล้ว')}>
+      <Check class="h-4 w-4" />
+    </button>
+  {/if}
+  {#if s === 'ชำระแล้ว' && canConfirmPayment}
+    <button class="shrink-0 rounded-xl bg-green-600 p-1.5 text-white hover:bg-green-700" title="เสร็จสิ้น" onclick={() => openPaymentApproval(row, 'เสร็จสิ้น')}>
+      <Check class="h-4 w-4" />
+    </button>
+  {/if}
+  {#if !terminal && canCancel && s !== 'ยกเลิก' && !expired}
+    <button class="shrink-0 rounded-xl border border-slate-200 bg-white p-1.5 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700" title="ยกเลิก" onclick={() => openCancelSingle(row)}>
+      <Ban class="h-4 w-4" />
+    </button>
+  {/if}
+  {#if canReject && role === 'Vinai' && !terminal && s !== 'ยกเลิก' && !expired}
+    <button class="shrink-0 rounded-xl border border-red-200 bg-white p-1.5 text-red-600 hover:bg-red-50 dark:border-red-900 dark:bg-slate-800 dark:hover:bg-red-950/30" title="ปฏิเสธ" onclick={() => doUpdateStatus(row, 'ไม่อนุมัติ')}>
+      <X class="h-4 w-4" />
+    </button>
+  {/if}
+  {#if canEdit && !row._archived && !terminal}
+    <button class="shrink-0 rounded-xl border border-slate-200 bg-white p-1.5 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700" title="แก้ไข" onclick={() => openEdit(row)}>
+      <Pencil class="h-4 w-4" />
+    </button>
+  {/if}
+  {#if canVisitorApproval && !row._archived && !terminal}
+    <button class="shrink-0 rounded-xl border border-slate-200 bg-white p-1.5 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700" title="ตรวจสอบผู้เข้าร่วม" onclick={() => openApproval(row)}>
+      <Users class="h-4 w-4" />
+    </button>
+  {/if}
+  <button
+    class="shrink-0 rounded-xl border border-slate-200 bg-white p-1.5 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
+    title="ดูรายละเอียด"
+    onclick={() => openDetail(row)}
+  >
+    <Eye class="h-4 w-4" />
+  </button>
+{/snippet}
+
 <div class="flex flex-col gap-4">
   <Card title="ระบบจอง" subtitle="ตารางการจองทั้งหมด" interactive>
     <div class="flex flex-col gap-4">
-      <div class="flex flex-wrap items-center gap-3">
-        <div class="relative min-w-0 flex-1">
+      <div class="flex flex-col gap-3">
+        <div class="relative">
           <Search class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="search"
@@ -410,9 +489,10 @@
           />
         </div>
 
+      <div class="flex flex-wrap items-center gap-3">
         <select
           bind:value={statusFilter}
-          class="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 transition-colors duration-150 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+          class="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 transition-colors duration-150 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 sm:flex-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
           aria-label="กรองตามสถานะ"
         >
           <option value="">ทุกสถานะ</option>
@@ -423,7 +503,7 @@
 
         <select
           bind:value={dateFilter}
-          class="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 transition-colors duration-150 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+          class="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 transition-colors duration-150 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 sm:flex-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
           aria-label="กรองตามวันที่"
         >
           <option value="">ทุกวัน</option>
@@ -434,7 +514,7 @@
 
         <select
           bind:value={wingFilter}
-          class="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 transition-colors duration-150 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+          class="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 transition-colors duration-150 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 sm:flex-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
           aria-label="กรองตามแดน"
         >
           <option value="">ทุกแดน</option>
@@ -492,6 +572,7 @@
             สร้างการจอง
           </button>
         {/if}
+      </div>
       </div>
 
       {#if daySummary && Object.keys(daySummary.counts).length > 0}
@@ -562,7 +643,7 @@
           <button class="ml-2 font-medium underline" onclick={() => reservations.refresh()}>ลองใหม่</button>
         </div>
       {:else}
-        <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+        <div class="hidden overflow-x-auto rounded-xl border border-slate-200 md:block dark:border-slate-700">
           <table class="w-full min-w-[860px] text-left text-sm">
             <thead>
               <tr class="bg-slate-50 dark:bg-slate-800/50">
@@ -634,18 +715,7 @@
                     <div class="text-xs text-slate-500 dark:text-slate-400">{formatBaht(row.total)}</div>
                   </td>
                   <td class="px-3 py-2.5">
-                    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium {(() => {
-                      switch (s) {
-                        case 'รอตรวจสอบผู้เข้าร่วม': return 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300';
-                        case 'รอตรวจสอบวินัย': return 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300';
-                        case 'รอชำระเงิน': return 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300';
-                        case 'ชำระแล้ว': return 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300';
-                        case 'เสร็จสิ้น': return 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300';
-                        case 'ไม่อนุมัติ': return 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300';
-                        case 'ยกเลิก': return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
-                        default: return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
-                      }
-                    })()}">
+                    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium {statusBadgeClass(s)}">
                       {s}
                     </span>
                   </td>
@@ -655,63 +725,7 @@
                    <td class="px-3 py-2.5">
                     {#if !archived}
                       <div class="flex items-center justify-end gap-1.5 whitespace-normal">
-                        {#if s === 'รอตรวจสอบผู้เข้าร่วม' && canApproveParticipant}
-                          <button class="shrink-0 rounded-xl border border-green-200 bg-white p-1.5 text-green-600 hover:bg-green-50 dark:border-green-900 dark:bg-slate-800 dark:hover:bg-green-950/30" title="อนุมัติผู้เข้าร่วม" onclick={() => doUpdateStatus(row, 'รอตรวจสอบวินัย')}>
-                            <Check class="h-4 w-4" />
-                          </button>
-                          {#if canReject && !expired}
-                            <button class="shrink-0 rounded-xl border border-red-200 bg-white p-1.5 text-red-600 hover:bg-red-50 dark:border-red-900 dark:bg-slate-800 dark:hover:bg-red-950/30" title="ปฏิเสธ" onclick={() => doUpdateStatus(row, 'ไม่อนุมัติ')}>
-                              <X class="h-4 w-4" />
-                            </button>
-                          {/if}
-                        {/if}
-                        {#if s === 'รอตรวจสอบวินัย' && canApproveDiscipline}
-                          <button class="shrink-0 rounded-xl border border-green-200 bg-white p-1.5 text-green-600 hover:bg-green-50 dark:border-green-900 dark:bg-slate-800 dark:hover:bg-green-950/30" title="อนุมัติวินัย" onclick={() => doUpdateStatus(row, 'รอชำระเงิน')}>
-                            <Check class="h-4 w-4" />
-                          </button>
-                          {#if canReject && !expired}
-                            <button class="shrink-0 rounded-xl border border-red-200 bg-white p-1.5 text-red-600 hover:bg-red-50 dark:border-red-900 dark:bg-slate-800 dark:hover:bg-red-950/30" title="ปฏิเสธวินัย" onclick={() => doUpdateStatus(row, 'ไม่อนุมัติ')}>
-                              <X class="h-4 w-4" />
-                            </button>
-                          {/if}
-                        {/if}
-                        {#if s === 'รอชำระเงิน' && canConfirmPayment}
-                          <button class="shrink-0 rounded-xl bg-blue-700 p-1.5 text-white hover:bg-blue-800" title="ยืนยันชำระเงิน" onclick={() => openPaymentApproval(row, 'ชำระแล้ว')}>
-                            <Check class="h-4 w-4" />
-                          </button>
-                        {/if}
-                        {#if s === 'ชำระแล้ว' && canConfirmPayment}
-                          <button class="shrink-0 rounded-xl bg-green-600 p-1.5 text-white hover:bg-green-700" title="เสร็จสิ้น" onclick={() => openPaymentApproval(row, 'เสร็จสิ้น')}>
-                            <Check class="h-4 w-4" />
-                          </button>
-                        {/if}
-                        {#if !terminal && canCancel && s !== 'ยกเลิก' && !expired}
-                          <button class="shrink-0 rounded-xl border border-slate-200 bg-white p-1.5 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700" title="ยกเลิก" onclick={() => openCancelSingle(row)}>
-                            <Ban class="h-4 w-4" />
-                          </button>
-                        {/if}
-                        {#if canReject && role === 'Vinai' && !terminal && s !== 'ยกเลิก' && !expired}
-                          <button class="shrink-0 rounded-xl border border-red-200 bg-white p-1.5 text-red-600 hover:bg-red-50 dark:border-red-900 dark:bg-slate-800 dark:hover:bg-red-950/30" title="ปฏิเสธ" onclick={() => doUpdateStatus(row, 'ไม่อนุมัติ')}>
-                            <X class="h-4 w-4" />
-                          </button>
-                        {/if}
-                        {#if canEdit && !archived && !terminal}
-                          <button class="shrink-0 rounded-xl border border-slate-200 bg-white p-1.5 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700" title="แก้ไข" onclick={() => openEdit(row)}>
-                            <Pencil class="h-4 w-4" />
-                          </button>
-                        {/if}
-                        {#if canVisitorApproval && !archived && !terminal}
-                          <button class="shrink-0 rounded-xl border border-slate-200 bg-white p-1.5 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700" title="ตรวจสอบผู้เข้าร่วม" onclick={() => openApproval(row)}>
-                            <Users class="h-4 w-4" />
-                          </button>
-                        {/if}
-                        <button
-                          class="shrink-0 rounded-xl border border-slate-200 bg-white p-1.5 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
-                          title="ดูรายละเอียด"
-                          onclick={() => openDetail(row)}
-                        >
-                          <Eye class="h-4 w-4" />
-                        </button>
+                        {@render rowActions(row, s, terminal, expired)}
                       </div>
                     {/if}
                   </td>
@@ -719,6 +733,67 @@
               {/each}
             </tbody>
           </table>
+
+          {#if sorted.length === 0}
+            <div class="py-12 text-center text-sm text-slate-400 dark:text-slate-500">ไม่พบข้อมูล</div>
+          {/if}
+        </div>
+
+        <!-- Mobile card list -->
+        <div class="flex flex-col gap-3 md:hidden">
+          {#each pagedRows as row (row.ref)}
+            {@const s = normalizeStatus(row.status)}
+            {@const archived = !!row._archived}
+            {@const terminal = s === 'เสร็จสิ้น' || s === 'ไม่อนุมัติ' || s === 'ยกเลิก'}
+            {@const expired = isExpired(row)}
+            <div class="rounded-xl border border-slate-200 bg-white p-3.5 dark:border-slate-700 dark:bg-slate-900 {archived ? 'opacity-60' : ''}">
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex items-start gap-2.5">
+                  <input
+                    type="checkbox"
+                    aria-label="เลือกแถว"
+                    checked={selectedRefs.includes(row.ref)}
+                    disabled={archived}
+                    onchange={() => toggleSelect(row.ref)}
+                    class="mt-1 rounded border-slate-300 text-blue-700 focus:ring-blue-600 dark:border-slate-600"
+                  />
+                  <div>
+                    <button
+                      class="font-mono text-xs font-semibold text-blue-700 hover:underline dark:text-blue-400"
+                      onclick={() => openDetail(row)}
+                    >
+                      {row.ref}
+                    </button>
+                    {#if archived}<span class="ml-1 text-[10px] text-slate-400">🗄️</span>{/if}
+                    <div class="mt-1 font-semibold text-slate-800 dark:text-slate-100">{row.prisonerName ?? '—'}</div>
+                    <div class="text-[11px] text-slate-400">#{row.prisonerId ?? ''} · แดน {row.wing ?? '—'}</div>
+                  </div>
+                </div>
+                <span class="inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[11px] font-medium {statusBadgeClass(s)}">
+                  {s}
+                </span>
+              </div>
+
+              <div class="mt-2.5 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800/50">
+                <div class="font-medium text-slate-800 dark:text-slate-100">{row.visitorName ?? '—'}</div>
+                {#if row.visitorPhone}<div class="text-xs text-slate-500 dark:text-slate-400">📞 {row.visitorPhone}</div>{/if}
+              </div>
+
+              <div class="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-sm">
+                <span class="text-slate-500 dark:text-slate-400">{visitDateLabel(row.visitDate, row.visitDateISO)}</span>
+                <span class="font-semibold text-slate-800 dark:text-slate-100">{formatNumber(row.visitorCount)} คน · {formatBaht(row.total)}</span>
+              </div>
+
+              <div class="mt-2.5 flex items-center justify-between gap-2 border-t border-slate-100 pt-2.5 dark:border-slate-800">
+                <StatusSteps status={row.status} />
+                {#if !archived}
+                  <div class="flex flex-wrap items-center justify-end gap-1.5">
+                    {@render rowActions(row, s, terminal, expired)}
+                  </div>
+                {/if}
+              </div>
+            </div>
+          {/each}
 
           {#if sorted.length === 0}
             <div class="py-12 text-center text-sm text-slate-400 dark:text-slate-500">ไม่พบข้อมูล</div>

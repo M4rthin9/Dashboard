@@ -1,4 +1,4 @@
-import { formatNumber, visitDateLabel, parseExtraVisitors, computeDeptReportData } from './format';
+import { formatNumber, visitDateLabel, parseExtraVisitors, computeDeptReportData, normalizeStatus, STATUS_COLORS } from './format';
 import { monthLabel } from './dashboard';
 import type { Reservation } from '../api/types';
 import type { FinancialDayRow, FinancialMonthRow, FinancialSummary } from './dashboard';
@@ -182,10 +182,11 @@ export function buildGateRegistrationReport(rows: Reservation[], date: string): 
 
 const SEATING_REPORT_CSS = `
   .table-block { margin-bottom:16mm; border:2px solid #312e81; border-radius:8px; overflow:hidden; background:#fff; box-shadow:0 2px 4px rgba(0,0,0,0.08); page-break-inside:avoid; }
-  .table-header { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:#312e81; color:#fff; }
+  .table-header { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:#312e81; color:#fff; gap:10px; flex-wrap:wrap; }
   .table-num { font-size:15px; font-weight:700; background:#d97706; color:#1e1b4b; padding:4px 14px; border-radius:4px; }
   .table-ref { font-size:14px; font-weight:600; margin-left:10px; }
   .table-date { font-size:12px; opacity:0.9; }
+  .status-pill { font-size:11px; font-weight:700; padding:4px 12px; border-radius:20px; color:#fff; white-space:nowrap; }
   .content-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:14px; }
   .info-section { border:1.5px solid #ddd; border-radius:6px; padding:10px 12px; background:#fafafa; }
   .info-section.prisoner { background:#f0f7f0; border-color:#166534; }
@@ -194,16 +195,24 @@ const SEATING_REPORT_CSS = `
   .info-section.prisoner .section-title { color:#166534; }
   .info-line { margin:3px 0; font-size:13px; line-height:1.4; }
   .info-line b { font-weight:600; color:#1e1b4b; }
+  .info-line.contact-line { font-size:15px; font-weight:800; color:#1e1b4b; }
+  .info-line.warn-line { color:#b91c1c; font-weight:700; background:#fef2f2; padding:2px 6px; border-radius:4px; display:inline-block; }
   .extra-section { grid-column:1 / -1; background:#fff8e7; border:1.5px solid #f5c542; border-radius:6px; padding:10px 12px; }
   .extra-title { font-weight:700; font-size:13px; color:#92400e; margin-bottom:6px; }
   .extra-item { font-size:13px; padding:2px 0 2px 12px; position:relative; }
   .extra-item::before { content:"\\2022"; position:absolute; left:0; color:#d97706; font-weight:bold; }
-  .table-footer { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:#f8f9fa; border-top:1.5px solid #ddd; }
+  .extra-item .pending-tag { color:#b45309; font-weight:700; font-size:11px; margin-left:4px; }
+  .table-footer { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:#f8f9fa; border-top:1.5px solid #ddd; gap:10px; flex-wrap:wrap; }
   .visit-date-info { font-size:13px; color:#555; }
   .visit-date-info b { color:#312e81; font-size:15px; }
-  .people-count { background:#d97706; color:#1e1b4b; padding:6px 16px; border-radius:6px; font-weight:700; font-size:16px; text-align:center; min-width:120px; }
+  .footer-boxes { display:flex; gap:8px; }
+  .payment-box { background:#eef2ff; color:#312e81; border:1.5px solid #312e81; padding:6px 14px; border-radius:6px; font-weight:700; font-size:14px; text-align:center; min-width:110px; }
+  .payment-box .label { font-size:11px; font-weight:500; display:block; }
+  .payment-box .number { font-size:16px; font-weight:800; }
+  .people-count { background:#d97706; color:#1e1b4b; padding:6px 16px; border-radius:6px; font-weight:700; font-size:16px; text-align:center; min-width:110px; }
   .people-count .label { font-size:11px; font-weight:500; display:block; }
   .people-count .number { font-size:18px; font-weight:800; }
+  .report-meta { font-size:12px; color:#555; margin-top:2px; }
   .grand-summary { margin-top:36px; page-break-before:always; padding:24px; }
   .grand-box { border:3px solid #312e81; border-radius:10px; padding:24px 32px; background:linear-gradient(135deg,#f8f9fa 0%,#fff 100%); max-width:500px; margin:0 auto; }
   .grand-title { font-size:18px; font-weight:800; color:#312e81; text-align:center; margin-bottom:16px; padding-bottom:10px; border-bottom:2px solid #312e81; }
@@ -227,7 +236,8 @@ const SEATING_REPORT_CSS = `
     .extra-item { font-size:11px; }
     .table-footer { padding:6px 10px; }
     .visit-date-info { font-size:11px; }
-    .people-count { padding:4px 12px; font-size:13px; }
+    .status-pill { font-size:10px; padding:3px 10px; }
+    .payment-box, .people-count { padding:4px 12px; font-size:13px; min-width:90px; }
     .grand-summary { margin-top:6mm; padding:12px; }
     .grand-box { padding:16px 20px; }
     .grand-title { font-size:14px; margin-bottom:10px; padding-bottom:6px; }
@@ -239,22 +249,42 @@ const SEATING_REPORT_CSS = `
   }
 `;
 
-export function buildSeatingReport(rows: Reservation[]): string {
+const PAID_STATUSES = ['ชำระแล้ว', 'เสร็จสิ้น'];
+const HALTED_STATUSES = ['ไม่อนุมัติ', 'ยกเลิก'];
+
+function paymentBoxClass(status: string): string {
+  if (PAID_STATUSES.includes(status)) return 'payment-box paid';
+  if (HALTED_STATUSES.includes(status)) return 'payment-box halted';
+  return 'payment-box';
+}
+
+export function buildSeatingReport(rows: Reservation[], filterLabel?: string): string {
   let totalVisitors = 0;
   let totalPrice = 0;
+  let paidTables = 0;
+  let paidAmount = 0;
   rows.forEach((r) => {
     totalVisitors += Number(r.visitorCount) || 1;
     totalPrice += Number(r.total) || 0;
+    if (PAID_STATUSES.includes(normalizeStatus(r.status))) {
+      paidTables++;
+      paidAmount += Number(r.total) || 0;
+    }
   });
   const totalPrisoners = rows.length;
   const totalPeople = totalVisitors + totalPrisoners;
+  const pendingAmount = totalPrice - paidAmount;
 
   const blocks = rows
     .map((r, i) => {
       const extras = parseExtraVisitors(r);
       const visitorCount = Number(r.visitorCount) || 1;
       const totalPeopleThisTable = visitorCount + 1;
-      const approvedExtras = extras.filter((e) => e.approved !== 'no');
+      const shownExtras = extras.filter((e) => e.approved !== 'no');
+      const status = normalizeStatus(r.status);
+      const statusColor = STATUS_COLORS[status] ?? '#64748b';
+      const hasAllergy = r.allergy && String(r.allergy).trim() && String(r.allergy).trim() !== '-' && String(r.allergy).trim() !== 'ไม่มี';
+      const paid = PAID_STATUSES.includes(status);
 
       return `
       <div class="table-block">
@@ -263,6 +293,7 @@ export function buildSeatingReport(rows: Reservation[]): string {
             <span class="table-num">โต๊ะ ${i + 1}</span>
             <span class="table-ref">${escapeHtml(r.ref ?? '—')}</span>
           </div>
+          <span class="status-pill" style="background:${statusColor};">${escapeHtml(status || '—')}</span>
           <span class="table-date">📅 ${escapeHtml(visitDateLabel(r.visitDate, r.visitDateISO))}</span>
         </div>
         <div class="content-grid">
@@ -275,18 +306,18 @@ export function buildSeatingReport(rows: Reservation[]): string {
           <div class="info-section visitor">
             <div class="section-title">👤 ผู้เยี่ยมหลัก</div>
             <div class="info-line"><b>${escapeHtml(r.visitorName ?? '—')}</b></div>
-            <div class="info-line">โทร: ${escapeHtml(r.visitorPhone ?? '—')}</div>
+            <div class="info-line contact-line">📞 ${escapeHtml(r.visitorPhone ?? '—')}</div>
             <div class="info-line">ความสัมพันธ์: ${escapeHtml(r.relation ?? '—')}</div>
             <div class="info-line">ศาสนา: ${escapeHtml(r.religion ?? '—')}</div>
-            <div class="info-line">แพ้อาหาร: ${escapeHtml(r.allergy ?? 'ไม่มี')}</div>
+            <div class="info-line${hasAllergy ? ' warn-line' : ''}">${hasAllergy ? '⚠️ แพ้อาหาร: ' : 'แพ้อาหาร: '}${escapeHtml(r.allergy || 'ไม่มี')}</div>
           </div>
           ${
-            approvedExtras.length > 0
+            shownExtras.length > 0
               ? `<div class="extra-section">
-                <div class="extra-title">👥 ผู้เยี่ยมเพิ่มเติม (${approvedExtras.length} คน)</div>
-                ${approvedExtras
+                <div class="extra-title">👥 ผู้เยี่ยมเพิ่มเติม (${shownExtras.length} คน)</div>
+                ${shownExtras
                   .map(
-                    (e) => `<div class="extra-item">${escapeHtml(e.name ?? '—')} · ${escapeHtml(e.relation ?? '—')}${e.id ? ' · บัตร ' + escapeHtml(e.id) : ''}</div>`
+                    (e) => `<div class="extra-item">${escapeHtml(e.name ?? '—')} · ${escapeHtml(e.relation ?? '—')}${e.id ? ' · บัตร ' + escapeHtml(e.id) : ''}${e.approved !== 'yes' ? '<span class="pending-tag">(รออนุมัติ)</span>' : ''}</div>`
                   )
                   .join('')}
               </div>`
@@ -295,9 +326,15 @@ export function buildSeatingReport(rows: Reservation[]): string {
         </div>
         <div class="table-footer">
           <div class="visit-date-info">วันที่เยี่ยม: <b>${escapeHtml(visitDateLabel(r.visitDate, r.visitDateISO))}</b></div>
-          <div class="people-count">
-            <span class="label">จำนวนคน</span>
-            <span class="number">${totalPeopleThisTable} คน</span>
+          <div class="footer-boxes">
+            <div class="${paymentBoxClass(status)}" style="${paid ? 'background:#ecfdf5;color:#166534;border-color:#166534;' : HALTED_STATUSES.includes(status) ? 'background:#fef2f2;color:#b91c1c;border-color:#b91c1c;' : ''}">
+              <span class="label">${paid ? 'ชำระแล้ว' : 'ยอดที่ต้องชำระ'}</span>
+              <span class="number">${formatNumber(Number(r.total) || 0)} บ.</span>
+            </div>
+            <div class="people-count">
+              <span class="label">จำนวนคน</span>
+              <span class="number">${totalPeopleThisTable} คน</span>
+            </div>
           </div>
         </div>
       </div>`;
@@ -310,6 +347,7 @@ export function buildSeatingReport(rows: Reservation[]): string {
       <h1 style="font-size:22px; margin:0 0 4px; font-weight:700; color:#312e81;">🪑 รายงานการจัดโต๊ะ</h1>
       <h2 style="font-size:16px; margin:0 0 2px; font-weight:700; color:#1e1b4b;">ร้าน Chance &amp; Change Cafe · ทัณฑสถานบำบัดพิเศษกลาง</h2>
       <div style="font-size:12px; color:#555;">เรียงตามเลขที่อ้างอิง · จำนวน ${rows.length} โต๊ะ</div>
+      ${filterLabel ? `<div class="report-meta">${escapeHtml(filterLabel)}</div>` : ''}
     </div>
     ${blocks}
     <div class="grand-summary">
@@ -318,6 +356,8 @@ export function buildSeatingReport(rows: Reservation[]): string {
         <div class="grand-item"><span class="g-label">จำนวนโต๊ะ</span><span class="g-number">${rows.length} โต๊ะ</span></div>
         <div class="grand-item"><span class="g-label">จำนวนผู้เยี่ยม</span><span class="g-number">${formatNumber(totalVisitors)} คน</span></div>
         <div class="grand-item"><span class="g-label">จำนวนผู้ต้องขัง</span><span class="g-number">${formatNumber(totalPrisoners)} คน</span></div>
+        <div class="grand-item"><span class="g-label">ชำระแล้ว</span><span class="g-number" style="color:#166534;">${paidTables}/${rows.length} โต๊ะ · ${formatNumber(paidAmount)} บาท</span></div>
+        <div class="grand-item"><span class="g-label">ค้างชำระ</span><span class="g-number" style="color:#b91c1c;">${rows.length - paidTables}/${rows.length} โต๊ะ · ${formatNumber(pendingAmount)} บาท</span></div>
         <div class="grand-item"><span class="g-label">ยอดเงินรวม</span><span class="g-number">${formatNumber(totalPrice)} บาท</span></div>
         <div class="grand-total"><span class="g-label">รวมคนทั้งหมด</span><span class="g-number">${formatNumber(totalPeople)} คน</span></div>
       </div>
