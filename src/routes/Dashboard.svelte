@@ -66,10 +66,10 @@
 
   const statusFilterCards = $derived.by(() => {
     const defs = [
+      { status: 'รอตรวจสอบผู้เข้าร่วม', label: 'รอตรวจสอบผู้เข้าร่วม', icon: Users, color: 'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-400', bar: 'from-violet-500 to-purple-600' },
       { status: 'รอตรวจสอบวินัย', label: 'รอตรวจสอบวินัย', icon: Crown, color: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400', bar: 'from-amber-500 to-amber-600' },
       { status: 'รอชำระเงิน', label: 'รอชำระเงิน', icon: ReceiptText, color: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400', bar: 'from-blue-600 to-blue-700' },
       { status: 'ชำระแล้ว', label: 'ชำระแล้ว', icon: Wallet, color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400', bar: 'from-emerald-600 to-teal-700' },
-      { status: 'เสร็จสิ้น', label: 'เสร็จสิ้น', icon: CheckCircle2, color: 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400', bar: 'from-green-600 to-green-700' },
     ];
     return defs.map((d) => ({ ...d, count: statusDist[d.status] ?? 0 }));
   });
