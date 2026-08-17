@@ -220,7 +220,7 @@
     const base = [
       {
         id: 'fund',
-        label: 'กองทุนวิชาชีพ (เดือนนี้)',
+        label: 'ยอดรายได้ (เดือนนี้)',
         value: formatBaht(revenue.mtdTotal),
         sub: `${formatNumber(revenue.mtdCount)} รายการในเดือนนี้`,
         icon: Coins,
