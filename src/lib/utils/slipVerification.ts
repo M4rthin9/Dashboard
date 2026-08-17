@@ -1,11 +1,11 @@
 /**
  * Automated bank-transfer slip verification using OCR.
  *
- * Primary OCR:  Cloudflare Workers AI (10,000 free Neurons/day, no API key).
- * Fallback OCR: OpenAI Vision API (requires OPENAI_API_KEY).
+ * Uses Cloudflare Workers AI free tier via REST API (browser-safe).
+ * Model: @cf/meta/llama-3.2-11b-vision-instruct
  *
  * Auto-status logic:
- *   name ✓ + amount ✓  →  เสร็จสิ้น  (fully verified, no admin review needed)
+ *   name ✓ + amount ✓  →  เสร็จสิ้น  (auto-complete, no admin review)
  *   any  ✗              →  ชำระแล้ว   (admin must manually approve)
  *
  * Flow:
@@ -15,6 +15,8 @@
  *   4. Compare extracted amount with required amount
  *   5. Return verification result + recommended target status
  */
+
+import { runInference, DEFAULT_MODEL } from './chatApi';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -133,110 +135,36 @@ function extractName(text: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// OCR engines
+// OCR via Cloudflare Workers AI REST API (free tier)
 // ---------------------------------------------------------------------------
 
-/**
- * Cloudflare Workers AI — FREE (10,000 Neurons/day).
- * Uses env.AI.run() binding available in CF Worker context.
- * Model: @cf/meta/llama-3.2-11b-vision-instruct (supports Thai).
- */
-async function ocrWithWorkersAI(
-  slipImage: string,
-  aiBinding?: { run: (model: string, input: Record<string, unknown>) => Promise<unknown> }
-): Promise<string> {
-  if (!aiBinding) throw new Error("Workers AI binding not available");
-
+async function ocrSlip(slipImage: string): Promise<string> {
   const imageUrl = slipImage.startsWith("data:")
     ? slipImage
     : `data:image/jpeg;base64,${slipImage}`;
 
-  const response = await aiBinding.run(
-    "@cf/meta/llama-3.2-11b-vision-instruct",
-    {
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              image: imageUrl,
-            },
-            {
-              type: "text",
-              text: [
-                "Extract ALL text from this Thai bank transfer slip.",
-                "Return the raw text only — no commentary, no markdown.",
-                "Preserve line breaks between fields.",
-              ].join(" "),
-            },
-          ],
-        },
-      ],
-      max_tokens: 1024,
-    }
-  );
-
-  // Workers AI returns { response: { response: string } } or similar
-  const res = response as Record<string, unknown>;
-  const inner = res.response as Record<string, unknown> | undefined;
-  return (inner?.response as string) ?? (res.response as string) ?? "";
-}
-
-/**
- * OpenAI Vision API — fallback when Workers AI binding is unavailable.
- * Requires OPENAI_API_KEY env var.
- */
-async function ocrWithOpenAI(slipImage: string): Promise<string> {
-  const apiKey =
-    (typeof process !== "undefined" ? process.env?.OPENAI_API_KEY : undefined)
-    ?? (typeof globalThis !== "undefined"
-      ? (globalThis as unknown as Record<string, string>).OPENAI_API_KEY
-      : undefined);
-
-  if (!apiKey) throw new Error("No OCR provider available (no Workers AI binding, no OPENAI_API_KEY)");
-
-  const imageUrl = slipImage.startsWith("data:")
-    ? slipImage
-    : `data:image/jpeg;base64,${slipImage}`;
-
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o",
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: [
-                "Extract ALL text from this Thai bank transfer slip.",
-                "Return the raw text only — no commentary, no markdown.",
-                "Preserve line breaks.",
-              ].join(" "),
-            },
-            { type: "image_url", image_url: { url: imageUrl, detail: "high" } },
-          ],
-        },
-      ],
-    }),
+  const r = await runInference(DEFAULT_MODEL, {
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "image", image: imageUrl },
+          {
+            type: "text",
+            text: [
+              "Extract ALL text from this Thai bank transfer slip.",
+              "Return the raw text only — no commentary, no markdown.",
+              "Preserve line breaks between fields.",
+            ].join(" "),
+          },
+        ],
+      },
+    ],
+    max_tokens: 1024,
   });
 
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`OpenAI Vision API error ${res.status}: ${body}`);
-  }
-
-  const data = (await res.json()) as {
-    choices: Array<{ message: { content: string } }>;
-  };
-  return data.choices?.[0]?.message?.content ?? "";
+  if (!r.ok) throw new Error(r.error);
+  return (r.result?.response as string) ?? "";
 }
 
 // ---------------------------------------------------------------------------
@@ -245,22 +173,17 @@ async function ocrWithOpenAI(slipImage: string): Promise<string> {
 
 const NAME_SIMILARITY_THRESHOLD = 0.8;
 
-export interface WorkersAIBinding {
-  run: (model: string, input: Record<string, unknown>) => Promise<unknown>;
-}
-
 /**
  * Verify a bank transfer slip against booking data.
+ * Runs entirely in the browser via Workers AI REST API (free tier).
  *
  * @param slipImage   - Base64 string or data-URL of the slip image.
  * @param bookingData - Expected customer name and amount.
- * @param aiBinding   - Optional Workers AI binding (auto-detected in CF Worker).
  * @returns Verification result with targetStatus for auto-updating the booking.
  */
-export async function verifySlip(
+export async function verifySlipOCR(
   slipImage: string,
-  bookingData: BookingData,
-  aiBinding?: WorkersAIBinding
+  bookingData: BookingData
 ): Promise<SlipVerifyResult> {
   const fail = (error: string): SlipVerifyResult => ({
     success: false,
@@ -273,16 +196,12 @@ export async function verifySlip(
     error,
   });
 
-  // --- Step 1: OCR (try Workers AI first, then OpenAI) --------------------
+  // --- Step 1: OCR via Workers AI -----------------------------------------
   let rawText: string;
   try {
-    rawText = await ocrWithWorkersAI(slipImage, aiBinding);
-  } catch {
-    try {
-      rawText = await ocrWithOpenAI(slipImage);
-    } catch (err) {
-      return fail(`OCR failed: ${err instanceof Error ? err.message : String(err)}`);
-    }
+    rawText = await ocrSlip(slipImage);
+  } catch (err) {
+    return fail(`OCR failed: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   if (!rawText.trim()) {
@@ -317,8 +236,6 @@ export async function verifySlip(
   ) / 100;
 
   // --- Step 6: Determine target status ------------------------------------
-  //  Both match → เสร็จสิ้น (auto-complete, no admin review)
-  //  Any mismatch → ชำระแล้ว (admin must approve manually)
   const targetStatus: 'เสร็จสิ้น' | 'ชำระแล้ว' =
     nameMatched && amountMatched ? "เสร็จสิ้น" : "ชำระแล้ว";
 
