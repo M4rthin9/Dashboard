@@ -1,12 +1,10 @@
 /**
- * Chat API client — calls Cloudflare Workers AI (free tier, 10k Neurons/day).
+ * Chat API client — calls Cloudflare Workers AI via Pages Functions proxy.
+ * No CORS issues since /api/chat is same-origin.
  *
- * Uses LLaMA 3.2 11B Vision for general chat (Thai + English).
- * Models are swappable via the `model` param.
- *
- * Env vars:
- *   VITE_AI_API_KEY   – Cloudflare API token (Workers AI scope)
- *   VITE_CF_ACCOUNT_ID – Cloudflare account ID
+ * Env vars are on the server side (Pages Functions):
+ *   CF_ACCOUNT_ID  – Cloudflare account ID
+ *   AI_API_KEY     – Workers AI API token
  */
 
 // ---------------------------------------------------------------------------
@@ -15,7 +13,10 @@
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
-  content: string;
+  content: string | Array<
+    | { type: 'text'; text: string }
+    | { type: 'image_url'; image_url: { url: string } }
+  >;
 }
 
 export interface ChatResponse {
@@ -55,73 +56,51 @@ export const ADMIN_SYSTEM_PROMPT = `คุณคือผู้ช่วย AI �
 - ใช้ emoji เล็กน้อยเพื่อความสะดวกในการอ่าน`;
 
 // ---------------------------------------------------------------------------
-// Shared AI config (imported by slipVerification.ts etc.)
+// Shared helper — calls Pages Function proxy (same-origin, no CORS)
 // ---------------------------------------------------------------------------
 
-export const CF_ACCOUNT_ID = import.meta.env.VITE_CF_ACCOUNT_ID as string | undefined;
-export const AI_API_KEY = import.meta.env.VITE_AI_API_KEY as string | undefined;
-export const DEFAULT_MODEL = '@cf/meta/llama-3.2-11b-vision-instruct';
+export const DEFAULT_MODEL = '@cf/google/gemma-4-26b-a4b-it';
 
 /**
- * Low-level Workers AI REST call. Returns the raw `result` object.
- * Used by both chat and slip verification.
+ * Low-level call to our Pages Function proxy.
+ * The proxy forwards to Workers AI server-side (no CORS, no exposed keys).
  */
 export async function runInference(
   model: string,
   input: Record<string, unknown>
 ): Promise<{ ok: boolean; result?: Record<string, unknown>; error?: string }> {
-  if (!AI_API_KEY) return { ok: false, error: 'VITE_AI_API_KEY ไม่ได้ตั้งค่า' };
-  if (!CF_ACCOUNT_ID) return { ok: false, error: 'VITE_CF_ACCOUNT_ID ไม่ได้ตั้งค่า' };
-
-  const url = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run/${model}`;
   try {
-    const res = await fetch(url, {
+    const res = await fetch('/api/chat', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${AI_API_KEY}`,
-      },
-      body: JSON.stringify(input),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, ...input }),
     });
     if (!res.ok) {
-      const body = await res.text();
-      return { ok: false, error: `AI API ${res.status}: ${body.slice(0, 200)}` };
+      const text = await res.text();
+      return { ok: false, error: `API ${res.status}: ${text.slice(0, 200)}` };
     }
-    const data = (await res.json()) as {
-      success: boolean;
-      result?: Record<string, unknown>;
-      errors?: Array<{ message: string }>;
-    };
-    if (!data.success) return { ok: false, error: data.errors?.[0]?.message ?? 'Unknown AI error' };
-    return { ok: true, result: data.result };
+    const data = (await res.json()) as { response?: string; error?: string };
+    if (data.error) return { ok: false, error: data.error };
+    return { ok: true, result: { response: data.response } };
   } catch (err) {
     return { ok: false, error: `Network: ${err instanceof Error ? err.message : String(err)}` };
   }
 }
 
 /**
- * Send a chat conversation to Workers AI and return the assistant reply.
- *
- * @param messages  - Full conversation history (system + user + assistant).
- * @param model     - Workers AI model ID (default: LLaMA 3.2 11B Vision).
- * @returns         - The assistant's reply text.
+ * Send a chat conversation and return the assistant reply.
  */
 export async function chatCompletion(
   messages: ChatMessage[],
   model: string = DEFAULT_MODEL
 ): Promise<ChatResponse> {
-  const r = await runInference(model, {
-    messages,
-    max_tokens: 1024,
-    temperature: 0.7,
-    stream: false,
-  });
+  const r = await runInference(model, { messages });
   if (!r.ok) return { reply: '', error: r.error };
   return { reply: (r.result?.response as string) ?? '' };
 }
 
 /**
- * Quick helper: send a single user message with a system prompt.
+ * Quick helper: single user message with a system prompt.
  */
 export async function quickChat(
   userMessage: string,

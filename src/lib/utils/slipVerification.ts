@@ -16,7 +16,7 @@
  *   5. Return verification result + recommended target status
  */
 
-import { runInference, DEFAULT_MODEL } from './chatApi';
+import { DEFAULT_MODEL } from './chatApi';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -135,36 +135,24 @@ function extractName(text: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// OCR via Cloudflare Workers AI REST API (free tier)
+// OCR via Pages Function proxy (same-origin, no CORS)
 // ---------------------------------------------------------------------------
 
 async function ocrSlip(slipImage: string): Promise<string> {
-  const imageUrl = slipImage.startsWith("data:")
-    ? slipImage
-    : `data:image/jpeg;base64,${slipImage}`;
-
-  const r = await runInference(DEFAULT_MODEL, {
-    messages: [
-      {
-        role: "user",
-        content: [
-          { type: "image", image: imageUrl },
-          {
-            type: "text",
-            text: [
-              "Extract ALL text from this Thai bank transfer slip.",
-              "Return the raw text only — no commentary, no markdown.",
-              "Preserve line breaks between fields.",
-            ].join(" "),
-          },
-        ],
-      },
-    ],
-    max_tokens: 1024,
+  const res = await fetch('/api/verify-slip', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image: slipImage, model: DEFAULT_MODEL }),
   });
 
-  if (!r.ok) throw new Error(r.error);
-  return (r.result?.response as string) ?? "";
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`OCR API ${res.status}: ${text.slice(0, 200)}`);
+  }
+
+  const data = (await res.json()) as { response?: string; error?: string };
+  if (data.error) throw new Error(data.error);
+  return data.response ?? '';
 }
 
 // ---------------------------------------------------------------------------
