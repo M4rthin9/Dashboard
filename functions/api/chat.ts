@@ -47,20 +47,35 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       }),
     });
 
-    const data = (await res.json()) as {
-      success: boolean;
-      result?: { response?: string };
-      errors?: Array<{ message: string }>;
-    };
+    const raw = await res.json() as Record<string, unknown>;
 
-    if (!data.success) {
-      return new Response(JSON.stringify({ error: data.errors?.[0]?.message ?? 'AI error' }), {
+    if (!raw.success) {
+      const errors = raw.errors as Array<{ message: string }> | undefined;
+      return new Response(JSON.stringify({ error: errors?.[0]?.message ?? 'AI error' }), {
         status: 502,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    return new Response(JSON.stringify({ response: data.result?.response ?? '' }), {
+    // Workers AI returns different shapes depending on the model.
+    // Gemma 4 (OpenAI-compatible): { result: { choices: [{ message: { content } }] } }
+    // Older models (native):       { result: { response: string } }
+    let text = '';
+    const result = raw.result as Record<string, unknown> | undefined;
+
+    if (result) {
+      // OpenAI-compatible format
+      const choices = result.choices as Array<{ message?: { content?: string } }> | undefined;
+      if (choices?.[0]?.message?.content) {
+        text = choices[0].message.content;
+      }
+      // Native Workers AI format
+      else if (typeof result.response === 'string') {
+        text = result.response;
+      }
+    }
+
+    return new Response(JSON.stringify({ response: text }), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err) {

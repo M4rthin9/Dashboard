@@ -138,11 +138,47 @@ function extractName(text: string): string {
 // OCR via Pages Function proxy (same-origin, no CORS)
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Image compression — resize to max 1024px and JPEG 0.7 to fit under API limit
+// ---------------------------------------------------------------------------
+
+function compressImage(base64: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1024;
+      let w = img.width;
+      let h = img.height;
+      if (w > MAX || h > MAX) {
+        const ratio = Math.min(MAX / w, MAX / h);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { resolve(base64); return; }
+      ctx.drawImage(img, 0, 0, w, h);
+      const compressed = canvas.toDataURL('image/jpeg', 0.7);
+      // strip data URI prefix, return raw base64
+      const raw = compressed.replace(/^data:image\/\w+;base64,/, '');
+      resolve(raw);
+    };
+    img.onerror = () => resolve(base64);
+    const src = base64.startsWith('data:') ? base64 : `data:image/jpeg;base64,${base64}`;
+    img.src = src;
+  });
+}
+
 async function ocrSlip(slipImage: string): Promise<string> {
+  const trimmed = slipImage.trim();
+  const compressed = await compressImage(trimmed);
+
   const res = await fetch('/api/verify-slip', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ image: slipImage, model: DEFAULT_MODEL }),
+    body: JSON.stringify({ image: compressed, model: DEFAULT_MODEL }),
   });
 
   if (!res.ok) {

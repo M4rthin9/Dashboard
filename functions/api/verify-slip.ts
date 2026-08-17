@@ -48,7 +48,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           {
             role: 'user',
             content: [
-              { type: 'image_url', image_url: { url: imageUrl } },
+              { type: 'image', image: imageUrl },
               {
                 type: 'text',
                 text: 'Extract ALL text from this Thai bank transfer slip. Return the raw text only — no commentary, no markdown. Preserve line breaks between fields.',
@@ -60,20 +60,29 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       }),
     });
 
-    const data = (await res.json()) as {
-      success: boolean;
-      result?: { response?: string };
-      errors?: Array<{ message: string }>;
-    };
+    const raw = await res.json() as Record<string, unknown>;
 
-    if (!data.success) {
-      return new Response(JSON.stringify({ error: data.errors?.[0]?.message ?? 'AI error' }), {
+    if (!raw.success) {
+      const errors = raw.errors as Array<{ message: string }> | undefined;
+      return new Response(JSON.stringify({ error: errors?.[0]?.message ?? 'AI error' }), {
         status: 502,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    return new Response(JSON.stringify({ response: data.result?.response ?? '' }), {
+    let text = '';
+    const result = raw.result as Record<string, unknown> | undefined;
+
+    if (result) {
+      const choices = result.choices as Array<{ message?: { content?: string } }> | undefined;
+      if (choices?.[0]?.message?.content) {
+        text = choices[0].message.content;
+      } else if (typeof result.response === 'string') {
+        text = result.response;
+      }
+    }
+
+    return new Response(JSON.stringify({ response: text }), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err) {
