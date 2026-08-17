@@ -7,7 +7,6 @@
     Check,
     CheckCircle2,
     Coins,
-    CreditCard,
     Crown,
     ReceiptText,
     RefreshCw,
@@ -214,8 +213,6 @@
     ],
   });
 
-  const utilTone = $derived(revenue.utilRate >= 75 ? 'text-green-600 dark:text-green-400' : revenue.utilRate >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400');
-
   const kpiCards = $derived.by(() => {
     const base = [
       {
@@ -238,23 +235,22 @@
         valueCls: 'text-green-700 dark:text-green-400',
       },
       {
-        id: 'avg',
-        label: 'เฉลี่ยต่อโต๊ะ',
-        value: formatBaht(revenue.avgRevenue),
-        sub: `จาก ${formatNumber(revenue.bookingCount)} รายการ`,
-        icon: CreditCard,
+        id: 'bookings',
+        label: 'จำนวนการจองทั้งหมด',
+        value: formatNumber(revenue.bookingCount),
+        sub: `${formatBaht(revenue.grandTotal)} รายได้รวม`,
+        icon: TrendingUp,
         grad: 'from-blue-800 to-blue-950',
         chip: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400',
       },
       {
-        id: 'util',
-        label: 'การใช้โต๊ะวันนี้',
-        value: `${revenue.utilRate}%`,
-        sub: `${formatNumber(revenue.todayCount)} / 20 โต๊ะ`,
-        icon: TrendingUp,
-        grad: 'from-blue-800 to-blue-950',
-        chip: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400',
-        valueCls: utilTone,
+        id: 'today',
+        label: 'การจองวันนี้',
+        value: formatNumber(revenue.todayCount),
+        sub: `จาก ${formatNumber(todaysVisits.length)} รายการ`,
+        icon: Users,
+        grad: 'from-purple-600 to-indigo-700',
+        chip: 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-400',
       },
     ];
     return base;
