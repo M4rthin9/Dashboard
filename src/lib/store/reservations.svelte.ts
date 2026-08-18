@@ -1,4 +1,4 @@
-import { getReservationsWithArchive, updateStatus as apiUpdateStatus, cancelBooking as apiCancelBooking, updateVisitorApproval as apiUpdateVisitorApproval, updateBooking as apiUpdateBooking, createBooking as apiCreateBooking } from '../api/endpoints';
+import { getReservationsWithArchive, updateStatus as apiUpdateStatus, cancelBooking as apiCancelBooking, deleteBooking as apiDeleteBooking, updateVisitorApproval as apiUpdateVisitorApproval, updateBooking as apiUpdateBooking, createBooking as apiCreateBooking } from '../api/endpoints';
 import { ApiError } from '../api/errors';
 import type { Reservation } from '../api/types';
 import { normalizeStatus, STATUS_LABELS } from '../utils/format';
@@ -107,6 +107,15 @@ class ReservationsStore {
       if (row) row.status = old;
       throw err;
     }
+  }
+
+  /** Hard-delete a booking. Refetches rather than splicing locally: `rows` is
+   *  mirrored into localStorage only inside load(), so a local splice would
+   *  leave the deleted booking in the cached copy. */
+  async deleteBooking(ref: string): Promise<void> {
+    const res = await apiDeleteBooking(ref);
+    if (res.status !== 'ok') throw new ApiError(String(res.message ?? 'เกิดข้อผิดพลาด'));
+    await this.refresh();
   }
 
   async updateVisitorApproval(ref: string, visitorApproved: string, extraVisitorApproved?: string): Promise<void> {

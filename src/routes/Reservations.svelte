@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Archive, Ban, Check, Download, Eye, Pencil, Plus, Printer, RefreshCw, Search, Users, X } from '@lucide/svelte';
+  import { Archive, Ban, Check, Download, Eye, Pencil, Plus, Printer, QrCode, RefreshCw, Search, Trash2, Users, X } from '@lucide/svelte';
   import Card from '../lib/components/ui/Card.svelte';
   import Spinner from '../lib/components/ui/Spinner.svelte';
   import Modal from '../lib/components/ui/Modal.svelte';
@@ -17,8 +17,8 @@
   import { currentQuery } from '../lib/router';
   import { formatBaht, formatNumber, normalizeStatus, STATUS_COLORS, todayISO, visitDateLabel } from '../lib/utils/format';
   import { exportReservationsCSV } from '../lib/utils/csv';
-  import { openPrintWindow, buildSeatingReport } from '../lib/utils/print';
-  import { getPrisoners } from '../lib/api/endpoints';
+  import { openPrintWindow, buildSeatingReport, buildPromptPayQrCard } from '../lib/utils/print';
+  import { getPrisoners, generatePromptPayQr } from '../lib/api/endpoints';
   import type { Prisoner, Reservation } from '../lib/api/types';
 
   let search = $state('');
@@ -45,6 +45,9 @@
   let formMode = $state<'edit' | 'create' | null>(null);
   let formSaving = $state(false);
   let prisoners = $state<Prisoner[]>([]);
+  let deleteTarget = $state<Reservation | null>(null);
+  let deleting = $state(false);
+  let qrPrinting = $state('');
 
   const role = $derived(auth.user?.role ?? 'User');
   const isAdminOrSuper = $derived(role === 'Superadmin' || role === 'Admin');
@@ -54,6 +57,7 @@
   const canCancel = $derived(isAdminOrSuper || role === 'Vinai' || hasPermission(role, 'cancel'));
   const canReject = $derived(isAdminOrSuper || role === 'Vinai' || hasPermission(role, 'reject') || hasPermission(role, 'reject_discipline'));
   const canEdit = $derived(role === 'Superadmin');
+  const canDelete = $derived(role === 'Superadmin');
   const canViewSlip = $derived(hasPermission(role, 'view_slip'));
   const canVisitorApproval = $derived(isAdminOrSuper || hasPermission(role, 'visitor_approval'));
   const canPrint = $derived(isAdminOrSuper || hasPermission(role, 'print'));
@@ -196,6 +200,58 @@
       ui.showAlert({ title: 'เปลี่ยนสถานะการจองสำเร็จ', message: `${name} · ${row.ref} → ${newStatus}`, type: 'success' });
     } catch (err) {
       ui.showAlert({ title: 'ไม่สามารถเปลี่ยนสถานะได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
+    }
+  }
+
+  async function confirmDelete(): Promise<void> {
+    if (!deleteTarget) return;
+    const ref = deleteTarget.ref;
+    deleting = true;
+    try {
+      await reservations.deleteBooking(ref);
+      ui.showAlert({ title: 'ลบการจองสำเร็จ', message: `ลบการจอง ${ref} ออกจากระบบเรียบร้อย`, type: 'success' });
+      deleteTarget = null;
+      selectedRefs = selectedRefs.filter((r) => r !== ref);
+    } catch (err) {
+      ui.showAlert({
+        title: 'ไม่สามารถลบการจองได้',
+        message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด',
+        type: 'error',
+      });
+    } finally {
+      deleting = false;
+    }
+  }
+
+  /** Print the booking's PromptPay card for offline payment. The QR is minted by
+   *  the worker from the booking's own total, so it stays correct even while the
+   *  online payment window is closed. */
+  async function printPaymentQr(row: Reservation): Promise<void> {
+    if (qrPrinting) return;
+    qrPrinting = row.ref;
+    try {
+      const res = await generatePromptPayQr({ ref: row.ref });
+      if (res.status !== 'ok' || !res.qrCardSvg) {
+        ui.showAlert({
+          title: 'ไม่สามารถสร้าง QR ได้',
+          message: String(res.message ?? 'เกิดข้อผิดพลาดในการสร้าง QR ชำระเงิน'),
+          type: 'error',
+        });
+        return;
+      }
+      const amount = Number(res.amount ?? row.total ?? 0);
+      const content = buildPromptPayQrCard(row, res.qrCardSvg, amount);
+      if (!openPrintWindow(content, `QR ชำระเงิน ${row.ref}`, auth.user?.displayName ?? '')) {
+        ui.showAlert({ title: 'เปิดหน้าต่างพิมพ์ไม่ได้', message: 'กรุณาอนุญาต pop-up ของเบราว์เซอร์', type: 'error' });
+      }
+    } catch (err) {
+      ui.showAlert({
+        title: 'ไม่สามารถสร้าง QR ได้',
+        message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด',
+        type: 'error',
+      });
+    } finally {
+      qrPrinting = '';
     }
   }
 
@@ -464,6 +520,16 @@
   {#if canVisitorApproval && !row._archived && !terminal}
     <button class="shrink-0 rounded-xl border border-slate-200 bg-white p-1.5 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700" title="ตรวจสอบผู้เข้าร่วม" onclick={() => openApproval(row)}>
       <Users class="h-4 w-4" />
+    </button>
+  {/if}
+  {#if (canPrint || canConfirmPayment) && !row._archived}
+    <button class="shrink-0 rounded-xl border border-blue-200 bg-white p-1.5 text-blue-600 hover:bg-blue-50 disabled:opacity-50 dark:border-blue-900 dark:bg-slate-800 dark:hover:bg-blue-950/30" title="พิมพ์ QR ชำระเงิน" disabled={qrPrinting === row.ref} onclick={() => void printPaymentQr(row)}>
+      <QrCode class="h-4 w-4" />
+    </button>
+  {/if}
+  {#if canDelete && !row._archived}
+    <button class="shrink-0 rounded-xl border border-red-200 bg-white p-1.5 text-red-600 hover:bg-red-50 dark:border-red-900 dark:bg-slate-800 dark:hover:bg-red-950/30" title="ลบการจองถาวร" onclick={() => (deleteTarget = row)}>
+      <Trash2 class="h-4 w-4" />
     </button>
   {/if}
   <button
@@ -850,6 +916,37 @@
       </button>
       <button class="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-red-600 focus-visible:outline-offset-2" onclick={submitCancel}>
         ยืนยันยกเลิก
+      </button>
+    </div>
+  </div>
+</Modal>
+
+<Modal open={deleteTarget !== null} title="ลบการจองถาวร" onclose={() => (deleteTarget = null)}>
+  <div class="flex flex-col gap-4">
+    <div class="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+      ยืนยันการลบการจอง <span class="font-semibold">{deleteTarget?.ref}</span> ออกจากฐานข้อมูล?
+      การกระทำนี้ไม่สามารถย้อนกลับได้ และจะลบบันทึกช่วยจำกับข้อมูลการแจ้งเตือนของการจองนี้ทั้งหมด
+    </div>
+    {#if deleteTarget}
+      <dl class="grid grid-cols-3 gap-x-3 gap-y-1.5 text-sm">
+        <dt class="text-slate-500 dark:text-slate-400">ผู้เข้าร่วม</dt>
+        <dd class="col-span-2 text-slate-800 dark:text-slate-100">{deleteTarget.visitorName || '-'}</dd>
+        <dt class="text-slate-500 dark:text-slate-400">ผู้ต้องขัง</dt>
+        <dd class="col-span-2 text-slate-800 dark:text-slate-100">{deleteTarget.prisonerName || '-'}</dd>
+        <dt class="text-slate-500 dark:text-slate-400">วันที่เข้าร่วม</dt>
+        <dd class="col-span-2 text-slate-800 dark:text-slate-100">
+          {visitDateLabel(deleteTarget.visitDate, deleteTarget.visitDateISO)}
+        </dd>
+        <dt class="text-slate-500 dark:text-slate-400">สถานะ</dt>
+        <dd class="col-span-2 text-slate-800 dark:text-slate-100">{normalizeStatus(deleteTarget.status)}</dd>
+      </dl>
+    {/if}
+    <div class="flex justify-end gap-2 border-t border-slate-200 pt-5 dark:border-slate-700">
+      <button class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition-colors duration-150 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" onclick={() => (deleteTarget = null)}>
+        กลับ
+      </button>
+      <button class="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-red-700 disabled:opacity-50" onclick={confirmDelete} disabled={deleting}>
+        {deleting ? 'กำลังลบ...' : 'ลบถาวร'}
       </button>
     </div>
   </div>

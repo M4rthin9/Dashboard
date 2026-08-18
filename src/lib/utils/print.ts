@@ -575,3 +575,46 @@ export function buildFinancialReport(
     </table>
   `;
 }
+
+/**
+ * Single-booking PromptPay payment slip for offline collection. The QR itself is
+ * the branded card SVG minted server-side by `generatePromptPayQr` — it already
+ * encodes this booking's ref as the bill number and its server-authoritative
+ * total as a fixed amount, so nothing here can drift from what the bank charges.
+ */
+export function buildPromptPayQrCard(row: Reservation, qrCardSvg: string, amount: number): string {
+  const meta: Array<[string, string]> = [
+    ['เลขอ้างอิง (Ref)', String(row.ref ?? '')],
+    ['ผู้เข้าร่วมกิจกรรม', String(row.visitorName ?? '')],
+    ['ผู้ต้องขัง', String(row.prisonerName ?? '')],
+    ['แดน', String(row.wing ?? '-')],
+    ['วันที่เข้าร่วม', visitDateLabel(row.visitDate, row.visitDateISO)],
+    ['จำนวนผู้เข้าร่วม', `${formatNumber(row.totalPersons ?? '')} คน`],
+  ];
+
+  const rowsHtml = meta
+    .map(
+      ([label, value]) => `
+      <tr>
+        <th style="width:35%;">${escapeHtml(label)}</th>
+        <td>${escapeHtml(value || '-')}</td>
+      </tr>`
+    )
+    .join('');
+
+  // qrCardSvg comes from our own worker, not user input, so it is inlined as
+  // markup on purpose — escaping it would print the source instead of the QR.
+  return `
+    <div class="print-title">ใบชำระเงินค่าร่วมกิจกรรม (PromptPay)</div>
+    <table>${rowsHtml}</table>
+    <div style="text-align:center;margin:10px 0 4px;font-size:15px;font-weight:700;">
+      ยอดชำระ ${escapeHtml(formatNumber(amount))} บาท
+    </div>
+    <div style="display:flex;justify-content:center;margin:8px 0 12px;">
+      <div style="width:320px;max-width:100%;">${qrCardSvg}</div>
+    </div>
+    <div style="text-align:center;font-size:11px;color:#555;line-height:1.7;">
+      สแกน QR นี้ด้วยแอปธนาคารเพื่อชำระเงิน · ยอดเงินถูกกำหนดไว้แล้ว ไม่ต้องกรอกเอง<br>
+      เมื่อชำระเรียบร้อยแล้ว กรุณาเก็บสลิปไว้เป็นหลักฐาน และแจ้งเจ้าหน้าที่เพื่อยืนยันการชำระเงิน
+    </div>`;
+}

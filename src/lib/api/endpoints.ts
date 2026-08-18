@@ -123,6 +123,10 @@ export function cancelBooking(ref: string, reason?: string): Promise<ApiResult> 
   return callAction('cancelBooking', { ref, ...(reason ? { reason } : {}) }, { auth: true });
 }
 
+export function deleteBooking(ref: string): Promise<ApiResult> {
+  return callAction('deleteBooking', { ref }, { auth: true });
+}
+
 export function updateVisitorApproval(
   ref: string,
   visitorApproved: string,
@@ -181,6 +185,8 @@ export interface PromptPayQrResponse {
   status: string;
   payload?: string;
   qrDataUrl?: string;
+  /** Branded PromptPay card rendered server-side (SVG markup). */
+  qrCardSvg?: string;
   amount?: number;
   billerId?: string;
   ref1?: string;
