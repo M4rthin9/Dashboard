@@ -5,8 +5,8 @@
  * the dev one — `vite build` always sets it — so it cannot be used to tell them
  * apart. The deploy hostname is the only reliable runtime signal:
  *
- *   production   ccc-dashboard.pages.dev  /  dashboard.cida.dpdns.org
- *   development  dev.ccc-dashboard.pages.dev
+ *   production   ccc-dashboard-6jh.pages.dev  /  dashboard.cida.dpdns.org
+ *   development  dev.ccc-dashboard-6jh.pages.dev
  *   local        localhost / 127.0.0.1
  */
 

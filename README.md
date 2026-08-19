@@ -63,8 +63,8 @@ npm run preview    # preview the production build
 
 | Branch | Pages environment | URL | `VITE_API_BASE` baked into the bundle |
 | --- | --- | --- | --- |
-| `main` | Production | `ccc-dashboard.pages.dev` | `https://ccc-backend.pongsinbas.workers.dev` |
-| `dev` | Preview | `dev.ccc-dashboard.pages.dev` | `https://ccc-backend-dev.pongsinbas.workers.dev` |
+| `main` | Production | `ccc-dashboard-6jh.pages.dev` | `https://ccc-backend.pongsinbas.workers.dev` |
+| `dev` | Preview | `dev.ccc-dashboard-6jh.pages.dev` | `https://ccc-backend-dev.pongsinbas.workers.dev` |
 
 `VITE_API_BASE` is a **build-time** value — Vite inlines it, so it is set in the
 workflow rather than as a Pages runtime variable. Unset, `src/lib/store/auth.svelte.ts`

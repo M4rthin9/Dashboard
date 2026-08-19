@@ -47,11 +47,11 @@ jobs:
           if [ "${{ github.ref_name }}" = "dev" ]; then
             echo "api_base=https://ccc-backend-dev.pongsinbas.workers.dev" >> "$GITHUB_OUTPUT"
             echo "label=development" >> "$GITHUB_OUTPUT"
-            echo "Target: development -> dev.ccc-dashboard.pages.dev"
+            echo "Target: development -> dev.ccc-dashboard-6jh.pages.dev"
           else
             echo "api_base=https://ccc-backend.pongsinbas.workers.dev" >> "$GITHUB_OUTPUT"
             echo "label=production" >> "$GITHUB_OUTPUT"
-            echo "Target: production -> ccc-dashboard.pages.dev"
+            echo "Target: production -> ccc-dashboard-6jh.pages.dev"
           fi
 
       - name: Build (${{ steps.target.outputs.label }})
@@ -77,7 +77,7 @@ jobs:
       # cloudflare/pages-action@v1 is archived and always deploys to the
       # production branch. wrangler-action honours --branch, which is what
       # routes a `dev` push to the Preview environment and gives it the
-      # stable alias dev.ccc-dashboard.pages.dev.
+      # stable alias dev.ccc-dashboard-6jh.pages.dev.
       - name: Deploy to Cloudflare Pages (${{ steps.target.outputs.label }})
         if: steps.secrets.outcome == 'success'
         uses: cloudflare/wrangler-action@v3
