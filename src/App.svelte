@@ -6,12 +6,33 @@
   import ToastContainer from './lib/components/ui/ToastContainer.svelte';
   import AlertBox from './lib/components/ui/AlertBox.svelte';
   import { ui } from './lib/store/ui.svelte';
+  import { auth } from './lib/store/auth.svelte';
+  import { liveSync } from './lib/store/liveSync.svelte';
+  import { reservations } from './lib/store/reservations.svelte';
   import { resolveRoute } from './lib/router';
 
   const route = $derived(resolveRoute());
 
   onMount(() => {
     ui.initDarkMode();
+  });
+
+  // Poll the backend change counters while signed in and refetch only the slice
+  // that actually moved, so one admin's approval reaches the others within a
+  // few seconds instead of on their next manual reload.
+  $effect(() => {
+    if (!auth.accessToken) {
+      liveSync.stop();
+      return;
+    }
+    const off = liveSync.subscribe(async (scopes) => {
+      if (scopes.includes('reservations')) await reservations.refresh();
+    });
+    liveSync.start();
+    return () => {
+      off();
+      liveSync.stop();
+    };
   });
 </script>
 
