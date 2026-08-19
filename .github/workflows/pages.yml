@@ -2,11 +2,11 @@ name: Deploy to Cloudflare Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch:
 
 concurrency:
-  group: pages-deploy
+  group: pages-deploy-${{ github.ref_name }}
   cancel-in-progress: true
 
 env:
@@ -41,10 +41,23 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Build
+      - name: Select target environment
+        id: target
+        run: |
+          if [ "${{ github.ref_name }}" = "dev" ]; then
+            echo "api_base=https://ccc-backend-dev.pongsinbas.workers.dev" >> "$GITHUB_OUTPUT"
+            echo "label=development" >> "$GITHUB_OUTPUT"
+            echo "Target: development -> dev.ccc-dashboard.pages.dev"
+          else
+            echo "api_base=https://ccc-backend.pongsinbas.workers.dev" >> "$GITHUB_OUTPUT"
+            echo "label=production" >> "$GITHUB_OUTPUT"
+            echo "Target: production -> ccc-dashboard.pages.dev"
+          fi
+
+      - name: Build (${{ steps.target.outputs.label }})
         run: npm run build
         env:
-          VITE_API_BASE: https://ccc-backend.pongsinbas.workers.dev
+          VITE_API_BASE: ${{ steps.target.outputs.api_base }}
 
       - name: Check Cloudflare secrets
         id: secrets
@@ -61,12 +74,14 @@ jobs:
           fi
           echo "Secrets OK"
 
-      - name: Deploy to Cloudflare Pages
+      # cloudflare/pages-action@v1 is archived and always deploys to the
+      # production branch. wrangler-action honours --branch, which is what
+      # routes a `dev` push to the Preview environment and gives it the
+      # stable alias dev.ccc-dashboard.pages.dev.
+      - name: Deploy to Cloudflare Pages (${{ steps.target.outputs.label }})
         if: steps.secrets.outcome == 'success'
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: ccc-dashboard
-          directory: dist
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          command: pages deploy dist --project-name=ccc-dashboard --branch=${{ github.ref_name }}

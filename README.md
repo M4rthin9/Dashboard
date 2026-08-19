@@ -55,13 +55,38 @@ npm run preview    # preview the production build
    - `CLOUDFLARE_ACCOUNT_ID`
    - `GITHUB_TOKEN` (auto-provided)
 3. Create the Pages project `ccc-dashboard` (or set `projectName` in `.github/workflows/pages.yml`).
-4. Push to `main` — the workflow builds and deploys `dist/` automatically.
+4. Push — the workflow builds and deploys `dist/` automatically.
+
+### Environments
+
+`.github/workflows/pages.yml` picks its target from the branch it was pushed from:
+
+| Branch | Pages environment | URL | `VITE_API_BASE` baked into the bundle |
+| --- | --- | --- | --- |
+| `main` | Production | `ccc-dashboard.pages.dev` | `https://ccc-backend.pongsinbas.workers.dev` |
+| `dev` | Preview | `dev.ccc-dashboard.pages.dev` | `https://ccc-backend-dev.pongsinbas.workers.dev` |
+
+`VITE_API_BASE` is a **build-time** value — Vite inlines it, so it is set in the
+workflow rather than as a Pages runtime variable. Unset, `src/lib/store/auth.svelte.ts`
+falls back to the production worker silently; check the Network tab to confirm which
+backend a deployment is actually talking to.
+
+The two Pages Functions (`functions/api/chat.ts`, `functions/api/verify-slip.ts`) are
+same-origin, so they follow the deployment rather than `VITE_API_BASE`. Their
+`CF_ACCOUNT_ID` / `AI_API_KEY` bindings must be set for **both** the Production and
+Preview environments in the Pages dashboard, or those endpoints return
+`{"error":"AI not configured"}`.
+
+The dev deployment shows a persistent amber DEVELOPMENT banner and skips service-worker
+registration (`src/lib/env.ts`) — `import.meta.env.PROD` is true for dev builds too, so
+the hostname is what distinguishes them.
 
 ### Option B: Manual
 
 ```bash
 npm run build
-npx wrangler pages deploy dist --project-name ccc-dashboard
+npx wrangler pages deploy dist --project-name ccc-dashboard                 # production
+npx wrangler pages deploy dist --project-name ccc-dashboard --branch dev    # development
 ```
 
 ## Notes

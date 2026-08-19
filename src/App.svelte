@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import AppLayout from './lib/components/layout/AppLayout.svelte';
+  import DevBanner from './lib/components/layout/DevBanner.svelte';
   import LazyRoute from './lib/components/LazyRoute.svelte';
   import ToastContainer from './lib/components/ui/ToastContainer.svelte';
   import AlertBox from './lib/components/ui/AlertBox.svelte';
@@ -15,6 +16,7 @@
 </script>
 
 <svelte:boundary {onerror}>
+  <DevBanner />
   <ToastContainer />
   <AlertBox />
 

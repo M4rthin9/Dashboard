@@ -1,6 +1,5 @@
 <script lang="ts">
   import { MessageCircle, X, Send, Bot, User, Loader2 } from '@lucide/svelte';
-  import { ui } from '../../store/ui.svelte';
   import { chatCompletion, type ChatMessage } from '../../utils/chatApi';
 
   let {

@@ -24,7 +24,7 @@
   import SlipVerifyPanel from './SlipVerifyPanel.svelte';
   import { formatBaht, formatNumber, formatDateTimeThai, normalizeStatus, visitDateLabel } from '../utils/format';
   import type { Reservation } from '../api/types';
-  import { getSlipByRef, generatePromptPayQr, updateStatus } from '../api/endpoints';
+  import { getSlipByRef, generatePromptPayQr } from '../api/endpoints';
   import { decodeBase64Image } from '../utils/base64';
   import { verifySlipOCR } from '../utils/slipVerification';
   import { ui } from '../store/ui.svelte';
