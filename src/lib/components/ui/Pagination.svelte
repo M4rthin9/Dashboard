@@ -28,7 +28,7 @@
     >
       <ChevronLeft class="h-4 w-4" />
     </button>
-    {#each pages as p (p === '…' ? `e-${pages.indexOf(p)}` : p)}
+    {#each pages as p, i (p === '…' ? `e-${i}` : p)}
       {#if p === '…'}
         <span class="px-1.5 text-sm text-slate-400 dark:text-slate-500">…</span>
       {:else}
