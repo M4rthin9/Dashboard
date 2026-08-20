@@ -107,6 +107,7 @@
         message: val === 'yes' ? `${row.visitorName} ได้รับอนุมัติแล้ว` : `${row.visitorName} ถูกปฏิเสธ และการจองถูกยกเลิกแล้ว`,
         type: val === 'yes' ? 'success' : 'warning',
       });
+      onclose();
     } catch (err) {
       ui.showAlert({ title: 'ไม่สามารถอัปเดตการอนุมัติได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
     } finally {
@@ -125,6 +126,7 @@
       // reviewed yet.
       await reservations.updateVisitorApproval(row.ref, undefined, current.join(';;'));
       ui.showAlert({ title: 'อัปเดตการอนุมัติผู้เยี่ยมร่วมแล้ว', message: 'บันทึกการอนุมัติผู้เข้าร่วมเรียบร้อย', type: 'success' });
+      onclose();
     } catch (err) {
       ui.showAlert({ title: 'ไม่สามารถอัปเดตการอนุมัติได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
     } finally {
