@@ -144,6 +144,7 @@
             message: `ชื่อ "${result.extractedName}" ✓ · จำนวนเงิน ${result.extractedAmount.toLocaleString()} บาท ✓\nสถานะเปลี่ยนเป็น "เสร็จสิ้น" อัตโนมัติ`,
             type: 'success',
           });
+          onclose();
         } else {
           const reasons: string[] = [];
           if (!result.nameMatched) reasons.push(`ชื่อ "${result.extractedName}" ไม่ตรง`);
