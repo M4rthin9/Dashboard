@@ -127,14 +127,21 @@ export function deleteBooking(ref: string): Promise<ApiResult> {
   return callAction('deleteBooking', { ref }, { auth: true });
 }
 
+// `visitorApproved` is omitted, not blanked, when only the extra visitors are
+// being decided: the backend reads *any* present-but-not-'yes' value as a
+// rejection of the main visitor and flips the booking to ไม่อนุมัติ.
 export function updateVisitorApproval(
   ref: string,
-  visitorApproved: string,
+  visitorApproved?: string,
   extraVisitorApproved?: string
 ): Promise<ApiResult & { visitorCount?: number; total?: number }> {
   return callAction(
     'updateVisitorApproval',
-    { ref, visitorApproved, ...(extraVisitorApproved !== undefined ? { extraVisitorApproved } : {}) },
+    {
+      ref,
+      ...(visitorApproved !== undefined ? { visitorApproved } : {}),
+      ...(extraVisitorApproved !== undefined ? { extraVisitorApproved } : {}),
+    },
     { auth: true }
   );
 }

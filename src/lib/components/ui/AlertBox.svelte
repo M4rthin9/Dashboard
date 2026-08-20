@@ -44,7 +44,7 @@
 {#if ui.alert}
   {@const a = ui.alert}
   {@const Icon = icons[a.type]}
-  <div class="fixed inset-0 z-[70] flex items-center justify-center p-4">
+  <div class="fixed inset-0 z-[90] flex items-center justify-center p-4">
     <div
       class="absolute inset-0 z-0 animate-fade-in bg-slate-900/60 backdrop-blur-sm"
       onclick={() => ui.closeAlert()}
@@ -56,7 +56,7 @@
       aria-modal="true"
       aria-label={a.title}
       tabindex="-1"
-      class="animate-modal-pop relative z-[71] flex w-full max-w-md flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl outline-none dark:border-slate-700 dark:bg-slate-900"
+      class="animate-modal-pop relative z-[91] flex w-full max-w-md flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl outline-none dark:border-slate-700 dark:bg-slate-900"
     >
       <div class="pointer-events-none absolute inset-x-0 top-0 z-0 h-1 {accentBar[a.type]}" aria-hidden="true"></div>
       <div class="relative flex flex-col gap-5 p-7">

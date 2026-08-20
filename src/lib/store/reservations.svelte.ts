@@ -2,6 +2,7 @@ import { getReservationsWithArchive, updateStatus as apiUpdateStatus, cancelBook
 import { ApiError } from '../api/errors';
 import type { Reservation } from '../api/types';
 import { normalizeStatus, STATUS_LABELS } from '../utils/format';
+import { liveSync } from './liveSync.svelte';
 
 const CACHE_KEY = 'ccc_reservations_cache';
 const CACHE_TTL = 5 * 60 * 1000;
@@ -32,12 +33,12 @@ class ReservationsStore {
       try {
         const cached = this.readCache();
         if (!force && cached && Date.now() - cached.t < CACHE_TTL) {
-          this.rows = cached.rows;
+          this.applyRows(cached.rows);
           this.loadedAt = cached.t;
           return;
         }
         const data = await getReservationsWithArchive(this.includeArchive);
-        this.rows = data.rows ?? [];
+        this.applyRows(data.rows ?? []);
         this.loadedAt = Date.now();
         this.writeCache();
       } catch (err) {
@@ -59,6 +60,30 @@ class ReservationsStore {
   async toggleArchive(): Promise<void> {
     this.includeArchive = !this.includeArchive;
     await this.load(true);
+  }
+
+  /**
+   * Replace the list *without* replacing the row objects themselves.
+   *
+   * An open modal (approval, payment, detail) holds the row it was given. When
+   * a refresh handed back freshly-parsed objects, that held row became an
+   * orphan: the store updated, the modal kept rendering its detached copy, and
+   * approving a second visitor looked like it did nothing until the modal was
+   * closed and reopened. Since liveSync refetches within ~3s of *your own*
+   * write, that orphaning happened on almost every approval. Merging field-wise
+   * into the existing object keeps every held reference live.
+   */
+  private applyRows(next: Reservation[]): void {
+    const byRef = new Map(this.rows.map((r) => [String(r.ref), r]));
+    this.rows = next.map((incoming) => {
+      const current = byRef.get(String(incoming.ref));
+      if (!current) return incoming;
+      for (const key of Object.keys(current)) {
+        if (!(key in incoming)) delete (current as Record<string, unknown>)[key];
+      }
+      Object.assign(current, incoming);
+      return current;
+    });
   }
 
   private readCache(): { rows: Reservation[]; t: number } | null {
@@ -118,28 +143,28 @@ class ReservationsStore {
     await this.refresh();
   }
 
-  async updateVisitorApproval(ref: string, visitorApproved: string, extraVisitorApproved?: string): Promise<void> {
+  async updateVisitorApproval(ref: string, visitorApproved?: string, extraVisitorApproved?: string): Promise<void> {
     const row = this.rows.find((r) => r.ref === ref);
     const oldApproved = row ? row.visitorApproved : undefined;
     const oldExtra = row ? row.extraVisitorApproved : undefined;
     const oldCount = row ? row.visitorCount : undefined;
     const oldTotal = row ? row.total : undefined;
     const oldStatus = row ? row.status : undefined;
-    if (row) row.visitorApproved = visitorApproved;
+    if (row && visitorApproved !== undefined) row.visitorApproved = visitorApproved;
     if (row && extraVisitorApproved !== undefined) row.extraVisitorApproved = extraVisitorApproved;
     try {
       const res = await apiUpdateVisitorApproval(ref, visitorApproved, extraVisitorApproved);
       if (res.status !== 'ok') throw new ApiError(String(res.message ?? 'เกิดข้อผิดพลาด'));
       if (row && res.visitorCount !== undefined) row.visitorCount = res.visitorCount;
       if (row && res.total !== undefined) row.total = res.total;
-      if (visitorApproved.toLowerCase() === 'no') {
+      if (visitorApproved?.toLowerCase() === 'no') {
         if (row) row.status = 'ไม่อนุมัติ';
         await this.refresh();
       } else {
         this.markDirty();
       }
     } catch (err) {
-      if (row) row.visitorApproved = oldApproved;
+      if (row && visitorApproved !== undefined) row.visitorApproved = oldApproved;
       if (row && extraVisitorApproved !== undefined) row.extraVisitorApproved = oldExtra;
       if (row) {
         row.visitorCount = oldCount;
@@ -188,10 +213,23 @@ class ReservationsStore {
     return { counts, totalAmount, pendingDiscipline, pendingParticipant };
   }
 
+  /**
+   * Mark the server as ahead of us after an optimistic write.
+   *
+   * Shifting `loadedAt` alone was not enough: the localStorage copy carries its
+   * own timestamp, so the next non-forced load() (a route remount, a tab
+   * revisit) restored the pre-write snapshot and the approval visibly reverted.
+   * Drop that copy too, and poke liveSync so the authoritative rows arrive in
+   * a few hundred milliseconds instead of on the next 3s poll.
+   */
   private markDirty(): void {
-    if (this.loadedAt) {
-      this.loadedAt = Date.now() - CACHE_TTL + 1;
+    this.loadedAt = null;
+    try {
+      localStorage.removeItem(CACHE_KEY);
+    } catch {
+      // storage unavailable — the forced refetch below still corrects us
     }
+    liveSync.poke();
   }
 }
 
