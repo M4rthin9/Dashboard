@@ -120,7 +120,10 @@
     current[i] = val;
     busy = true;
     try {
-      await reservations.updateVisitorApproval(row.ref, 'yes', current.join(';;'));
+      // Deciding an extra visitor must not touch the main visitor: passing a
+      // hardcoded 'yes' here silently approved a main visitor nobody had
+      // reviewed yet.
+      await reservations.updateVisitorApproval(row.ref, undefined, current.join(';;'));
       ui.showAlert({ title: 'อัปเดตการอนุมัติผู้เยี่ยมร่วมแล้ว', message: 'บันทึกการอนุมัติผู้เข้าร่วมเรียบร้อย', type: 'success' });
     } catch (err) {
       ui.showAlert({ title: 'ไม่สามารถอัปเดตการอนุมัติได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
