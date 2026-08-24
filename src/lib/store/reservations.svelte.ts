@@ -1,4 +1,4 @@
-import { getReservationsWithArchive, updateStatus as apiUpdateStatus, cancelBooking as apiCancelBooking, deleteBooking as apiDeleteBooking, updateVisitorApproval as apiUpdateVisitorApproval, updateBooking as apiUpdateBooking, createBooking as apiCreateBooking } from '../api/endpoints';
+import { getReservationsWithArchive, updateStatus as apiUpdateStatus, cancelBooking as apiCancelBooking, deleteBooking as apiDeleteBooking, revertBookingPayment as apiRevertBookingPayment, updateVisitorApproval as apiUpdateVisitorApproval, updateBooking as apiUpdateBooking, createBooking as apiCreateBooking } from '../api/endpoints';
 import { ApiError } from '../api/errors';
 import type { Reservation } from '../api/types';
 import { normalizeStatus, STATUS_LABELS } from '../utils/format';
@@ -139,6 +139,15 @@ class ReservationsStore {
    *  leave the deleted booking in the cached copy. */
   async deleteBooking(ref: string): Promise<void> {
     const res = await apiDeleteBooking(ref);
+    if (res.status !== 'ok') throw new ApiError(String(res.message ?? 'เกิดข้อผิดพลาด'));
+    await this.refresh();
+  }
+
+  /** Undo a mistaken slip upload (Superadmin only): status back to รอชำระเงิน,
+   *  stored slip + verification data cleared server-side. Refetches so the row
+   *  no longer shows the old slip. */
+  async revertBookingPayment(ref: string): Promise<void> {
+    const res = await apiRevertBookingPayment(ref);
     if (res.status !== 'ok') throw new ApiError(String(res.message ?? 'เกิดข้อผิดพลาด'));
     await this.refresh();
   }

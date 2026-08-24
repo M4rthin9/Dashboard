@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Archive, Ban, Check, Download, Eye, Pencil, Plus, Printer, QrCode, RefreshCw, Search, Trash2, Users, X } from '@lucide/svelte';
+  import { Archive, Ban, Check, Download, Eye, Pencil, Plus, Printer, QrCode, RotateCcw, RefreshCw, Search, Trash2, Users, X } from '@lucide/svelte';
   import Card from '../lib/components/ui/Card.svelte';
   import Spinner from '../lib/components/ui/Spinner.svelte';
   import Modal from '../lib/components/ui/Modal.svelte';
@@ -47,6 +47,8 @@
   let prisoners = $state<Prisoner[]>([]);
   let deleteTarget = $state<Reservation | null>(null);
   let deleting = $state(false);
+  let revertTarget = $state<Reservation | null>(null);
+  let reverting = $state(false);
   let qrPrinting = $state('');
 
   const role = $derived(auth.user?.role ?? 'User');
@@ -220,6 +222,33 @@
       });
     } finally {
       deleting = false;
+    }
+  }
+
+  /** Rewind a mistaken slip upload back to awaiting-payment (Superadmin). The
+   *  server clears the stored slip and its verification data, so the visitor
+   *  can upload the correct one through the normal payment flow. */
+  async function confirmRevert(): Promise<void> {
+    if (!revertTarget) return;
+    const ref = revertTarget.ref;
+    const name = String(revertTarget.visitorName ?? '');
+    reverting = true;
+    try {
+      await reservations.revertBookingPayment(ref);
+      ui.showAlert({
+        title: 'ย้อนสถานะสำเร็จ',
+        message: `${name} · ${ref} กลับไปเป็น "รอชำระเงิน" แล้ว ผู้เยี่ยมสามารถอัปโหลดสลิปใหม่ได้`,
+        type: 'success',
+      });
+      revertTarget = null;
+    } catch (err) {
+      ui.showAlert({
+        title: 'ไม่สามารถย้อนสถานะได้',
+        message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด',
+        type: 'error',
+      });
+    } finally {
+      reverting = false;
     }
   }
 
@@ -525,6 +554,11 @@
   {#if (canPrint || canConfirmPayment) && !row._archived}
     <button class="shrink-0 rounded-xl border border-blue-200 bg-white p-1.5 text-blue-600 hover:bg-blue-50 disabled:opacity-50 dark:border-blue-900 dark:bg-slate-800 dark:hover:bg-blue-950/30" title="พิมพ์ QR ชำระเงิน" disabled={qrPrinting === row.ref} onclick={() => void printPaymentQr(row)}>
       <QrCode class="h-4 w-4" />
+    </button>
+  {/if}
+  {#if canDelete && !row._archived && (s === 'รอชำระเงิน' || s === 'ชำระแล้ว') && !expired}
+    <button class="shrink-0 rounded-xl border border-amber-200 bg-white p-1.5 text-amber-600 hover:bg-amber-50 dark:border-amber-900 dark:bg-slate-800 dark:hover:bg-amber-950/30" title="ย้อนสถานะเป็นรอชำระเงิน (สลิปไม่ถูกต้อง)" onclick={() => (revertTarget = row)}>
+      <RotateCcw class="h-4 w-4" />
     </button>
   {/if}
   {#if canDelete && !row._archived}
@@ -947,6 +981,35 @@
       </button>
       <button class="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-red-700 disabled:opacity-50" onclick={confirmDelete} disabled={deleting}>
         {deleting ? 'กำลังลบ...' : 'ลบถาวร'}
+      </button>
+    </div>
+  </div>
+</Modal>
+
+<Modal open={revertTarget !== null} title="ย้อนสถานะการชำระเงิน" onclose={() => (revertTarget = null)}>
+  <div class="flex flex-col gap-4">
+    <div class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
+      ยืนยันการย้อนสถานะของ <span class="font-semibold">{revertTarget?.ref}</span> กลับไปเป็น "รอชำระเงิน"?
+      สลิปที่อัปโหลดไว้และข้อมูลการตรวจสอบจะถูกลบทิ้ง ผู้เยี่ยมจะสามารถอัปโหลดสลิปใหม่ได้ตามปกติ
+    </div>
+    {#if revertTarget}
+      <dl class="grid grid-cols-3 gap-x-3 gap-y-1.5 text-sm">
+        <dt class="text-slate-500 dark:text-slate-400">ผู้เข้าร่วม</dt>
+        <dd class="col-span-2 text-slate-800 dark:text-slate-100">{revertTarget.visitorName || '-'}</dd>
+        <dt class="text-slate-500 dark:text-slate-400">ผู้ต้องขัง</dt>
+        <dd class="col-span-2 text-slate-800 dark:text-slate-100">{revertTarget.prisonerName || '-'}</dd>
+        <dt class="text-slate-500 dark:text-slate-400">สถานะปัจจุบัน</dt>
+        <dd class="col-span-2 text-slate-800 dark:text-slate-100">{normalizeStatus(revertTarget.status)}</dd>
+        <dt class="text-slate-500 dark:text-slate-400">ยอดชำระ</dt>
+        <dd class="col-span-2 text-slate-800 dark:text-slate-100">{formatBaht(revertTarget.total)}</dd>
+      </dl>
+    {/if}
+    <div class="flex justify-end gap-2 border-t border-slate-200 pt-5 dark:border-slate-700">
+      <button class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition-colors duration-150 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" onclick={() => (revertTarget = null)}>
+        กลับ
+      </button>
+      <button class="rounded-xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-amber-700 disabled:opacity-50" onclick={confirmRevert} disabled={reverting}>
+        {reverting ? 'กำลังย้อนสถานะ...' : 'ยืนยันย้อนสถานะ'}
       </button>
     </div>
   </div>
