@@ -127,6 +127,11 @@ export function deleteBooking(ref: string): Promise<ApiResult> {
   return callAction('deleteBooking', { ref }, { auth: true });
 }
 
+/** Rewind a mistaken slip upload: status back to รอชำระเงิน, slip + verification data cleared (Superadmin only). */
+export function revertBookingPayment(ref: string): Promise<ApiResult> {
+  return callAction('revertBookingPayment', { ref }, { auth: true });
+}
+
 // `visitorApproved` is omitted, not blanked, when only the extra visitors are
 // being decided: the backend reads *any* present-but-not-'yes' value as a
 // rejection of the main visitor and flips the booking to ไม่อนุมัติ.
