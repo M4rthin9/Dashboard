@@ -52,6 +52,7 @@
   let qrPrinting = $state('');
 
   const role = $derived(auth.user?.role ?? 'User');
+  const isSuper = $derived(role === 'Superadmin');
   const isAdminOrSuper = $derived(role === 'Superadmin' || role === 'Admin');
   const canApproveParticipant = $derived(isAdminOrSuper || hasPermission(role, 'approve_participant'));
   const canApproveDiscipline = $derived(isAdminOrSuper || hasPermission(role, 'approve_discipline'));
@@ -310,7 +311,9 @@
     }
     let refs = cancelMode === 'bulk' ? selectedRefs : [cancelRef];
     const allRows = reservations.rows.filter((r) => refs.includes(r.ref));
-    const expired = allRows.filter((r) => isExpired(r));
+    // Superadmin cancels through the forced updateStatus path, which the
+    // backend allows on expired/archived/any-status bookings — no skip list.
+    const expired = isSuper ? [] : allRows.filter((r) => isExpired(r));
     refs = refs.filter((ref) => !expired.some((r) => r.ref === ref));
     if (expired.length > 0 && refs.length === 0) {
       closeCancel();
@@ -321,7 +324,8 @@
     let success = 0;
     for (const ref of refs) {
       try {
-        await reservations.cancelBooking(ref, reason);
+        if (isSuper) await reservations.updateStatus(ref, 'ยกเลิก', reason);
+        else await reservations.cancelBooking(ref, reason);
         success++;
       } catch {
         // keep going; report failures at the end
@@ -505,7 +509,7 @@
     <button class="shrink-0 rounded-xl border border-green-200 bg-white p-1.5 text-green-600 hover:bg-green-50 dark:border-green-900 dark:bg-slate-800 dark:hover:bg-green-950/30" title="อนุมัติผู้เข้าร่วม" onclick={() => doUpdateStatus(row, 'รอตรวจสอบวินัย')}>
       <Check class="h-4 w-4" />
     </button>
-    {#if canReject && !expired}
+    {#if canReject && (!expired || isSuper)}
       <button class="shrink-0 rounded-xl border border-red-200 bg-white p-1.5 text-red-600 hover:bg-red-50 dark:border-red-900 dark:bg-slate-800 dark:hover:bg-red-950/30" title="ปฏิเสธ" onclick={() => doUpdateStatus(row, 'ไม่อนุมัติ')}>
         <X class="h-4 w-4" />
       </button>
@@ -515,7 +519,7 @@
     <button class="shrink-0 rounded-xl border border-green-200 bg-white p-1.5 text-green-600 hover:bg-green-50 dark:border-green-900 dark:bg-slate-800 dark:hover:bg-green-950/30" title="อนุมัติวินัย" onclick={() => doUpdateStatus(row, 'รอชำระเงิน')}>
       <Check class="h-4 w-4" />
     </button>
-    {#if canReject && !expired}
+    {#if canReject && (!expired || isSuper)}
       <button class="shrink-0 rounded-xl border border-red-200 bg-white p-1.5 text-red-600 hover:bg-red-50 dark:border-red-900 dark:bg-slate-800 dark:hover:bg-red-950/30" title="ปฏิเสธวินัย" onclick={() => doUpdateStatus(row, 'ไม่อนุมัติ')}>
         <X class="h-4 w-4" />
       </button>
@@ -531,7 +535,7 @@
       <Check class="h-4 w-4" />
     </button>
   {/if}
-  {#if !terminal && canCancel && s !== 'ยกเลิก' && !expired}
+  {#if canCancel && s !== 'ยกเลิก' && (isSuper || (!terminal && !expired && !row._archived))}
     <button class="shrink-0 rounded-xl border border-slate-200 bg-white p-1.5 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700" title="ยกเลิก" onclick={() => openCancelSingle(row)}>
       <Ban class="h-4 w-4" />
     </button>
@@ -541,8 +545,8 @@
       <X class="h-4 w-4" />
     </button>
   {/if}
-  {#if canEdit && !row._archived && !terminal}
-    <button class="shrink-0 rounded-xl border border-slate-200 bg-white p-1.5 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700" title="แก้ไข" onclick={() => openEdit(row)}>
+  {#if canEdit}
+    <button class="shrink-0 rounded-xl border border-slate-200 bg-white p-1.5 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700" title={row._archived ? 'แก้ไข (ย้อนหลัง)' : 'แก้ไข'} onclick={() => openEdit(row)}>
       <Pencil class="h-4 w-4" />
     </button>
   {/if}
@@ -561,8 +565,8 @@
       <RotateCcw class="h-4 w-4" />
     </button>
   {/if}
-  {#if canDelete && !row._archived}
-    <button class="shrink-0 rounded-xl border border-red-200 bg-white p-1.5 text-red-600 hover:bg-red-50 dark:border-red-900 dark:bg-slate-800 dark:hover:bg-red-950/30" title="ลบการจองถาวร" onclick={() => (deleteTarget = row)}>
+  {#if canDelete}
+    <button class="shrink-0 rounded-xl border border-red-200 bg-white p-1.5 text-red-600 hover:bg-red-50 dark:border-red-900 dark:bg-slate-800 dark:hover:bg-red-950/30" title={row._archived ? 'ลบการจองถาวร (ย้อนหลัง)' : 'ลบการจองถาวร'} onclick={() => (deleteTarget = row)}>
       <Trash2 class="h-4 w-4" />
     </button>
   {/if}
@@ -823,7 +827,7 @@
                     <StatusSteps status={row.status} />
                   </td>
                    <td class="px-3 py-2.5">
-                    {#if !archived}
+                    {#if !archived || isSuper}
                       <div class="flex items-center justify-end gap-1.5 whitespace-normal">
                         {@render rowActions(row, s, terminal, expired)}
                       </div>
@@ -886,7 +890,7 @@
 
               <div class="mt-2.5 flex items-center justify-between gap-2 border-t border-slate-100 pt-2.5 dark:border-slate-800">
                 <StatusSteps status={row.status} />
-                {#if !archived}
+                {#if !archived || isSuper}
                   <div class="flex flex-wrap items-center justify-end gap-1.5">
                     {@render rowActions(row, s, terminal, expired)}
                   </div>
