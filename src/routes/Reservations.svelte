@@ -25,6 +25,8 @@
   let statusFilter = $state('');
   let dateFilter = $state('');
   let wingFilter = $state('');
+  /** '' = both pools, 'prisoner' = visit bookings, 'table' = no-prisoner tables. */
+  let typeFilter = $state('');
   let page = $state(1);
   let pageSize = $state(10);
   let sortKey = $state('timestamp');
@@ -84,6 +86,12 @@
     Array.from(new Set(reservations.rows.map((r) => String(r.wing ?? '').trim()).filter(Boolean))).sort()
   );
 
+  /** Legacy rows predate the column and are always prisoner visits. */
+  function bookingTypeOf(row: Reservation): string {
+    return String(row.bookingType ?? '').trim() || 'prisoner';
+  }
+  const isTableBooking = (row: Reservation) => bookingTypeOf(row) === 'table';
+
   function isExpired(row: Reservation): boolean {
     const iso = String(row.visitDateISO ?? '').trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
@@ -104,6 +112,7 @@
       if (statusFilter && normalizeStatus(r.status) !== statusFilter) return false;
       if (dateFilter && String(r.visitDateISO ?? '').trim() !== dateFilter) return false;
       if (wingFilter && String(r.wing ?? '').trim() !== wingFilter) return false;
+      if (typeFilter && bookingTypeOf(r) !== typeFilter) return false;
       if (q && !JSON.stringify(r).toLowerCase().includes(q)) return false;
       return true;
     });
@@ -390,6 +399,7 @@
     if (dateFilter) filterParts.push(`วันที่ ${visitDateLabel(dateFilter)}`);
     if (statusFilter) filterParts.push(`สถานะ ${statusFilter}`);
     if (wingFilter) filterParts.push(`แดน ${wingFilter}`);
+    if (typeFilter) filterParts.push(`ประเภท ${typeFilter === 'table' ? 'จองโต๊ะ' : 'เยี่ยมผู้ต้องขัง'}`);
     if (search.trim()) filterParts.push(`ค้นหา "${search.trim()}"`);
     const filterLabel = filterParts.length > 0 ? `ตัวกรอง: ${filterParts.join(' · ')}` : undefined;
     const ok = openPrintWindow(buildSeatingReport(rows, filterLabel), 'รายงานการจัดโต๊ะ', printerName);
@@ -627,6 +637,16 @@
           {/each}
         </select>
 
+        <select
+          bind:value={typeFilter}
+          class="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 transition-colors duration-150 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 sm:flex-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+          aria-label="กรองตามประเภทการจอง"
+        >
+          <option value="">ทุกประเภท</option>
+          <option value="prisoner">เยี่ยมผู้ต้องขัง</option>
+          <option value="table">จองโต๊ะ (ไม่มีผู้ต้องขัง)</option>
+        </select>
+
         <button
           class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-3.5 py-2 text-sm text-slate-600 transition-colors duration-150 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
           onclick={() => reservations.toggleArchive()}
@@ -804,15 +824,19 @@
                   </td>
                   <td class="px-3 py-2.5">
                     <div class="max-w-[200px]">
-                      <div class="font-semibold text-slate-800 dark:text-slate-100 truncate">{row.prisonerName ?? '—'}</div>
-                      <div class="text-[11px] text-slate-400">#{row.prisonerId ?? ''}</div>
+                      {#if isTableBooking(row)}
+                        <span class="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">จองโต๊ะ</span>
+                      {:else}
+                        <div class="font-semibold text-slate-800 dark:text-slate-100 truncate">{row.prisonerName ?? '—'}</div>
+                        <div class="text-[11px] text-slate-400">#{row.prisonerId ?? ''}</div>
+                      {/if}
                       <div class="mt-0.5 border-t border-dashed border-slate-200 pt-0.5 text-[13px] dark:border-slate-700">
                         <span class="block truncate">{row.visitorName ?? ''}</span>
                         {#if row.visitorPhone}<span class="text-[11px] text-slate-400">{row.visitorPhone}</span>{/if}
                       </div>
                     </div>
                   </td>
-                  <td class="px-3 py-2.5 font-medium">{row.wing ?? '—'}</td>
+                  <td class="px-3 py-2.5 font-medium">{isTableBooking(row) ? '—' : (row.wing ?? '—')}</td>
                   <td class="px-3 py-2.5 whitespace-nowrap">{visitDateLabel(row.visitDate, row.visitDateISO)}</td>
                   <td class="px-3 py-2.5 text-right whitespace-nowrap">
                     <div>{formatNumber(row.visitorCount)} คน</div>
@@ -869,8 +893,12 @@
                       {row.ref}
                     </button>
                     {#if archived}<span class="ml-1 text-[10px] text-slate-400">🗄️</span>{/if}
-                    <div class="mt-1 font-semibold text-slate-800 dark:text-slate-100">{row.prisonerName ?? '—'}</div>
-                    <div class="text-[11px] text-slate-400">#{row.prisonerId ?? ''} · แดน {row.wing ?? '—'}</div>
+                    {#if isTableBooking(row)}
+                      <span class="mt-1 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">จองโต๊ะ (ไม่มีผู้ต้องขัง)</span>
+                    {:else}
+                      <div class="mt-1 font-semibold text-slate-800 dark:text-slate-100">{row.prisonerName ?? '—'}</div>
+                      <div class="text-[11px] text-slate-400">#{row.prisonerId ?? ''} · แดน {row.wing ?? '—'}</div>
+                    {/if}
                   </div>
                 </div>
                 <span class="inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[11px] font-medium {statusBadgeClass(s)}">

@@ -95,6 +95,11 @@
   let visitorAge = $state('');
   let religion = $state('');
   let allergy = $state('');
+  // 'prisoner' = the visit flow; 'table' = the parallel no-prisoner seating flow,
+  // which has no prisoner to pick, no discipline check and no prisoner fee.
+  let bookingType = $state('prisoner');
+  const isTable = $derived(bookingType === 'table');
+
   let prisonerQuery = $state('');
   let prisonerId = $state('');
   let prisonerName = $state('');
@@ -108,13 +113,14 @@
 
   const extraCount = $derived(extras.filter((e) => e.name.trim()).length);
   const visitorCount = $derived(1 + extraCount);
-  const totalPersons = $derived(visitorCount + 1);
+  // A table booking has no prisoner occupying a seat.
+  const totalPersons = $derived(isTable ? visitorCount : visitorCount + 1);
 
   const total = $derived.by(() => {
     const extraFees = extras
       .filter((e) => e.name.trim())
       .reduce((sum, e) => sum + computeExtraFee(e.relation, e.age), 0);
-    return PRICING.PRISONER + computeMainFee(relation, visitorAge) + extraFees;
+    return (isTable ? 0 : PRICING.PRISONER) + computeMainFee(relation, visitorAge) + extraFees;
   });
 
   const extraFeeTotal = $derived(
@@ -207,6 +213,8 @@
       visitorAge = String(row.visitorAge ?? '');
       religion = String(row.religion ?? '');
       allergy = String(row.allergy ?? '');
+      // Legacy rows predate the column and are always prisoner visits.
+      bookingType = String(row.bookingType ?? '').trim() || 'prisoner';
       prisonerId = String(row.prisonerId ?? '');
       prisonerName = String(row.prisonerName ?? '');
       wing = String(row.wing ?? '');
@@ -221,6 +229,7 @@
     } else if (mode === 'create') {
       const now = new Date();
       visitDateISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      bookingType = 'prisoner';
       visitorName = '';
       visitorId = '';
       visitorPhone = '';
@@ -295,9 +304,11 @@
       extraVisitorNames: extraNamesStr,
       extraVisitorReligions: extraReligionsStr,
       extraVisitorAllergies: extraAllergiesStr,
-      prisonerName,
-      prisonerId,
-      wing,
+      // Blank on a table booking; the server's table whitelist drops them anyway.
+      prisonerName: isTable ? '' : prisonerName,
+      prisonerId: isTable ? '' : prisonerId,
+      wing: isTable ? '' : wing,
+      bookingType,
       visitDate,
       visitDateISO,
       visitorCount,
@@ -315,11 +326,11 @@
       ui.showAlert({ title: 'กรุณากรอกข้อมูล', message: 'กรุณากรอกชื่อผู้เยี่ยม', type: 'warning' });
       return;
     }
-    if (!prisonerId || !prisonerName) {
+    if (!isTable && (!prisonerId || !prisonerName)) {
       ui.showAlert({ title: 'กรุณาเลือกผู้ต้องขัง', message: 'กรุณาเลือกผู้ต้องขังจากรายการค้นหา', type: 'warning' });
       return;
     }
-    if (prisonerRestricted) {
+    if (!isTable && prisonerRestricted) {
       ui.showAlert({ title: 'ไม่สามารถจองได้', message: '⚠️ ผู้ต้องขังนี้มีสถานะติดวินัย งดเยี่ยม ไม่สามารถจองเยี่ยมได้', type: 'error' });
       return;
     }
@@ -347,12 +358,28 @@
       submit();
     }}
   >
+    {#if mode === 'create'}
+      <!-- Staff can take either kind of booking (e.g. a table booked over the
+           phone). The type is fixed once created, so it is only offered here. -->
+      <section class="flex flex-col gap-2">
+        <span class={labelCls}>ประเภทการจอง</span>
+        <div class="flex flex-wrap gap-3">
+          <label class="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+            <input type="radio" bind:group={bookingType} value="prisoner" /> เยี่ยมผู้ต้องขัง
+          </label>
+          <label class="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+            <input type="radio" bind:group={bookingType} value="table" /> จองโต๊ะ (ไม่มีผู้ต้องขัง)
+          </label>
+        </div>
+      </section>
+    {/if}
+
     <section class="flex flex-col gap-3">
       <div class="flex items-center gap-2">
         <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
           <User class="h-4 w-4" />
         </div>
-        <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100">ผู้เยี่ยมหลัก</h3>
+        <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100">{isTable ? 'ผู้จองหลัก' : 'ผู้เยี่ยมหลัก'}</h3>
       </div>
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div class="flex flex-col gap-1">
@@ -394,6 +421,7 @@
 
     <div class="border-t border-dashed border-slate-200 dark:border-slate-700"></div>
 
+    {#if !isTable}
     <section class="flex flex-col gap-3">
       <div class="flex items-center gap-2">
         <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-400">
@@ -480,6 +508,7 @@
         </div>
       {/if}
     </section>
+    {/if}
 
     <div class="border-t border-dashed border-slate-200 dark:border-slate-700"></div>
 
@@ -604,8 +633,8 @@
       <div class="overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/40">
         <div class="flex flex-col gap-1 px-4 py-3 text-sm">
           <div class="flex items-center justify-between text-emerald-800/80 dark:text-emerald-300/80">
-            <span>ผู้เยี่ยมหลัก + ผู้ต้องขัง</span>
-            <span>{formatBaht(PRICING.MAIN_VISITOR + PRICING.PRISONER)}</span>
+            <span>{isTable ? 'ผู้เข้าร่วมหลัก' : 'ผู้เยี่ยมหลัก + ผู้ต้องขัง'}</span>
+            <span>{formatBaht(PRICING.MAIN_VISITOR + (isTable ? 0 : PRICING.PRISONER))}</span>
           </div>
           {#if extraCount > 0}
             <div class="flex items-center justify-between text-emerald-800/80 dark:text-emerald-300/80">
