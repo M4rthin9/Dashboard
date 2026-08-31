@@ -51,7 +51,10 @@
   const isDone = $derived(mode === 'เสร็จสิ้น');
   const title = $derived(isDone ? 'ยืนยันการเสร็จสิ้น' : 'ยืนยันการชำระเงิน');
   const totalPersons = $derived(Number(row?.totalPersons) || (Number(row?.visitorCount) || 0) + 1);
-  const slipUrl = $derived(decodeBase64Image(fetchedSlip || String(row?.slipImage ?? '').trim()));
+  const slipUrl = $derived.by(() => {
+    const listSlip = String(row?.slipImage ?? '').trim();
+    return listSlip.startsWith('data:') ? listSlip : decodeBase64Image(fetchedSlip);
+  });
   const hasSlip = $derived(!!slipUrl && !slipUrl.startsWith('SLIP_UPLOADED:'));
 
   function initials(name: string | undefined): string {

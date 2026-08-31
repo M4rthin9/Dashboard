@@ -169,7 +169,14 @@
     }
   });
 
-  const slipUrl = $derived(decodeBase64Image(fetchedSlip || String(row?.slipImage ?? '').trim()));
+  // Only feed a non-expiring source to <img>. A data-URI slip never expires and
+  // can come straight from the list. A signed HTTPS URL (R2-backed) DOES expire,
+  // and the list caches `row.slipImage` — so it must never reach an <img>, or the
+  // stale token 401s. Render it only once we've fetched a fresh one.
+  const slipUrl = $derived.by(() => {
+    const listSlip = String(row?.slipImage ?? '').trim();
+    return listSlip.startsWith('data:') ? listSlip : decodeBase64Image(fetchedSlip);
+  });
   const hasSlip = $derived(!!slipUrl && !slipUrl.startsWith('SLIP_UPLOADED:'));
 
   interface ExtraVisitor {
@@ -521,7 +528,7 @@
         </section>
       {/if}
 
-      {#if canViewSlip && hasSlip}
+      {#if canViewSlip && (hasSlip || slipLoading)}
         <section class="flex flex-col gap-2">
           <div class="flex items-center gap-2">
             <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
