@@ -29,8 +29,6 @@
       slipLoading = false;
       return;
     }
-    const base = String(row?.slipImage ?? '').trim();
-    if (base && !base.startsWith('SLIP_UPLOADED:')) return;
     const ref = row?.ref;
     if (!ref) return;
     let cancelled = false;
@@ -53,7 +51,7 @@
   const isDone = $derived(mode === 'เสร็จสิ้น');
   const title = $derived(isDone ? 'ยืนยันการเสร็จสิ้น' : 'ยืนยันการชำระเงิน');
   const totalPersons = $derived(Number(row?.totalPersons) || (Number(row?.visitorCount) || 0) + 1);
-  const slipUrl = $derived(decodeBase64Image(String(row?.slipImage ?? '').trim() || fetchedSlip));
+  const slipUrl = $derived(decodeBase64Image(fetchedSlip || String(row?.slipImage ?? '').trim()));
   const hasSlip = $derived(!!slipUrl && !slipUrl.startsWith('SLIP_UPLOADED:'));
 
   function initials(name: string | undefined): string {

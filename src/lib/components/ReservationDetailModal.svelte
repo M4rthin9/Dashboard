@@ -88,8 +88,9 @@
       slipLoading = false;
       return;
     }
-    const base = String(row?.slipImage ?? '').trim();
-    if (base && !base.startsWith('SLIP_UPLOADED:')) return;
+    // Always ask the backend for a fresh, un-expired signed URL when the modal
+    // opens. The reservation list caches `row.slipImage`, and a URL fetched more
+    // than a few days ago carries an expired token that would 401 in the modal.
     const ref = row?.ref;
     if (!ref) return;
     let cancelled = false;
@@ -120,9 +121,7 @@
 
     const slipBase = String(row.slipImage ?? '').trim();
     const isSentinel = !slipBase || slipBase.startsWith('SLIP_UPLOADED:');
-    if (isSentinel && !fetchedSlip) return;
-
-    const imageRaw = slipBase && !isSentinel ? slipBase : fetchedSlip;
+    const imageRaw = fetchedSlip || (slipBase && !isSentinel ? slipBase : '');
     if (!imageRaw) return;
 
     slipVerifying = true;
@@ -170,7 +169,7 @@
     }
   });
 
-  const slipUrl = $derived(decodeBase64Image(String(row?.slipImage ?? '').trim() || fetchedSlip));
+  const slipUrl = $derived(decodeBase64Image(fetchedSlip || String(row?.slipImage ?? '').trim()));
   const hasSlip = $derived(!!slipUrl && !slipUrl.startsWith('SLIP_UPLOADED:'));
 
   interface ExtraVisitor {
