@@ -11,6 +11,7 @@
     Link2,
     QrCode,
     Settings,
+    Utensils,
   } from '@lucide/svelte';
   import { auth } from '../../store/auth.svelte';
   import { visibleMenu, roleLabel } from '../../utils/permissions';
@@ -27,6 +28,7 @@
     reservations: { path: '/reservations', label: 'ระบบจอง', icon: CalendarDays },
     reports: { path: '/reports', label: 'รายงาน', icon: BarChart3 },
     reports_overall: { path: '/reports/overall', label: 'รายงานการเงิน', icon: Wallet },
+    reports_tables: { path: '/reports/tables', label: 'รายงานโต๊ะ (TBL)', icon: Utensils },
     eventlog: { path: '/eventlog', label: 'บันทึกเหตุการณ์', icon: ClipboardList },
     users: { path: '/users', label: 'ผู้ใช้', icon: Users },
     prisoners: { path: '/prisoners', label: 'ผู้ต้องขัง', icon: UserRound },

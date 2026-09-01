@@ -20,11 +20,11 @@ export const PERMISSIONS: Record<Role, string[]> = {
 };
 
 export const SIDEBAR_MENU: Record<Role, string[]> = {
-  Superadmin: ['home', 'reservations', 'reports', 'reports_overall', 'eventlog', 'users', 'prisoners', 'connection', 'promptpay', 'settings'],
-  Admin: ['home', 'reservations', 'reports', 'reports_overall', 'eventlog', 'prisoners', 'connection'],
-  Finance: ['reservations', 'reports', 'reports_overall'],
-  Vinai: ['home', 'reservations', 'reports', 'reports_overall'],
-  Tadtel: ['home', 'reservations', 'reports', 'reports_overall'],
+  Superadmin: ['home', 'reservations', 'reports', 'reports_overall', 'reports_tables', 'eventlog', 'users', 'prisoners', 'connection', 'promptpay', 'settings'],
+  Admin: ['home', 'reservations', 'reports', 'reports_overall', 'reports_tables', 'eventlog', 'prisoners', 'connection'],
+  Finance: ['reservations', 'reports', 'reports_overall', 'reports_tables'],
+  Vinai: ['home', 'reservations', 'reports', 'reports_overall', 'reports_tables'],
+  Tadtel: ['home', 'reservations', 'reports', 'reports_overall', 'reports_tables'],
   User: ['home'],
 };
 

@@ -419,6 +419,69 @@ export function buildKitchenReport(rows: Reservation[], date: string): string {
   `;
 }
 
+/**
+ * Door-registration list for no-prisoner table (TBL) bookings. Each table party
+ * gets a row with a signature column, so staff at the gate can tick people off
+ * as they walk in. Only the booking-order rows shown — no prisoner column, since
+ * table bookings have no prisoner.
+ */
+export function buildTableRegistrationReport(rows: Reservation[], date: string): string {
+  const sorted = rows
+    .slice()
+    .sort((a, b) => String(a.ref || '').localeCompare(String(b.ref || '')));
+
+  const body = sorted
+    .map((r, i) => {
+      const extras = parseExtraVisitors(r).filter((e) => e.approved !== 'no');
+      const visitors = [String(r.visitorName ?? '—'), ...extras.map((e) => e.name ?? '')].filter(Boolean).join(', ');
+      const people = (Number(r.visitorCount) || 1) + extras.length;
+      return `
+      <tr>
+        <td style="text-align:center;">${i + 1}</td>
+        <td style="text-align:center;">${escapeHtml(r.ref)}</td>
+        <td style="text-align:center;">${escapeHtml(String(r.visitDateISO ?? '—'))}</td>
+        <td>${escapeHtml(visitors)}</td>
+        <td style="text-align:center;">${people}</td>
+        <td style="text-align:center;">${escapeHtml(normalizeStatus(r.status) ?? '—')}</td>
+        <td style="width:110px;"></td>
+      </tr>`;
+    })
+    .join('');
+
+  const totals = sorted.reduce(
+    (acc, r) => {
+      const extras = parseExtraVisitors(r).filter((e) => e.approved !== 'no');
+      acc.tables += 1;
+      acc.people += (Number(r.visitorCount) || 1) + extras.length;
+      acc.total += Number(r.total) || 0;
+      return acc;
+    },
+    { tables: 0, people: 0, total: 0 }
+  );
+
+  return `
+    <style>@page { size: landscape; margin: 10mm; }</style>
+    <div class="print-title">ทะเบียนจัดการโต๊ะ (ลงทะเบียนหน้าประตู) — วันที่ ${escapeHtml(thaiDateLabel(date))}</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:40px; text-align:center;">ลำดับ</th>
+          <th style="width:90px; text-align:center;">Ref</th>
+          <th style="width:110px; text-align:center;">วันที่</th>
+          <th>รายชื่อผู้ร่วมโต๊ะ</th>
+          <th style="width:55px; text-align:center;">จำนวนคน</th>
+          <th style="width:90px; text-align:center;">สถานะ</th>
+          <th style="width:110px; text-align:center;">ลงชื่อ (เจ้าหน้าที่)</th>
+        </tr>
+      </thead>
+      <tbody>${body || '<tr><td colspan="7" style="text-align:center;color:#888;">ไม่พบการจองโต๊ะในวันที่เลือก</td></tr>'}</tbody>
+    </table>
+    <div style="font-weight:600; font-size:12px; margin-top:6px;">
+      รวม ${formatNumber(totals.tables)} โต๊ะ · ${formatNumber(totals.people)} คน · ยอด ${formatNumber(totals.total)} บาท
+    </div>
+  `;
+}
+
 function thaiDateLabel(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
   if (isNaN(d.getTime())) return iso;
