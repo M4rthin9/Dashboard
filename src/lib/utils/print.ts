@@ -266,25 +266,14 @@ function paymentBoxClass(status: string): string {
   return 'payment-box';
 }
 
-export function buildSeatingReport(rows: Reservation[], filterLabel?: string): string {
-  let totalVisitors = 0;
-  let totalPrice = 0;
-  let paidTables = 0;
-  let paidAmount = 0;
-  rows.forEach((r) => {
-    totalVisitors += Number(r.visitorCount) || 1;
-    totalPrice += Number(r.total) || 0;
-    if (PAID_STATUSES.includes(normalizeStatus(r.status))) {
-      paidTables++;
-      paidAmount += Number(r.total) || 0;
-    }
-  });
-  const totalPrisoners = rows.length;
-  const totalPeople = totalVisitors + totalPrisoners;
-  const pendingAmount = totalPrice - paidAmount;
+function isTableBooking(r: Reservation): boolean {
+  return String(r.bookingType ?? '').trim() === 'table' || String(r.ref ?? '').toUpperCase().startsWith('TBL-');
+}
 
-  const blocks = rows
+function renderSeatingBlocks(rows: Reservation[], startIndex: number): string {
+  return rows
     .map((r, i) => {
+      const idx = startIndex + i;
       const extras = parseExtraVisitors(r);
       const visitorCount = Number(r.visitorCount) || 1;
       const totalPeopleThisTable = visitorCount + 1;
@@ -298,7 +287,7 @@ export function buildSeatingReport(rows: Reservation[], filterLabel?: string): s
       <div class="table-block">
         <div class="table-header">
           <div style="display:flex;align-items:center;">
-            <span class="table-num">โต๊ะ ${i + 1}</span>
+            <span class="table-num">โต๊ะ ${idx + 1}</span>
             <span class="table-ref">${escapeHtml(r.ref ?? '—')}</span>
           </div>
           <span class="status-pill" style="background:${statusColor};">${escapeHtml(status || '—')}</span>
@@ -348,30 +337,81 @@ export function buildSeatingReport(rows: Reservation[], filterLabel?: string): s
       </div>`;
     })
     .join('');
+}
+
+function renderSeatingSummary(rows: Reservation[], isPrisoner: boolean): string {
+  let totalVisitors = 0;
+  let totalPrice = 0;
+  let paidTables = 0;
+  let paidAmount = 0;
+  rows.forEach((r) => {
+    totalVisitors += Number(r.visitorCount) || 1;
+    totalPrice += Number(r.total) || 0;
+    if (PAID_STATUSES.includes(normalizeStatus(r.status))) {
+      paidTables++;
+      paidAmount += Number(r.total) || 0;
+    }
+  });
+  const totalPrisoners = isPrisoner ? rows.length : 0;
+  const totalPeople = totalVisitors + totalPrisoners;
+  const pendingAmount = totalPrice - paidAmount;
 
   return `
-    <style>${SEATING_REPORT_CSS}</style>
-    <div style="text-align:center; margin-bottom:20px;">
-      <h1 style="font-size:22px; margin:0 0 4px; font-weight:700; color:#312e81;">🪑 รายงานการจัดโต๊ะ</h1>
-      <h2 style="font-size:16px; margin:0 0 2px; font-weight:700; color:#1e1b4b;">ร้าน Chance &amp; Change Cafe · ทัณฑสถานบำบัดพิเศษกลาง</h2>
-      <div style="font-size:12px; color:#555;">เรียงตามเลขที่อ้างอิง · จำนวน ${rows.length} โต๊ะ</div>
-      ${filterLabel ? `<div class="report-meta">${escapeHtml(filterLabel)}</div>` : ''}
-    </div>
-    ${blocks}
     <div class="grand-summary">
       <div class="grand-box">
-        <div class="grand-title">📋 สรุปยอดรวมทั้งหมด</div>
+        <div class="grand-title">📋 สรุปยอดรวม</div>
         <div class="grand-item"><span class="g-label">จำนวนโต๊ะ</span><span class="g-number">${rows.length} โต๊ะ</span></div>
         <div class="grand-item"><span class="g-label">จำนวนผู้เยี่ยม</span><span class="g-number">${formatNumber(totalVisitors)} คน</span></div>
-        <div class="grand-item"><span class="g-label">จำนวนผู้ต้องขัง</span><span class="g-number">${formatNumber(totalPrisoners)} คน</span></div>
+        ${isPrisoner ? `<div class="grand-item"><span class="g-label">จำนวนผู้ต้องขัง</span><span class="g-number">${formatNumber(totalPrisoners)} คน</span></div>` : ''}
         <div class="grand-item"><span class="g-label">ชำระแล้ว</span><span class="g-number" style="color:#166534;">${paidTables}/${rows.length} โต๊ะ · ${formatNumber(paidAmount)} บาท</span></div>
         <div class="grand-item"><span class="g-label">ค้างชำระ</span><span class="g-number" style="color:#b91c1c;">${rows.length - paidTables}/${rows.length} โต๊ะ · ${formatNumber(pendingAmount)} บาท</span></div>
         <div class="grand-item"><span class="g-label">ยอดเงินรวม</span><span class="g-number">${formatNumber(totalPrice)} บาท</span></div>
         <div class="grand-total"><span class="g-label">รวมคนทั้งหมด</span><span class="g-number">${formatNumber(totalPeople)} คน</span></div>
       </div>
     </div>
-    <div class="page-footer">พิมพ์จากระบบ CC Cafe Reservation · ทัณฑสถานบำบัดพิเศษกลาง</div>
   `;
+}
+
+export function buildSeatingReport(rows: Reservation[], filterLabel?: string): string {
+  const prisoner = rows.filter((r) => !isTableBooking(r));
+  const table = rows.filter(isTableBooking);
+
+  const sectionHead = (title: string, sub: string): string => `
+    <div style="margin:18px 0 10px;padding:12px 16px;background:#312e81;color:#fff;border-radius:8px;">
+      <div style="font-size:16px;font-weight:700;">${title}</div>
+      <div style="font-size:12px;opacity:0.9;margin-top:2px;">${sub}</div>
+    </div>
+  `;
+
+  let html = `
+    <style>${SEATING_REPORT_CSS}</style>
+    <div style="text-align:center; margin-bottom:20px;">
+      <h1 style="font-size:22px; margin:0 0 4px; font-weight:700; color:#312e81;">🪑 รายงานการจัดโต๊ะ</h1>
+      <h2 style="font-size:16px; margin:0 0 2px; font-weight:700; color:#1e1b4b;">ร้าน Chance &amp; Change Cafe · ทัณฑสถานบำบัดพิเศษกลาง</h2>
+      <div style="font-size:12px; color:#555;">เรียงตามเลขที่อ้างอิง · รายงานแยกการจองผู้ต้องขัง และการจองโต๊ะ (TBL)</div>
+      ${filterLabel ? `<div class="report-meta">${escapeHtml(filterLabel)}</div>` : ''}
+    </div>
+  `;
+
+  if (prisoner.length > 0) {
+    html += sectionHead('1) การจองเยี่ยมผู้ต้องขัง', `${prisoner.length} โต๊ะ`);
+    html += renderSeatingBlocks(prisoner, 0);
+    html += renderSeatingSummary(prisoner, true);
+  }
+
+  if (table.length > 0) {
+    html += `<div style="page-break-before:always;"></div>`;
+    html += sectionHead('2) การจองโต๊ะ (TBL)', `${table.length} โต๊ะ`);
+    html += renderSeatingBlocks(table, prisoner.length);
+    html += renderSeatingSummary(table, false);
+  }
+
+  if (prisoner.length === 0 && table.length === 0) {
+    html += `<div style="text-align:center;color:#888;padding:40px 0;">ไม่มีข้อมูลการจอง</div>`;
+  }
+
+  html += `<div class="page-footer">พิมพ์จากระบบ CC Cafe Reservation · ทัณฑสถานบำบัดพิเศษกลาง</div>`;
+  return html;
 }
 
 const KITCHEN_TICKET_CSS = `
