@@ -483,7 +483,7 @@ export function buildTableRegistrationReport(rows: Reservation[], date: string):
       const extras = parseExtraVisitors(r).filter((e) => e.approved !== 'no');
       const visitors = [visitorLine(String(r.visitorName ?? ''), r.visitorId)];
       for (const e of extras) visitors.push(visitorLine(e.name, e.id));
-      const people = (Number(r.visitorCount) || 1) + extras.length;
+      const people = Number(r.visitorCount) || 1 + extras.length;
       return `
       <tr>
         <td style="text-align:center;">${i + 1}</td>
@@ -501,7 +501,7 @@ export function buildTableRegistrationReport(rows: Reservation[], date: string):
     (acc, r) => {
       const extras = parseExtraVisitors(r).filter((e) => e.approved !== 'no');
       acc.tables += 1;
-      acc.people += (Number(r.visitorCount) || 1) + extras.length;
+      acc.people += Number(r.visitorCount) || 1 + extras.length;
       acc.total += Number(r.total) || 0;
       return acc;
     },
