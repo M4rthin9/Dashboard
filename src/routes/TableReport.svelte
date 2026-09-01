@@ -51,6 +51,7 @@
     tableRows.filter((r) => {
       if (!r.ref || String(r.ref).trim() === '') return false;
       if (r._archived && !reservations.includeArchive) return false;
+      if (normalizeStatus(r.status) !== 'เสร็จสิ้น') return false;
       return String(r.visitDateISO ?? '').trim() === printDate;
     })
   );
@@ -139,7 +140,7 @@
         </button>
       </div>
       <p class="mt-3 text-xs text-slate-400 dark:text-slate-500">
-        พิมพ์จากรายการจองโต๊ะ (Ref ขึ้นต้น TBL-) ในวันที่เลือก · เหมาะสำหรับจัดการผู้ลงทะเบียนที่หน้าประตูโดยแยกจากการจองผู้ต้องขัง
+        พิมพ์ทะเบียนโต๊ะจากรายการสถานะ <strong>เสร็จสิ้น</strong> ในวันที่เลือกเท่านั้น (Ref ขึ้นต้น TBL-) · เหมาะสำหรับจัดการผู้ลงทะเบียนที่หน้าประตูโดยแยกจากการจองผู้ต้องขัง
       </p>
     </Card>
 

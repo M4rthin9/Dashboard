@@ -15,8 +15,12 @@
     computeRevenueSummary, computeStatusDistribution, computeWingCounts,
     computeDailyRevenue, computeMonthlyRevenue, computeVisitorTypes,
   } from '../lib/utils/dashboard';
-  import { openPrintWindow, buildDisciplinaryReport, buildGateRegistrationReport, buildKitchenReport } from '../lib/utils/print';
+  import { openPrintWindow, buildDisciplinaryReport, buildGateRegistrationReport, buildKitchenReport, buildTableRegistrationReport } from '../lib/utils/print';
   import type { Reservation } from '../lib/api/types';
+
+  function isTable(r: Reservation): boolean {
+    return String(r.bookingType ?? '').trim() === 'table' || String(r.ref ?? '').toUpperCase().startsWith('TBL-');
+  }
 
   let from = $state(todayISO());
   let to = $state(todayISO());
@@ -103,6 +107,17 @@
       if (!r.ref || String(r.ref).trim() === '') return false;
       if (r._archived && !reservations.includeArchive) return false;
       if (normalizeStatus(r.status) !== 'เสร็จสิ้น') return false;
+      if (isTable(r)) return false;
+      return String(r.visitDateISO ?? '').trim() === reportDate;
+    });
+  });
+
+  const tableDayRows = $derived.by(() => {
+    return reservations.rows.filter((r) => {
+      if (!r.ref || String(r.ref).trim() === '') return false;
+      if (r._archived && !reservations.includeArchive) return false;
+      if (normalizeStatus(r.status) !== 'เสร็จสิ้น') return false;
+      if (!isTable(r)) return false;
       return String(r.visitDateISO ?? '').trim() === reportDate;
     });
   });
@@ -155,6 +170,17 @@
       icon: Utensils,
       build: buildKitchenReport,
     },
+    {
+      id: 'table',
+      title: 'ทะเบียนจัดการโต๊ะ (TBL)',
+      desc: 'รายชื่อผู้ร่วมโต๊ะและช่องลงชื่อเจ้าหน้าที่',
+      note: 'แยกจากการจองผู้ต้องขัง · รวมเฉพาะสถานะ เสร็จสิ้น',
+      copies: 'พิมพ์ 1 ชุด',
+      accent: 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300',
+      btn: 'bg-orange-700 hover:bg-orange-800',
+      icon: Utensils,
+      build: buildTableRegistrationReport,
+    },
   ];
 
   const printDaySummary = $derived.by(() => {
@@ -164,11 +190,16 @@
       visitors += Number(r.visitorCount) || 0;
       revenue += Number(r.total) || 0;
     }
-    return { tables: dayRows.length, visitors, prisoners: dayRows.length, revenue };
+    for (const r of tableDayRows) {
+      visitors += Number(r.visitorCount) || 0;
+      revenue += Number(r.total) || 0;
+    }
+    return { tables: dayRows.length + tableDayRows.length, visitors, prisoners: dayRows.length, revenue };
   });
 
   function doPrint(report: PrintReportDef): void {
-    const rows = dayRows.slice().sort((a, b) => String(a.ref).localeCompare(String(b.ref)));
+    const source = report.id === 'table' ? tableDayRows : dayRows;
+    const rows = source.slice().sort((a, b) => String(a.ref).localeCompare(String(b.ref)));
     if (rows.length === 0) {
       ui.showAlert({ title: 'ไม่มีข้อมูล', message: 'ไม่มีรายการสถานะ เสร็จสิ้น ในวันที่เลือก', type: 'warning' });
       return;

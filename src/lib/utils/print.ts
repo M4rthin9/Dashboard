@@ -123,19 +123,27 @@ export function buildDisciplinaryReport(rows: Reservation[], date: string): stri
   `;
 }
 
+/** Render one visitor (main or extra) with their citizen ID when provided. */
+function visitorLine(name: string, id?: string): string {
+  const n = escapeHtml(String(name ?? '').trim() || '—');
+  const i = escapeHtml(String(id ?? '').trim());
+  return i ? `${n} <span style="color:#444;white-space:nowrap;">· เลขบัตร ${i}</span>` : n;
+}
+
 export function buildGateRegistrationReport(rows: Reservation[], date: string): string {
   const body = rows
     .map((r, i) => {
-      const mainName = String(r.visitorName ?? '—');
       const extras = parseExtraVisitors(r).filter((e) => e.approved !== 'no');
-      const visitors = [mainName, ...extras.map((e) => e.name)].join(', ');
+      const people = [visitorLine(String(r.visitorName ?? ''), r.visitorId)];
+      for (const e of extras) people.push(visitorLine(e.name, e.id));
+      const visitors = people.join('<br>');
       const count = (Number(r.visitorCount) || 1) + 1;
       return `
       <tr>
         <td style="text-align:center;">${i + 1}</td>
         <td style="text-align:center;">${escapeHtml(r.ref)}</td>
         <td></td>
-        <td>${escapeHtml(visitors)}</td>
+        <td>${visitors}</td>
         <td><strong>น.ช. ${escapeHtml(r.prisonerName ?? '—')}</strong></td>
         <td>${escapeHtml(r.wing ?? '—')}</td>
         <td>${escapeHtml(r.relation ?? '—')}</td>
@@ -305,7 +313,7 @@ export function buildSeatingReport(rows: Reservation[], filterLabel?: string): s
           </div>
           <div class="info-section visitor">
             <div class="section-title">👤 ผู้เยี่ยมหลัก</div>
-            <div class="info-line"><b>${escapeHtml(r.visitorName ?? '—')}</b></div>
+            <div class="info-line"><b>${escapeHtml(r.visitorName ?? '—')}</b>${r.visitorId ? `<span style="color:#555;"> · เลขบัตร ${escapeHtml(r.visitorId)}</span>` : ''}</div>
             <div class="info-line contact-line">📞 ${escapeHtml(r.visitorPhone ?? '—')}</div>
             <div class="info-line">ความสัมพันธ์: ${escapeHtml(r.relation ?? '—')}</div>
             <div class="info-line">ศาสนา: ${escapeHtml(r.religion ?? '—')}</div>
@@ -317,7 +325,7 @@ export function buildSeatingReport(rows: Reservation[], filterLabel?: string): s
                 <div class="extra-title">👥 ผู้เยี่ยมเพิ่มเติม (${shownExtras.length} คน)</div>
                 ${shownExtras
                   .map(
-                    (e) => `<div class="extra-item">${escapeHtml(e.name ?? '—')} · ${escapeHtml(e.relation ?? '—')}${e.id ? ' · บัตร ' + escapeHtml(e.id) : ''}${e.approved !== 'yes' ? '<span class="pending-tag">(รออนุมัติ)</span>' : ''}</div>`
+                    (e) => `<div class="extra-item">${escapeHtml(e.name ?? '—')}${e.id ? ' · เลขบัตร ' + escapeHtml(e.id) : ''} · ${escapeHtml(e.relation ?? '—')}${e.approved !== 'yes' ? '<span class="pending-tag">(รออนุมัติ)</span>' : ''}</div>`
                   )
                   .join('')}
               </div>`
@@ -433,14 +441,15 @@ export function buildTableRegistrationReport(rows: Reservation[], date: string):
   const body = sorted
     .map((r, i) => {
       const extras = parseExtraVisitors(r).filter((e) => e.approved !== 'no');
-      const visitors = [String(r.visitorName ?? '—'), ...extras.map((e) => e.name ?? '')].filter(Boolean).join(', ');
+      const visitors = [visitorLine(String(r.visitorName ?? ''), r.visitorId)];
+      for (const e of extras) visitors.push(visitorLine(e.name, e.id));
       const people = (Number(r.visitorCount) || 1) + extras.length;
       return `
       <tr>
         <td style="text-align:center;">${i + 1}</td>
         <td style="text-align:center;">${escapeHtml(r.ref)}</td>
         <td style="text-align:center;">${escapeHtml(String(r.visitDateISO ?? '—'))}</td>
-        <td>${escapeHtml(visitors)}</td>
+        <td>${visitors.join('<br>')}</td>
         <td style="text-align:center;">${people}</td>
         <td style="text-align:center;">${escapeHtml(normalizeStatus(r.status) ?? '—')}</td>
         <td style="width:110px;"></td>
