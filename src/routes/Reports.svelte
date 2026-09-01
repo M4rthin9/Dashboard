@@ -170,18 +170,28 @@
       icon: Utensils,
       build: buildKitchenReport,
     },
-    {
-      id: 'table',
-      title: 'ทะเบียนจัดการโต๊ะ (TBL)',
-      desc: 'รายชื่อผู้ร่วมโต๊ะและช่องลงชื่อเจ้าหน้าที่',
-      note: 'แยกจากการจองผู้ต้องขัง · รวมเฉพาะสถานะ เสร็จสิ้น',
-      copies: 'พิมพ์ 1 ชุด',
-      accent: 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300',
-      btn: 'bg-orange-700 hover:bg-orange-800',
-      icon: Utensils,
-      build: buildTableRegistrationReport,
-    },
   ];
+
+  const tablePrintSummary = $derived.by(() => {
+    let people = 0;
+    let revenue = 0;
+    for (const r of tableDayRows) {
+      people += Number(r.visitorCount) || 1;
+      revenue += Number(r.total) || 0;
+    }
+    return { tables: tableDayRows.length, people, revenue };
+  });
+
+  function doTablePrint(): void {
+    const rows = tableDayRows.slice().sort((a, b) => String(a.ref).localeCompare(String(b.ref)));
+    if (rows.length === 0) {
+      ui.showAlert({ title: 'ไม่มีข้อมูล', message: 'ไม่มีการจองโต๊ะ (TBL) สถานะ เสร็จสิ้น ในวันที่เลือก', type: 'warning' });
+      return;
+    }
+    const content = buildTableRegistrationReport(rows, reportDate);
+    const ok = openPrintWindow(content, 'ทะเบียนจัดการโต๊ะ (TBL)', printerName);
+    if (!ok) ui.showAlert({ title: 'กรุณาอนุญาต Popup', message: 'กรุณาอนุญาต Popup เพื่อเปิดหน้าพิมพ์', type: 'warning' });
+  }
 
   const printDaySummary = $derived.by(() => {
     let visitors = 0;
@@ -293,6 +303,33 @@
             </div>
           </div>
         {/each}
+      </div>
+    </Card>
+
+    <Card title="พิมพ์ทะเบียนจัดการโต๊ะ (TBL)" subtitle="พิมพ์เฉพาะการจองโต๊ะ (Ref ขึ้นต้น TBL-) แยกจากรายงานผู้ต้องขัง">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div class="flex flex-wrap gap-2">
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-orange-100 px-3 py-1.5 text-xs font-semibold text-orange-700 dark:bg-orange-950 dark:text-orange-300">
+            <Utensils class="h-3.5 w-3.5" /> โต๊ะ {formatNumber(tablePrintSummary.tables)}
+          </span>
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+            <Users class="h-3.5 w-3.5" /> ผู้ร่วมโต๊ะ {formatNumber(tablePrintSummary.people)}
+          </span>
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+            <Coins class="h-3.5 w-3.5" /> {formatBaht(tablePrintSummary.revenue)}
+          </span>
+        </div>
+        <button
+          class="inline-flex items-center gap-1.5 rounded-xl bg-orange-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-700"
+          onclick={doTablePrint}
+        >
+          <Printer class="h-4 w-4" />
+          พิมพ์ทะเบียนโต๊ะ (TBL)
+        </button>
+      </div>
+      <div class="mt-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950/60 dark:text-amber-300">
+        <Info class="mt-0.5 h-4 w-4 shrink-0" />
+        <span>พิมพ์เฉพาะการจองโต๊ะ <strong>(TBL)</strong> สถานะ <strong>เสร็จสิ้น</strong> ในวันที่เลือกเท่านั้น</span>
       </div>
     </Card>
 
