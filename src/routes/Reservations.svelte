@@ -389,20 +389,22 @@
   }
 
   function doPrint(): void {
-    if (sorted.length === 0) {
-      ui.showAlert({ title: 'ไม่มีข้อมูล', message: 'ไม่มีข้อมูลตาม filter ที่เลือก', type: 'warning' });
+    const printRows = filtered.filter((r) => normalizeStatus(r.status) === 'เสร็จสิ้น');
+    if (printRows.length === 0) {
+      ui.showAlert({ title: 'ไม่มีข้อมูล', message: 'ไม่มีรายการสถานะ เสร็จสิ้น ตาม filter ที่เลือก', type: 'warning' });
       return;
     }
-    const rows = sorted.slice().sort((a, b) => String(a.ref).localeCompare(String(b.ref)));
+    const rows = printRows.slice().sort((a, b) => String(a.ref).localeCompare(String(b.ref)));
     const printerName = auth.user?.displayName || auth.user?.username || 'ไม่ระบุ';
     const filterParts: string[] = [];
     if (dateFilter) filterParts.push(`วันที่ ${visitDateLabel(dateFilter)}`);
-    if (statusFilter) filterParts.push(`สถานะ ${statusFilter}`);
+    else filterParts.push('ทุกวัน');
     if (wingFilter) filterParts.push(`แดน ${wingFilter}`);
     if (typeFilter) filterParts.push(`ประเภท ${typeFilter === 'table' ? 'จองโต๊ะ' : 'เยี่ยมผู้ต้องขัง'}`);
     if (search.trim()) filterParts.push(`ค้นหา "${search.trim()}"`);
+    filterParts.push('สถานะ เสร็จสิ้น');
     const filterLabel = filterParts.length > 0 ? `ตัวกรอง: ${filterParts.join(' · ')}` : undefined;
-    const ok = openPrintWindow(buildSeatingReport(rows, filterLabel), 'รายงานการจัดโต๊ะ', printerName);
+    const ok = openPrintWindow(buildSeatingReport(rows, filterLabel), 'รายงานการจัดโต๊ะ (เสร็จสิ้น)', printerName);
     if (!ok) ui.showAlert({ title: 'กรุณาอนุญาต Popup', message: 'กรุณาอนุญาต Popup เพื่อเปิดหน้าพิมพ์', type: 'warning' });
   }
 
@@ -679,8 +681,8 @@
           <button
             class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-3.5 py-2 text-sm text-slate-600 transition-colors duration-150 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
             onclick={doPrint}
-            disabled={sorted.length === 0}
-            title="พิมพ์รายงานการจัดโต๊ะตามตัวกรองปัจจุบัน"
+            disabled={!filtered.some((r) => normalizeStatus(r.status) === 'เสร็จสิ้น')}
+            title="พิมพ์รายงานการจัดโต๊ะเฉพาะสถานะ เสร็จสิ้น ตามวันที่ที่กรอง"
           >
             <Printer class="h-4 w-4" />
             พิมพ์รายงาน
