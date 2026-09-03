@@ -17,6 +17,8 @@
   let paymentEnabled = $state(true);
   let paymentClosedMessage = $state('');
   let paymentSaving = $state(false);
+  let tableMaintenance = $state(true);
+  let tableMaintenanceSaving = $state(false);
 
   const isManager = $derived(auth.user?.role === 'Superadmin' || auth.user?.role === 'Admin' || hasPermission(auth.user?.role ?? '', 'manage_users'));
 
@@ -35,6 +37,9 @@
       // Absent or malformed key means payment is OPEN — never strand payers.
       paymentEnabled = payment.enabled !== false;
       paymentClosedMessage = typeof payment.closedMessage === 'string' ? payment.closedMessage : '';
+      const tableBooking = (serverSettings.tableBooking ?? {}) as Record<string, unknown>;
+      // Absent means maintenance is ON — preserves current coming-soon behaviour.
+      tableMaintenance = tableBooking.maintenance !== false;
     } catch (err) {
       ui.showAlert({ title: 'ไม่สามารถโหลดตั้งค่าได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
     } finally {
@@ -92,6 +97,32 @@
       ui.showAlert({ title: 'เกิดข้อผิดพลาด', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
     } finally {
       paymentSaving = false;
+    }
+  }
+
+  /** Read-merge-write so the toggle never clobbers perDay/holdMinutes/seats etc
+   *  that share the same tableBooking key in the admin_settings blob. */
+  async function saveTableMaintenanceSwitch(next: boolean): Promise<void> {
+    tableMaintenanceSaving = true;
+    try {
+      const current = await getSettings();
+      const existingTb = (current.settings?.tableBooking ?? {}) as Record<string, unknown>;
+      const merged = {
+        ...(current.settings ?? {}),
+        tableBooking: { ...existingTb, maintenance: next },
+      };
+      const res = await saveSettings(merged as Record<string, unknown>);
+      if (res.status !== 'ok') {
+        ui.showAlert({ title: 'บันทึกไม่สำเร็จ', message: String(res.message ?? 'เกิดข้อผิดพลาด'), type: 'error' });
+        return;
+      }
+      tableMaintenance = next;
+      ui.showToast(next ? 'เปิดโหมดบำรุงรักษาจองโต๊ะแล้ว' : 'ปิดโหมดบำรุงรักษา เปิดหน้าจองโต๊ะแล้ว', 'success');
+      await fetchSettings();
+    } catch (err) {
+      ui.showAlert({ title: 'เกิดข้อผิดพลาด', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
+    } finally {
+      tableMaintenanceSaving = false;
     }
   }
 
@@ -185,6 +216,32 @@
               </button>
             </div>
           </div>
+        </div>
+      {/if}
+    </Card>
+
+    <Card title="การจองโต๊ะ" subtitle="เปิด/ปิดโหมดบำรุงรักษาของหน้าการจองโต๊ะบนเว็บจอง">
+      {#if loading}
+        <div class="flex items-center justify-center py-10"><Spinner /></div>
+      {:else}
+        <div class="flex items-center justify-between gap-4 rounded-xl border p-4 {tableMaintenance ? 'border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30' : 'border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30'}">
+          <div>
+            <p class="text-sm font-semibold {tableMaintenance ? 'text-amber-700 dark:text-amber-300' : 'text-green-700 dark:text-green-300'}">
+              {tableMaintenance ? 'เปิดโหมดบำรุงรักษา (อยู่ระหว่างพัฒนา)' : 'ปิดโหมดบำรุงรักษา'}
+            </p>
+            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              {tableMaintenance
+                ? 'เมื่อเข้าหน้าการจองโต๊ะ ผู้เข้าร่วมจะเห็น popup แจ้งว่าบริการอยู่ระหว่างพัฒนา/บำรุงรักษา แล้วกลับไปหน้าหลัก'
+                : 'ปิด popup เตือน ผู้เข้าร่วมจะเข้าสู่แบบฟอร์มการจองโต๊ะได้ตามปกติ'}
+            </p>
+          </div>
+          <button
+            class="shrink-0 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 disabled:opacity-50 {tableMaintenance ? 'bg-green-600 hover:bg-green-700' : 'bg-amber-600 hover:bg-amber-700'}"
+            onclick={() => void saveTableMaintenanceSwitch(!tableMaintenance)}
+            disabled={tableMaintenanceSaving}
+          >
+            {tableMaintenanceSaving ? 'กำลังบันทึก...' : tableMaintenance ? 'ปิดโหมดบำรุงรักษา' : 'เปิดโหมดบำรุงรักษา'}
+          </button>
         </div>
       {/if}
     </Card>
