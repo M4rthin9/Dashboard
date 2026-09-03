@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Printer, RefreshCw, Wallet } from '@lucide/svelte';
+  import { Printer, RefreshCw, Users, Utensils, Wallet } from '@lucide/svelte';
+  import type { ReportType } from '../lib/utils/print';
   import Card from '../lib/components/ui/Card.svelte';
   import Spinner from '../lib/components/ui/Spinner.svelte';
   import Button from '../lib/components/ui/Button.svelte';
@@ -27,9 +28,14 @@
   let error = $state('');
   let fromMonth = $state(currentMonthISO());
   let toMonth = $state(currentMonthISO());
+  let reportType = $state<ReportType>('all');
 
   const fromISO = $derived(`${fromMonth}-01`);
   const toISO = $derived(lastDayISO(toMonth));
+
+  function isTable(r: Reservation): boolean {
+    return String(r.bookingType ?? '').trim() === 'table' || String(r.ref ?? '').toUpperCase().startsWith('TBL-');
+  }
 
   const inPeriod = $derived.by(() => {
     const from = fromMonth;
@@ -41,9 +47,26 @@
     });
   });
 
-  const summary = $derived(computeFinancialSummary(inPeriod));
-  const daily = $derived(buildDailyFinancialReport(inPeriod, fromISO, toISO));
-  const monthly = $derived(buildMonthlyFinancialReport(inPeriod, fromMonth, toMonth));
+  const visPeriod = $derived(inPeriod.filter((r) => !isTable(r)));
+  const tblPeriod = $derived(inPeriod.filter(isTable));
+
+  const summary = $derived(
+    reportType === 'vis' ? computeFinancialSummary(visPeriod) : reportType === 'tbl' ? computeFinancialSummary(tblPeriod) : computeFinancialSummary(inPeriod)
+  );
+  const daily = $derived(
+    reportType === 'vis'
+      ? buildDailyFinancialReport(visPeriod, fromISO, toISO)
+      : reportType === 'tbl'
+        ? buildDailyFinancialReport(tblPeriod, fromISO, toISO)
+        : buildDailyFinancialReport(inPeriod, fromISO, toISO)
+  );
+  const monthly = $derived(
+    reportType === 'vis'
+      ? buildMonthlyFinancialReport(visPeriod, fromMonth, toMonth)
+      : reportType === 'tbl'
+        ? buildMonthlyFinancialReport(tblPeriod, fromMonth, toMonth)
+        : buildMonthlyFinancialReport(inPeriod, fromMonth, toMonth)
+  );
   const periodLabel = $derived(`${monthLabel(fromMonth)} – ${monthLabel(toMonth)}`);
   const printerName = $derived(auth.user?.displayName || auth.user?.username || 'ไม่ระบุ');
 
@@ -99,13 +122,21 @@
     setRange(months[0], months[months.length - 1]);
   }
 
-  function doPrint(): void {
-    if (inPeriod.length === 0) {
-      ui.showAlert({ title: 'ไม่มีข้อมูล', message: 'ไม่มีข้อมูลในช่วงเดือนที่เลือก', type: 'warning' });
+  function doPrint(type: ReportType = reportType): void {
+    const source = type === 'vis' ? visPeriod : type === 'tbl' ? tblPeriod : inPeriod;
+    if (source.length === 0) {
+      const label =
+        type === 'vis' ? 'การจองเยี่ยม (VIS)' : type === 'tbl' ? 'การจองโต๊ะ (TBL)' : 'ข้อมูลในช่วงเดือนที่เลือก';
+      ui.showAlert({ title: 'ไม่มีข้อมูล', message: `ไม่มี${label}ในช่วงเดือนที่เลือก`, type: 'warning' });
       return;
     }
-    const content = buildFinancialReport(summary, daily, monthly, periodLabel);
-    const ok = openPrintWindow(content, 'รายงานสรุปการเงินภาพรวม', printerName);
+    const sum = computeFinancialSummary(source);
+    const dly = buildDailyFinancialReport(source, fromISO, toISO);
+    const mly = buildMonthlyFinancialReport(source, fromMonth, toMonth);
+    const content = buildFinancialReport(sum, dly, mly, periodLabel, type);
+    const title =
+      type === 'vis' ? 'รายงานสรุปการดำเนินงาน (VIS)' : type === 'tbl' ? 'รายงานสรุปการดำเนินงาน (TBL)' : 'รายงานยอดรวมการเงิน';
+    const ok = openPrintWindow(content, title, printerName);
     if (!ok) ui.showAlert({ title: 'กรุณาอนุญาต Popup', message: 'กรุณาอนุญาต Popup เพื่อเปิดหน้าพิมพ์', type: 'warning' });
   }
 
@@ -117,16 +148,49 @@
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
       <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">รายงานการเงินภาพรวม</h2>
-      <p class="text-sm text-slate-500 dark:text-slate-400">รวมข้อมูลจากตาราง reservation และ archive_reservation</p>
+      <p class="text-sm text-slate-500 dark:text-slate-400">
+        {reportType === 'vis' ? 'เฉพาะการจองเยี่ยมผู้ต้องขัง (VIS)' : reportType === 'tbl' ? 'เฉพาะการจองโต๊ะ (TBL)' : 'รวมการจองเยี่ยม (VIS) และการจองโต๊ะ (TBL)'} · จากตาราง reservation และ archive_reservation
+      </p>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
       <Button variant="outline" onclick={() => load()}>
         <RefreshCw class="h-4 w-4" />
         โหลดใหม่
       </Button>
-      <Button variant="success" onclick={doPrint}>
+      <div class="flex items-center gap-1 rounded-xl border border-slate-300 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-800">
+        <button
+          type="button"
+          class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors {reportType === 'all' ? 'bg-blue-700 text-white' : 'text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700'}"
+          onclick={() => (reportType = 'all')}
+        >
+          ทั้งหมด
+        </button>
+        <button
+          type="button"
+          class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors {reportType === 'vis' ? 'bg-blue-700 text-white' : 'text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700'}"
+          onclick={() => (reportType = 'vis')}
+        >
+          <Users class="h-3.5 w-3.5" /> เยี่ยม (VIS)
+        </button>
+        <button
+          type="button"
+          class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors {reportType === 'tbl' ? 'bg-blue-700 text-white' : 'text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700'}"
+          onclick={() => (reportType = 'tbl')}
+        >
+          <Utensils class="h-3.5 w-3.5" /> โต๊ะ (TBL)
+        </button>
+      </div>
+      <Button variant="success" onclick={() => doPrint('vis')} disabled={visPeriod.length === 0}>
         <Printer class="h-4 w-4" />
-        พิมพ์รายงานการเงิน
+        พิมพ์รายงาน (VIS)
+      </Button>
+      <Button variant="success" onclick={() => doPrint('tbl')} disabled={tblPeriod.length === 0}>
+        <Printer class="h-4 w-4" />
+        พิมพ์รายงาน (TBL)
+      </Button>
+      <Button variant="success" onclick={() => doPrint('all')}>
+        <Printer class="h-4 w-4" />
+        พิมพ์รายงานทั้งหมด
       </Button>
     </div>
   </div>

@@ -537,13 +537,32 @@ function thaiDateLabel(iso: string): string {
   return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
+export type ReportType = 'all' | 'vis' | 'tbl';
+
+const REPORT_TYPE_TITLES: Record<ReportType, { title: string; subtitle: string }> = {
+  all: {
+    title: 'รายงานสรุปผลการดำเนินงานด้านการเงิน (ภาพรวม)',
+    subtitle: 'ร้าน Chance &amp; Change Cafe · ทัณฑสถานบำบัดพิเศษกลาง · รวมการจองเยี่ยมผู้ต้องขัง (VIS) และการจองโต๊ะ (TBL)',
+  },
+  vis: {
+    title: 'รายงานสรุปการดำเนินงาน (VIS)',
+    subtitle: 'ร้าน Chance &amp; Change Cafe · ทัณฑสถานบำบัดพิเศษกลาง · เฉพาะการจองเยี่ยมผู้ต้องขัง (Ref ขึ้นต้น VIS-)',
+  },
+  tbl: {
+    title: 'รายงานสรุปการดำเนินงาน (TBL)',
+    subtitle: 'ร้าน Chance &amp; Change Cafe · ทัณฑสถานบำบัดพิเศษกลาง · เฉพาะการจองโต๊ะ (Ref ขึ้นต้น TBL-)',
+  },
+};
+
 export function buildFinancialReport(
   summary: FinancialSummary,
   daily: FinancialDayRow[],
   monthly: FinancialMonthRow[],
-  periodLabel: string
+  periodLabel: string,
+  type: ReportType = 'all'
 ): string {
   const fmt = (n: number): string => formatNumber(n);
+  const meta = REPORT_TYPE_TITLES[type];
 
   const dailyRows = daily
     .filter((d) => d.bookings > 0 || d.attended > 0)
@@ -597,8 +616,8 @@ export function buildFinancialReport(
 
   return `
     <div style="text-align:center; border-bottom:2px solid #1a1a1a; padding-bottom:10px; margin-bottom:14px;">
-      <div style="font-size:15px; font-weight:700;">รายงานสรุปผลการดำเนินงานด้านการเงิน</div>
-      <div style="font-size:13px; font-weight:600; margin-top:2px;">ร้าน Chance &amp; Change Cafe · ทัณฑสถานบำบัดพิเศษกลาง</div>
+      <div style="font-size:15px; font-weight:700;">${meta.title}</div>
+      <div style="font-size:13px; font-weight:600; margin-top:2px;">${meta.subtitle}</div>
       <div style="font-size:11px; color:#555; margin-top:4px;">ช่วงเวลารายงาน: ${escapeHtml(periodLabel)} &nbsp;|&nbsp; จัดทำเมื่อวันที่ ${escapeHtml(issuedLabel)}</div>
     </div>
 
