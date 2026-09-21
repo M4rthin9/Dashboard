@@ -43,7 +43,7 @@
   let editing = $state<Prisoner | null>(null);
   let editOpen = $state(false);
 
-  const isManager = $derived(auth.user?.role === 'Superadmin' || auth.user?.role === 'Admin' || hasPermission(auth.user?.role ?? '', 'manage_users'));
+  const isManager = $derived(hasPermission(auth.user?.role ?? '', 'manage_prisoners'));
 
   const wings = $derived([...new Set(rows.map((r) => r.wing).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'th')));
 

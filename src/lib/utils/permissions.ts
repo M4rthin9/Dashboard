@@ -5,7 +5,7 @@ export const PERMISSIONS: Record<Role, string[]> = {
     'approve', 'reject', 'approve_discipline', 'reject_discipline',
     'approve_participant', 'confirm_payment', 'reject_payment',
     'cancel', 'visitor_approval', 'view_slip', 'view_detail',
-    'export', 'print', 'manage_users', 'manage_settings', 'view_eventlog',
+    'export', 'print', 'manage_users', 'manage_prisoners', 'manage_settings', 'view_eventlog',
   ],
   Admin: [
     'approve', 'reject', 'approve_discipline', 'reject_discipline',
@@ -14,7 +14,7 @@ export const PERMISSIONS: Record<Role, string[]> = {
     'export', 'print', 'view_eventlog',
   ],
   Finance: ['confirm_payment', 'reject_payment', 'cancel', 'view_slip', 'view_detail'],
-  Vinai: ['approve_discipline', 'reject_discipline', 'view_slip', 'view_detail'],
+  Vinai: ['approve_discipline', 'reject_discipline', 'manage_prisoners', 'view_slip', 'view_detail'],
   Tadtel: ['approve_participant', 'visitor_approval', 'view_slip', 'view_detail'],
   User: ['print'],
 };
@@ -23,7 +23,7 @@ export const SIDEBAR_MENU: Record<Role, string[]> = {
   Superadmin: ['home', 'reservations', 'reports', 'reports_overall', 'reports_tables', 'eventlog', 'users', 'prisoners', 'connection', 'promptpay', 'settings'],
   Admin: ['home', 'reservations', 'reports', 'reports_overall', 'reports_tables', 'eventlog', 'prisoners', 'connection'],
   Finance: ['reservations', 'reports', 'reports_overall', 'reports_tables'],
-  Vinai: ['home', 'reservations', 'reports', 'reports_overall', 'reports_tables'],
+  Vinai: ['home', 'reservations', 'reports', 'reports_overall', 'reports_tables', 'prisoners'],
   Tadtel: ['home', 'reservations', 'reports', 'reports_overall', 'reports_tables'],
   User: ['home'],
 };
