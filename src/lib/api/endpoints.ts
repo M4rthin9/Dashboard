@@ -211,6 +211,11 @@ export function generatePromptPayQr(params: Partial<PromptPayQrParams> = {}): Pr
   return callGet<PromptPayQrResponse>('/api/promptpay/qr', params);
 }
 
+/** Superadmin: run the archive sweep now instead of waiting for the nightly cron. */
+export function archiveOldReservations(): Promise<ApiResult & { archived?: number; remaining?: number; cutoff?: string }> {
+  return callAction('archiveOldReservations', {}, { auth: true });
+}
+
 export function getSettings(): Promise<ApiResult & { settings?: Record<string, unknown> }> {
   return callAction('getSettings', {}, { auth: true });
 }

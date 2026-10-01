@@ -6,7 +6,7 @@
   import { API_BASE, auth } from '../lib/store/auth.svelte';
   import { ui } from '../lib/store/ui.svelte';
   import { hasPermission } from '../lib/utils/permissions';
-  import { getSettings, saveSettings } from '../lib/api/endpoints';
+  import { archiveOldReservations, getSettings, saveSettings } from '../lib/api/endpoints';
   import BookingWindowCard from '../lib/components/settings/BookingWindowCard.svelte';
   import PromoCard from '../lib/components/settings/PromoCard.svelte';
   import PdpaCard from '../lib/components/settings/PdpaCard.svelte';
@@ -22,6 +22,7 @@
   let paymentSaving = $state(false);
   let tableMaintenance = $state(true);
   let tableMaintenanceSaving = $state(false);
+  let archiving = $state(false);
 
   const isManager = $derived(auth.user?.role === 'Superadmin' || auth.user?.role === 'Admin' || hasPermission(auth.user?.role ?? '', 'manage_users'));
 
@@ -126,6 +127,19 @@
       ui.showAlert({ title: 'เกิดข้อผิดพลาด', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
     } finally {
       tableMaintenanceSaving = false;
+    }
+  }
+
+  async function runArchive(): Promise<void> {
+    if (!confirm('ย้ายการจองที่วันเข้าเยี่ยมเก่ากว่ากำหนดเข้าคลังข้อมูลตอนนี้? (ดูย้อนหลังได้จากปุ่ม "รวมย้อนหลัง" ในหน้าระบบจอง)')) return;
+    archiving = true;
+    try {
+      const res = await archiveOldReservations();
+      ui.showAlert({ title: 'ย้ายเข้าคลังข้อมูลแล้ว', message: String(res.message ?? `ย้ายแล้ว ${res.archived ?? 0} รายการ`), type: 'success' });
+    } catch (err) {
+      ui.showAlert({ title: 'ย้ายเข้าคลังไม่สำเร็จ', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
+    } finally {
+      archiving = false;
     }
   }
 
@@ -256,6 +270,24 @@
     <PromoCard onSaved={() => void fetchSettings()} />
 
     <PdpaCard onSaved={() => void fetchSettings()} />
+
+    {#if auth.user?.role === 'Superadmin'}
+      <Card title="คลังข้อมูลการจอง" subtitle="ระบบย้ายการจองเก่าเข้าคลังอัตโนมัติทุกเที่ยงคืน — กดเพื่อย้ายทันที">
+        <div class="flex items-center justify-between gap-4">
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            หน้าระบบจองแสดงเฉพาะการจองตั้งแต่ 1 ต.ค. 2569 เป็นต้นไป · การจองที่ย้ายแล้วยังดูได้จากปุ่ม "รวมย้อนหลัง" และรายงานการเงิน
+          </p>
+          <button
+            type="button"
+            class="shrink-0 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition-colors duration-150 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+            onclick={() => void runArchive()}
+            disabled={archiving}
+          >
+            {archiving ? 'กำลังย้าย...' : 'ย้ายเข้าคลังตอนนี้'}
+          </button>
+        </div>
+      </Card>
+    {/if}
 
     <Card title="ตั้งค่าผู้ดูแลระบบ" subtitle="ข้อมูล JSON ที่บันทึกบนเซิร์ฟเวอร์ (admin_settings)">
       {#if loading}
