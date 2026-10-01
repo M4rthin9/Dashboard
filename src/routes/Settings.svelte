@@ -7,6 +7,8 @@
   import { ui } from '../lib/store/ui.svelte';
   import { hasPermission } from '../lib/utils/permissions';
   import { getSettings, saveSettings } from '../lib/api/endpoints';
+  import BookingWindowCard from '../lib/components/settings/BookingWindowCard.svelte';
+  import PromoCard from '../lib/components/settings/PromoCard.svelte';
 
   let serverSettings = $state<Record<string, unknown>>({});
   let settingsText = $state('');
@@ -245,6 +247,12 @@
         </div>
       {/if}
     </Card>
+
+    <!-- Both cards write admin_settings, so the raw JSON below must reload after
+         them or a later raw save would put the stale copy back. -->
+    <BookingWindowCard onSaved={() => void fetchSettings()} />
+
+    <PromoCard onSaved={() => void fetchSettings()} />
 
     <Card title="ตั้งค่าผู้ดูแลระบบ" subtitle="ข้อมูล JSON ที่บันทึกบนเซิร์ฟเวอร์ (admin_settings)">
       {#if loading}

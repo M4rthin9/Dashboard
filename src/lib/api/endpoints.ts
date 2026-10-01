@@ -1,4 +1,4 @@
-import { callAction, callGet } from './client';
+import { API_BASE, callAction, callGet } from './client';
 import type {
   ApiResult,
   EventLog,
@@ -217,4 +217,18 @@ export function getSettings(): Promise<ApiResult & { settings?: Record<string, u
 
 export function saveSettings(settings: Record<string, unknown>): Promise<ApiResult> {
   return callAction('saveSettings', { settings }, { auth: true });
+}
+
+/** Store one home-page advert image (data URI) in R2; the id then goes into `promo.ads`. */
+export function uploadPromoImage(image: string): Promise<ApiResult & { id?: string; url?: string }> {
+  return callAction('uploadPromoImage', { image }, { auth: true });
+}
+
+/** Drop an advert image. The server refuses while `promo.ads` still lists it. */
+export function deletePromoImage(id: string): Promise<ApiResult> {
+  return callAction('deletePromoImage', { id }, { auth: true });
+}
+
+export function promoImageUrl(id: string): string {
+  return `${API_BASE}/api/promo/image?id=${encodeURIComponent(id)}`;
 }
