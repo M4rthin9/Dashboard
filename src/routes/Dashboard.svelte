@@ -59,9 +59,12 @@
   const funnel = $derived(computeFunnel(rows));
   const visitorTypes = $derived(computeVisitorTypes(rows));
   const dailyRevenue = $derived(computeDailyRevenue(rows));
-  const alerts = $derived(computeAlerts(rows));
-  const paymentQueue = $derived(computePaymentQueue(rows));
-  const todaysVisits = $derived(computeTodaysVisits(rows));
+  // Charts above cover history (archive included); these are work to act on
+  // now, and an archived booking is never actionable.
+  const liveRows = $derived(rows.filter((r) => !r._archived));
+  const alerts = $derived(computeAlerts(liveRows));
+  const paymentQueue = $derived(computePaymentQueue(liveRows));
+  const todaysVisits = $derived(computeTodaysVisits(liveRows));
 
   const statusFilterCards = $derived.by(() => {
     const defs = [

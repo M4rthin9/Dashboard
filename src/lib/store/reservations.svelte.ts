@@ -19,7 +19,9 @@ class ReservationsStore {
   loading = $state(false);
   error = $state('');
   loadedAt = $state<number | null>(null);
-  includeArchive = $state(false);
+  /** On by default: the live table only holds the current window, so archived
+   *  bookings must be visible without hunting for the toggle. */
+  includeArchive = $state(true);
 
   private inFlight: Promise<void> | null = null;
 
@@ -91,7 +93,9 @@ class ReservationsStore {
       const raw = localStorage.getItem(CACHE_KEY);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed.rows)) return parsed;
+      // A list cached in the other mode (or before the flag existed) is the
+      // wrong list — refetch rather than show it.
+      if (Array.isArray(parsed.rows) && parsed.archive === this.includeArchive) return parsed;
       return null;
     } catch {
       return null;
@@ -100,7 +104,7 @@ class ReservationsStore {
 
   private writeCache(): void {
     try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ rows: this.rows, t: Date.now() }));
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ rows: this.rows, t: Date.now(), archive: this.includeArchive }));
     } catch {
       // storage full or unavailable — ignore
     }
