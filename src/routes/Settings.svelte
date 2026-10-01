@@ -9,6 +9,7 @@
   import { getSettings, saveSettings } from '../lib/api/endpoints';
   import BookingWindowCard from '../lib/components/settings/BookingWindowCard.svelte';
   import PromoCard from '../lib/components/settings/PromoCard.svelte';
+  import PdpaCard from '../lib/components/settings/PdpaCard.svelte';
 
   let serverSettings = $state<Record<string, unknown>>({});
   let settingsText = $state('');
@@ -253,6 +254,8 @@
     <BookingWindowCard onSaved={() => void fetchSettings()} />
 
     <PromoCard onSaved={() => void fetchSettings()} />
+
+    <PdpaCard onSaved={() => void fetchSettings()} />
 
     <Card title="ตั้งค่าผู้ดูแลระบบ" subtitle="ข้อมูล JSON ที่บันทึกบนเซิร์ฟเวอร์ (admin_settings)">
       {#if loading}

@@ -229,6 +229,24 @@ export function deletePromoImage(id: string): Promise<ApiResult> {
   return callAction('deletePromoImage', { id }, { auth: true });
 }
 
+export interface CookieConsentEntry {
+  consentId: string;
+  policyVersion: string;
+  choice: 'accept_all' | 'reject_all' | 'custom' | string;
+  preferences: boolean;
+  analytics: boolean;
+  lang: string;
+  userAgent: string;
+  createdAt: string;
+}
+
+/** PDPA consent-log totals (by choice) and the latest decisions. */
+export function getCookieConsentStats(): Promise<
+  ApiResult & { last30Days?: Record<string, number>; allTime?: Record<string, number>; recent?: CookieConsentEntry[] }
+> {
+  return callAction('getCookieConsentStats', {}, { auth: true });
+}
+
 export function promoImageUrl(id: string): string {
   return `${API_BASE}/api/promo/image?id=${encodeURIComponent(id)}`;
 }
