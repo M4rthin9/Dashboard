@@ -1,4 +1,4 @@
-import { formatNumber, visitDateLabel, parseExtraVisitors, computeDeptReportData, normalizeStatus, STATUS_COLORS } from './format';
+import { formatNumber, visitDateLabel, parseExtraVisitors, computeDeptReportData, prisonersOf, normalizeStatus, STATUS_COLORS } from './format';
 import { monthLabel } from './dashboard';
 import type { Reservation } from '../api/types';
 import type { FinancialDayRow, FinancialMonthRow, FinancialSummary } from './dashboard';
@@ -65,8 +65,8 @@ export function openPrintWindow(content: string, reportName: string, printerName
 export function buildDisciplinaryReport(rows: Reservation[], date: string): string {
   const prisoners: Array<{ name: string; id: string; wing: string }> = [];
   rows.forEach((r) => {
-    if (r.prisonerName && !prisoners.some((p) => p.id === r.prisonerId)) {
-      prisoners.push({ name: String(r.prisonerName), id: String(r.prisonerId ?? ''), wing: String(r.wing ?? '') });
+    for (const p of prisonersOf(r)) {
+      if (p.name && !prisoners.some((x) => x.id === p.id)) prisoners.push(p);
     }
   });
 
@@ -137,15 +137,16 @@ export function buildGateRegistrationReport(rows: Reservation[], date: string): 
       const people = [visitorLine(String(r.visitorName ?? ''), r.visitorId)];
       for (const e of extras) people.push(visitorLine(e.name, e.id));
       const visitors = people.join('<br>');
-      const count = (Number(r.visitorCount) || 1) + 1;
+      const inmates = prisonersOf(r);
+      const count = (Number(r.visitorCount) || 1) + inmates.length;
       return `
       <tr>
         <td style="text-align:center;">${i + 1}</td>
         <td style="text-align:center;">${escapeHtml(r.ref)}</td>
         <td></td>
         <td>${visitors}</td>
-        <td><strong>น.ช. ${escapeHtml(r.prisonerName ?? '—')}</strong></td>
-        <td>${escapeHtml(r.wing ?? '—')}</td>
+        <td>${inmates.map((p) => `<strong>น.ช. ${escapeHtml(p.name || '—')}</strong>`).join('<br>') || '—'}</td>
+        <td>${inmates.map((p) => escapeHtml(p.wing || '—')).join('<br>') || '—'}</td>
         <td>${escapeHtml(r.relation ?? '—')}</td>
         <td style="text-align:center;">${count}</td>
         <td></td>
@@ -157,7 +158,7 @@ export function buildGateRegistrationReport(rows: Reservation[], date: string): 
     (acc, r) => {
       const cnt = Number(r.visitorCount) || 1;
       acc.visitors += cnt;
-      acc.people += cnt + 1;
+      acc.people += cnt + prisonersOf(r).length;
       return acc;
     },
     { visitors: 0, people: 0 }
@@ -276,7 +277,8 @@ function renderSeatingBlocks(rows: Reservation[], startIndex: number): string {
       const idx = startIndex + i;
       const extras = parseExtraVisitors(r);
       const visitorCount = Number(r.visitorCount) || 1;
-      const totalPeopleThisTable = visitorCount + 1;
+      const inmates = prisonersOf(r);
+      const totalPeopleThisTable = visitorCount + inmates.length;
       const shownExtras = extras.filter((e) => e.approved !== 'no');
       const status = normalizeStatus(r.status);
       const statusColor = STATUS_COLORS[status] ?? '#64748b';
@@ -296,9 +298,14 @@ function renderSeatingBlocks(rows: Reservation[], startIndex: number): string {
         <div class="content-grid">
           <div class="info-section prisoner">
             <div class="section-title">🔒 ผู้ต้องขัง</div>
-            <div class="info-line">ชื่อ: <b>น.ช. ${escapeHtml(r.prisonerName ?? '—')}</b></div>
-            <div class="info-line">เลขประจำตัว: <b>${escapeHtml(r.prisonerId ?? '—')}</b></div>
-            <div class="info-line">แดน: <b>${escapeHtml(r.wing ?? '—')}</b></div>
+            ${inmates
+              .map(
+                (p) => `
+            <div class="info-line">ชื่อ: <b>น.ช. ${escapeHtml(p.name || '—')}</b></div>
+            <div class="info-line">เลขประจำตัว: <b>${escapeHtml(p.id || '—')}</b></div>
+            <div class="info-line">แดน: <b>${escapeHtml(p.wing || '—')}</b></div>`
+              )
+              .join('<hr style="border:0;border-top:1px dashed #ccc;margin:3px 0;">')}
           </div>
           <div class="info-section visitor">
             <div class="section-title">👤 ผู้เยี่ยมหลัก</div>
@@ -352,7 +359,7 @@ function renderSeatingSummary(rows: Reservation[], isPrisoner: boolean): string 
       paidAmount += Number(r.total) || 0;
     }
   });
-  const totalPrisoners = isPrisoner ? rows.length : 0;
+  const totalPrisoners = isPrisoner ? rows.reduce((n, r) => n + prisonersOf(r).length, 0) : 0;
   const totalPeople = totalVisitors + totalPrisoners;
   const pendingAmount = totalPrice - paidAmount;
 
@@ -439,8 +446,9 @@ export function buildKitchenReport(rows: Reservation[], date: string): string {
     totalKids5_8 += d.kids5_8;
     totalKidsUnder5 += d.kidsUnder5;
   });
-  const tables = rows.length;
-  const combinedAdults = totalAdults + tables;
+  // Every prisoner at the table eats as an adult (the main one plus any extras).
+  const prisonerMeals = rows.reduce((n, r) => n + Math.max(1, prisonersOf(r).length), 0);
+  const combinedAdults = totalAdults + prisonerMeals;
   const totalPeople = combinedAdults + totalKids5_8 + totalKidsUnder5;
 
   const reportBody = `
@@ -717,8 +725,8 @@ export function buildPromptPayQrCard(row: Reservation, qrCardSvg: string, amount
   const meta: Array<[string, string]> = [
     ['เลขอ้างอิง (Ref)', String(row.ref ?? '')],
     ['ผู้เข้าร่วมกิจกรรม', String(row.visitorName ?? '')],
-    ['ผู้ต้องขัง', String(row.prisonerName ?? '')],
-    ['แดน', String(row.wing ?? '-')],
+    ['ผู้ต้องขัง', prisonersOf(row).map((p) => p.name).join(', ')],
+    ['แดน', [...new Set(prisonersOf(row).map((p) => p.wing || '-'))].join(', ')],
     ['วันที่เข้าร่วม', visitDateLabel(row.visitDate, row.visitDateISO)],
     ['จำนวนผู้เข้าร่วม', `${formatNumber(row.totalPersons ?? '')} คน`],
   ];

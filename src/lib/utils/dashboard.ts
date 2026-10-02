@@ -1,5 +1,5 @@
 import type { Reservation } from '../api/types';
-import { normalizeStatus, computeDeptReportData } from './format';
+import { normalizeStatus, computeDeptReportData, prisonersOf } from './format';
 
 export function toLocalDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -65,7 +65,7 @@ export function computeStats(rows: Reservation[]): DashboardStats {
     if (key >= prevWeekStartISO && key <= prevWeekEndISO) prevWeek++;
     if (key >= monthStartISO && key <= monthEndISO) thisMonth++;
     if (key >= prevMonthStartISO && key <= prevMonthEndISO) prevMonth++;
-    if (r.prisonerId) prisoners.add(String(r.prisonerId));
+    for (const p of prisonersOf(r)) if (p.id) prisoners.add(p.id);
     if (r.visitorName) visitors.add(String(r.visitorName));
   }
 
@@ -381,8 +381,7 @@ export function computeFinancialSummary(rows: Reservation[]): FinancialSummary {
   const prisoners = new Set<string>();
   for (const r of rows) {
     if (!isFinancialAttended(r)) continue;
-    const id = String(r.prisonerId ?? '').trim();
-    if (id) prisoners.add(id);
+    for (const p of prisonersOf(r)) if (p.id) prisoners.add(p.id);
   }
   const paidPct = agg.total > 0 ? Math.round((agg.paid / agg.total) * 100) : 0;
   return { ...agg, distinctPrisoners: prisoners.size, paidPct };

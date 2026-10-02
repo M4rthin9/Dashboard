@@ -22,7 +22,7 @@
   import Badge from './ui/Badge.svelte';
   import SlipViewerModal from './SlipViewerModal.svelte';
   import SlipVerifyPanel from './SlipVerifyPanel.svelte';
-  import { formatBaht, formatNumber, formatDateTimeThai, normalizeStatus, visitDateLabel } from '../utils/format';
+  import { formatBaht, formatNumber, formatDateTimeThai, normalizeStatus, visitDateLabel, parseExtraPrisoners } from '../utils/format';
   import type { Reservation } from '../api/types';
   import { getSlipByRef, generatePromptPayQr } from '../api/endpoints';
   import { decodeBase64Image } from '../utils/base64';
@@ -330,6 +330,17 @@
             <Building2 class="h-3.5 w-3.5 text-slate-400" />
             ปีกที่ดูแล: <span class="font-semibold">{row.wing ?? '—'}</span>
           </div>
+          {#each parseExtraPrisoners(row) as p (p.id)}
+            <div class="flex items-center gap-3 border-t border-dashed border-slate-200 pt-3 dark:border-slate-700">
+              <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-300 to-amber-400 text-xs font-bold text-white">
+                {initials(p.name)}
+              </div>
+              <div class="min-w-0">
+                <div class="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{p.name || '—'}</div>
+                <div class="text-xs text-slate-400">#{p.id} · ปีก {p.wing || '—'} · ผู้ต้องขังร่วมโต๊ะ</div>
+              </div>
+            </div>
+          {/each}
         </section>
         {:else}
         <section class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">

@@ -1,7 +1,7 @@
 <script lang="ts">
   import Card from '../ui/Card.svelte';
   import { reservations } from '../../store/reservations.svelte';
-  import { normalizeStatus, todayISO, formatBaht, visitDateLabel } from '../../utils/format';
+  import { normalizeStatus, todayISO, formatBaht, visitDateLabel, prisonersOf } from '../../utils/format';
 
   const wingColors: Record<string, string> = {
     'แดน 1': '#1e40af', 'แดน 2': '#7c3aed', 'แดน 3': '#b91c1c',
@@ -68,7 +68,7 @@
             </span>
           </div>
           <div class="truncate font-mono text-xs font-semibold text-slate-700 dark:text-slate-200">{r.ref}</div>
-          <div class="mt-1 truncate text-xs text-slate-600 dark:text-slate-300">🔒 {r.prisonerName ?? '—'}</div>
+          <div class="mt-1 truncate text-xs text-slate-600 dark:text-slate-300">🔒 {prisonersOf(r).map((p) => p.name).join(', ') || '—'}</div>
           <div class="mt-1 text-[11px] font-semibold" style="color:{wingColors[String(r.wing ?? '')] ?? '#475569'}">{r.wing ?? '—'}</div>
           <div class="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
             👥 {r.visitorCount ?? 1} คน · {formatBaht(r.total)}

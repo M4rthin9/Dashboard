@@ -30,6 +30,31 @@ export function parseExtraVisitors(row: Reservation): ExtraVisitor[] {
     .map((v, i) => ({ ...v, approved: (appr[i] ?? '').trim() }));
 }
 
+export interface PrisonerEntry {
+  name: string;
+  id: string;
+  wing: string;
+}
+
+/** Prisoners added to the table by a Superadmin (e.g. father and son). Never visitors. */
+export function parseExtraPrisoners(row: Reservation): PrisonerEntry[] {
+  return String(row.extraPrisoners ?? '')
+    .split(';;')
+    .map((e) => {
+      const p = e.split('|');
+      return { name: (p[0] ?? '').trim(), id: (p[1] ?? '').trim(), wing: (p[2] ?? '').trim() };
+    })
+    .filter((p) => p.id);
+}
+
+/** Every prisoner at the booking's table: the main one, then the extras. */
+export function prisonersOf(row: Reservation): PrisonerEntry[] {
+  const main = row.prisonerName || row.prisonerId
+    ? [{ name: String(row.prisonerName ?? ''), id: String(row.prisonerId ?? ''), wing: String(row.wing ?? '') }]
+    : [];
+  return [...main, ...parseExtraPrisoners(row)];
+}
+
 export function computeDeptReportData(row: Reservation): { adults: number; kids5_8: number; kidsUnder5: number } {
   const extras = parseExtraVisitors(row);
   let adults = 1;

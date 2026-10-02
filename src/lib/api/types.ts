@@ -52,6 +52,8 @@ export interface Reservation {
   extraVisitorApproved?: string;
   prisonerName?: string;
   prisonerId?: string;
+  /** Superadmin-added prisoners at the same table: `name|prisonerId|wing` rows joined by `;;`. */
+  extraPrisoners?: string;
   wing?: string;
   visitDate?: string;
   visitDateISO?: string;

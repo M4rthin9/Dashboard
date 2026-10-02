@@ -9,7 +9,7 @@
   import { reservations } from '../lib/store/reservations.svelte';
   import { auth } from '../lib/store/auth.svelte';
   import { ui } from '../lib/store/ui.svelte';
-  import { formatBaht, formatNumber, todayISO, STATUS_COLORS, normalizeStatus, visitDateLabel } from '../lib/utils/format';
+  import { formatBaht, formatNumber, todayISO, STATUS_COLORS, normalizeStatus, visitDateLabel, prisonersOf } from '../lib/utils/format';
   import { exportReservationsCSV } from '../lib/utils/csv';
   import {
     computeRevenueSummary, computeStatusDistribution, computeWingCounts,
@@ -204,7 +204,8 @@
       visitors += Number(r.visitorCount) || 0;
       revenue += Number(r.total) || 0;
     }
-    return { tables: dayRows.length + tableDayRows.length, visitors, prisoners: dayRows.length, revenue };
+    const prisoners = dayRows.reduce((n, r) => n + prisonersOf(r).length, 0);
+    return { tables: dayRows.length + tableDayRows.length, visitors, prisoners, revenue };
   });
 
   function doPrint(report: PrintReportDef): void {
@@ -400,7 +401,7 @@
             {#each inRange.slice(0, 200) as r (r.ref)}
               <tr class="border-b border-slate-200 last:border-0 hover:bg-slate-50/50 dark:border-slate-800 dark:hover:bg-slate-800/30">
                 <td class="px-3 py-2 font-mono text-xs text-slate-800 dark:text-slate-200">{r.ref}</td>
-                <td class="px-3 py-2 text-slate-700 dark:text-slate-200">{r.prisonerName}</td>
+                <td class="px-3 py-2 text-slate-700 dark:text-slate-200">{prisonersOf(r).map((p) => p.name).join(', ')}</td>
                 <td class="px-3 py-2 text-xs text-slate-500 dark:text-slate-400">{visitDateLabel(r.visitDate, r.visitDateISO)}</td>
                 <td class="px-3 py-2 text-xs text-slate-600 dark:text-slate-300">{r.status}</td>
                 <td class="px-3 py-2 text-right text-xs text-slate-700 dark:text-slate-200">{formatBaht(r.total)}</td>

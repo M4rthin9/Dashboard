@@ -14,7 +14,7 @@
     X,
   } from '@lucide/svelte';
   import Modal from './ui/Modal.svelte';
-  import { formatBaht, formatNumber, normalizeStatus, STATUS_STEPS, statusColor } from '../utils/format';
+  import { formatBaht, formatNumber, normalizeStatus, parseExtraPrisoners, STATUS_STEPS, statusColor, type PrisonerEntry } from '../utils/format';
   import { ui } from '../store/ui.svelte';
   import type { Prisoner, Reservation } from '../api/types';
 
@@ -106,6 +106,10 @@
   let wing = $state('');
   let visitDateISO = $state('');
   let extras = $state<ExtraVisitor[]>([]);
+  // Prisoners seated at this table besides the main one (e.g. father and son in
+  // the same prison). Superadmin edit only; they are prisoners, never ผู้เยี่ยม.
+  let coPrisoners = $state<PrisonerEntry[]>([]);
+  let coQuery = $state('');
   let adultCount = $state(1);
   let child5to8Count = $state(0);
   let childUnder5Count = $state(0);
@@ -114,13 +118,14 @@
   const extraCount = $derived(extras.filter((e) => e.name.trim()).length);
   const visitorCount = $derived(1 + extraCount);
   // A table booking has no prisoner occupying a seat.
-  const totalPersons = $derived(isTable ? visitorCount : visitorCount + 1);
+  const prisonerCount = $derived(isTable ? 0 : 1 + coPrisoners.length);
+  const totalPersons = $derived(visitorCount + prisonerCount);
 
   const total = $derived.by(() => {
     const extraFees = extras
       .filter((e) => e.name.trim())
       .reduce((sum, e) => sum + computeExtraFee(e.relation, e.age), 0);
-    return (isTable ? 0 : PRICING.PRISONER) + computeMainFee(relation, visitorAge) + extraFees;
+    return prisonerCount * PRICING.PRISONER + computeMainFee(relation, visitorAge) + extraFees;
   });
 
   const extraFeeTotal = $derived(
@@ -151,6 +156,25 @@
     if (!prisonerId) return false;
     return isDisciplineRestricted(prisoners.find((x) => String(x.prisonerId) === String(prisonerId)));
   });
+
+  const coSuggestions = $derived.by(() => {
+    const q = coQuery.trim().toLowerCase();
+    if (!q) return [];
+    const taken = new Set([prisonerId, ...coPrisoners.map((p) => p.id)]);
+    return prisoners
+      .filter((p) => !taken.has(String(p.prisonerId)))
+      .filter((p) => String(p.prisonerId ?? '').toLowerCase().includes(q) || String(p.prisonerName ?? '').toLowerCase().includes(q))
+      .slice(0, 8);
+  });
+
+  const coRestricted = $derived(
+    coPrisoners.filter((c) => isDisciplineRestricted(prisoners.find((x) => String(x.prisonerId) === c.id)))
+  );
+
+  function addCoPrisoner(p: Prisoner): void {
+    coPrisoners = [...coPrisoners, { name: String(p.prisonerName ?? ''), id: String(p.prisonerId ?? ''), wing: String(p.wing ?? '') }];
+    coQuery = '';
+  }
 
   function onPrisonerKeydown(e: KeyboardEvent): void {
     if (e.key === 'Enter') {
@@ -222,6 +246,8 @@
       prisonerMatchStatus = prisonerName ? `✓ เลือกจากฐานข้อมูล: ${prisonerName} (#${prisonerId}) — ${wing}` : '';
       visitDateISO = String(row.visitDateISO ?? row.visitDate ?? '');
       extras = parseExtras();
+      coPrisoners = parseExtraPrisoners(row);
+      coQuery = '';
       adultCount = Number(row.adultCount ?? 1) || 1;
       child5to8Count = Number(row.child5to8Count ?? 0) || 0;
       childUnder5Count = Number(row.childUnder5Count ?? 0) || 0;
@@ -243,6 +269,8 @@
       wing = '';
       prisonerMatchStatus = '';
       extras = [];
+      coPrisoners = [];
+      coQuery = '';
       adultCount = 1;
       child5to8Count = 0;
       childUnder5Count = 0;
@@ -318,6 +346,10 @@
       child5to8Count,
       childUnder5Count,
       ...(mode === 'edit' ? { status } : {}),
+      // Superadmin edit only; the server re-reads names/wings and checks each one.
+      ...(mode === 'edit' && !isTable
+        ? { extraPrisoners: coPrisoners.map((p) => `${p.name}|${p.id}|${p.wing}`).join(';;') }
+        : {}),
     };
   }
 
@@ -332,6 +364,10 @@
     }
     if (!isTable && prisonerRestricted) {
       ui.showAlert({ title: 'ไม่สามารถจองได้', message: '⚠️ ผู้ต้องขังนี้มีสถานะติดวินัย งดเยี่ยม ไม่สามารถจองเยี่ยมได้', type: 'error' });
+      return;
+    }
+    if (!isTable && coRestricted.length > 0) {
+      ui.showAlert({ title: 'ไม่สามารถจองได้', message: `⚠️ ผู้ต้องขังร่วมโต๊ะ ${coRestricted.map((p) => p.name).join(', ')} มีสถานะติดวินัย งดเยี่ยม`, type: 'error' });
       return;
     }
     if (!visitDateISO) {
@@ -507,6 +543,63 @@
           </div>
         </div>
       {/if}
+      {#if mode === 'edit'}
+        <div class="flex flex-col gap-2 rounded-xl border border-orange-200 bg-orange-50/50 p-3 dark:border-orange-900 dark:bg-orange-950/30">
+          <div>
+            <div class="text-xs font-semibold text-orange-700 dark:text-orange-300">ผู้ต้องขังร่วมโต๊ะ</div>
+            <div class="text-[11px] text-slate-500 dark:text-slate-400">
+              เช่น บิดาและบุตรที่อยู่ในเรือนจำเดียวกัน ขอนั่งโต๊ะเดียวกัน · คิดค่าบริการผู้ต้องขัง {formatBaht(PRICING.PRISONER)}/คน · ไม่นับเป็นญาติ
+            </div>
+          </div>
+          {#each coPrisoners as c, i (c.id)}
+            <div class="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm dark:bg-slate-900">
+              <Building2 class="h-3.5 w-3.5 shrink-0 text-orange-500" />
+              <span class="min-w-0 flex-1 truncate"><b>{c.name}</b> <span class="text-xs text-slate-400">#{c.id} · ปีก {c.wing}</span></span>
+              {#if coRestricted.includes(c)}<span class="text-[11px] font-semibold text-red-600">ติดวินัย</span>{/if}
+              <button
+                type="button"
+                class="shrink-0 rounded p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950"
+                title="นำออก"
+                onclick={() => (coPrisoners = coPrisoners.filter((_, j) => j !== i))}
+              >
+                <X class="h-3.5 w-3.5" />
+              </button>
+            </div>
+          {/each}
+          <div class="relative">
+            <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              bind:value={coQuery}
+              class={inputCls + ' pl-9'}
+              placeholder="+ เพิ่มผู้ต้องขังร่วมโต๊ะ: พิมพ์เลข หรือ ชื่อ..."
+              aria-label="ค้นหาผู้ต้องขังร่วมโต๊ะ"
+              onkeydown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  if (coSuggestions[0]) addCoPrisoner(coSuggestions[0]);
+                } else if (e.key === 'Escape') coQuery = '';
+              }}
+            />
+            {#if coSuggestions.length > 0}
+              <div class="absolute z-10 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
+                {#each coSuggestions as p (p.prisonerId)}
+                  <button
+                    type="button"
+                    class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-orange-50 dark:hover:bg-orange-950/60"
+                    onmousedown={(e) => {
+                      e.preventDefault();
+                      addCoPrisoner(p);
+                    }}
+                  >
+                    <span class="min-w-0 flex-1 truncate"><b>{p.prisonerName}</b> <span class="text-xs text-slate-400">#{p.prisonerId} · ปีก {p.wing}</span></span>
+                    <Plus class="h-4 w-4 shrink-0 text-orange-500" />
+                  </button>
+                {/each}
+              </div>
+            {/if}
+          </div>
+        </div>
+      {/if}
     </section>
     {/if}
 
@@ -636,6 +729,12 @@
             <span>{isTable ? 'ผู้เข้าร่วมหลัก' : 'ผู้เยี่ยมหลัก + ผู้ต้องขัง'}</span>
             <span>{formatBaht(PRICING.MAIN_VISITOR + (isTable ? 0 : PRICING.PRISONER))}</span>
           </div>
+          {#if !isTable && coPrisoners.length > 0}
+            <div class="flex items-center justify-between text-emerald-800/80 dark:text-emerald-300/80">
+              <span>ผู้ต้องขังร่วมโต๊ะ ({coPrisoners.length} คน)</span>
+              <span>{formatBaht(coPrisoners.length * PRICING.PRISONER)}</span>
+            </div>
+          {/if}
           {#if extraCount > 0}
             <div class="flex items-center justify-between text-emerald-800/80 dark:text-emerald-300/80">
               <span>ผู้เยี่ยมร่วม ({extraCount} คน)</span>
@@ -647,7 +746,7 @@
             <span>{formatBaht(total)}</span>
           </div>
           <div class="text-xs text-emerald-700/70 dark:text-emerald-300/70">
-            ผู้เยี่ยม {formatNumber(visitorCount)} คน · ผู้ใหญ่ {adultCount} · เด็ก 5-8 ปี {child5to8Count} · เด็ก &lt;5 ปี {childUnder5Count}
+            ผู้เยี่ยม {formatNumber(visitorCount)} คน{#if prisonerCount > 0} · ผู้ต้องขัง {prisonerCount} คน{/if} · ผู้ใหญ่ {adultCount} · เด็ก 5-8 ปี {child5to8Count} · เด็ก &lt;5 ปี {childUnder5Count}
           </div>
         </div>
       </div>

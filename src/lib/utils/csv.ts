@@ -11,7 +11,7 @@ export const PRISONER_CSV_HEADERS = [
 
 export const CSV_HEADERS = [
   'ref', 'timestamp', 'visitorName', 'visitorPhone', 'visitorId', 'relation', 'prisonerName',
-  'prisonerId', 'wing', 'visitDate', 'visitDateISO', 'visitorCount', 'totalPersons', 'total',
+  'prisonerId', 'wing', 'extraPrisoners', 'visitDate', 'visitDateISO', 'visitorCount', 'totalPersons', 'total',
   'status', 'extraVisitorNames', 'visitorApproved', 'extraVisitorApproved', 'cancelReason',
 ];
 
