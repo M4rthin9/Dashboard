@@ -252,6 +252,27 @@ export function getCookieConsentStats(): Promise<
   return callAction('getCookieConsentStats', {}, { auth: true });
 }
 
+export interface PushSubscriber {
+  /** Browser family behind the push service — the endpoint URL itself is never sent. */
+  service: string;
+  /** Booking this browser follows ('' = none). */
+  ref: string;
+  visitorName: string;
+  visitDateISO: string;
+  bookingStatus: string;
+  /** Opted in to the "booking opens" alerts. */
+  openingAlerts: boolean;
+  createdAt: string;
+  lastActiveAt: string;
+}
+
+/** Web Push subscribers: totals plus the most recently active (max 200). */
+export function getPushSubscribers(limit = 100): Promise<
+  ApiResult & { summary?: { total: number; openingAlerts: number; bookings: number }; rows?: PushSubscriber[] }
+> {
+  return callAction('getPushSubscribers', { limit }, { auth: true });
+}
+
 export function promoImageUrl(id: string): string {
   return `${API_BASE}/api/promo/image?id=${encodeURIComponent(id)}`;
 }

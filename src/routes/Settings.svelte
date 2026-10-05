@@ -10,6 +10,7 @@
   import BookingWindowCard from '../lib/components/settings/BookingWindowCard.svelte';
   import PromoCard from '../lib/components/settings/PromoCard.svelte';
   import PdpaCard from '../lib/components/settings/PdpaCard.svelte';
+  import PushSubscribersCard from '../lib/components/settings/PushSubscribersCard.svelte';
 
   let serverSettings = $state<Record<string, unknown>>({});
   let settingsText = $state('');
@@ -270,6 +271,8 @@
     <PromoCard onSaved={() => void fetchSettings()} />
 
     <PdpaCard onSaved={() => void fetchSettings()} />
+
+    <PushSubscribersCard />
 
     {#if auth.user?.role === 'Superadmin'}
       <Card title="คลังข้อมูลการจอง" subtitle="ระบบย้ายการจองเก่าเข้าคลังอัตโนมัติทุกเที่ยงคืน — กดเพื่อย้ายทันที">
