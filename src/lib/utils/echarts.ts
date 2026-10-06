@@ -5,6 +5,7 @@ import {
   TooltipComponent,
   LegendComponent,
   TitleComponent,
+  AriaComponent,
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 
@@ -17,6 +18,7 @@ echarts.use([
   TooltipComponent,
   LegendComponent,
   TitleComponent,
+  AriaComponent,
   CanvasRenderer,
 ]);
 

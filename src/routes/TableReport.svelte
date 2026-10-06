@@ -9,13 +9,14 @@
   import { formatBaht, formatNumber, todayISO, normalizeStatus, visitDateLabel } from '../lib/utils/format';
   import { exportReservationsCSV } from '../lib/utils/csv';
   import { openPrintWindow, buildTableRegistrationReport } from '../lib/utils/print';
+  import { activeBooking, amount, visitorCount, bookingPool } from '../lib/utils/management';
   import type { Reservation } from '../lib/api/types';
 
   let from = $state(todayISO());
   let to = $state(todayISO());
 
   function isTable(r: Reservation): boolean {
-    return String(r.bookingType ?? '').trim() === 'table' || String(r.ref ?? '').toUpperCase().startsWith('TBL-');
+    return bookingPool(r) === 'table';
   }
 
   const tableRows = $derived(reservations.rows.filter(isTable));
@@ -34,14 +35,17 @@
     let people = 0;
     let paid = 0;
     let total = 0;
+    let pending = 0;
     for (const r of inRange) {
+      if (!activeBooking(r)) continue;
       tables += 1;
-      people += Number(r.visitorCount) || 1;
-      total += Number(r.total) || 0;
+      people += visitorCount(r);
+      total += amount(r);
       const s = normalizeStatus(r.status);
-      if (s === 'ชำระแล้ว' || s === 'เสร็จสิ้น') paid += Number(r.total) || 0;
+      if (s === 'ชำระแล้ว' || s === 'เสร็จสิ้น') paid += amount(r);
+      if (s === 'รอชำระเงิน') pending += amount(r);
     }
-    return { tables, people, paid, total, pending: total - paid };
+    return { tables, people, paid, total, pending };
   });
 
   let printDate = $state(todayISO());
@@ -132,7 +136,7 @@
             <Utensils class="h-3.5 w-3.5 text-slate-400" /> โต๊ะ {formatNumber(dayRows.length)}
           </span>
           <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-            <Users class="h-3.5 w-3.5" /> ผู้ร่วมโต๊ะ {formatNumber(dayRows.reduce((n, r) => n + (Number(r.visitorCount) || 1), 0))}
+            <Users class="h-3.5 w-3.5" /> ผู้ร่วมโต๊ะ {formatNumber(dayRows.reduce((n, r) => n + visitorCount(r), 0))}
           </span>
         </div>
         <button class="inline-flex items-center gap-1.5 rounded-xl bg-orange-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-700" onclick={doPrint}>
@@ -146,7 +150,7 @@
 
     <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
       <Card>
-        <p class="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">การจองโต๊ะ</p>
+        <p class="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">การจองโต๊ะที่ยังมีผล</p>
         <p class="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">{formatNumber(summary.tables)}</p>
       </Card>
       <Card>

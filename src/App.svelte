@@ -6,7 +6,7 @@
   import ToastContainer from './lib/components/ui/ToastContainer.svelte';
   import AlertBox from './lib/components/ui/AlertBox.svelte';
   import { ui } from './lib/store/ui.svelte';
-  import { auth } from './lib/store/auth.svelte';
+  import { auth, API_BASE } from './lib/store/auth.svelte';
   import { liveSync } from './lib/store/liveSync.svelte';
   import { reservations } from './lib/store/reservations.svelte';
   import { resolveRoute } from './lib/router';
@@ -21,6 +21,7 @@
   // that actually moved, so one admin's approval reaches the others within a
   // few seconds instead of on their next manual reload.
   $effect(() => {
+    reservations.setSession(auth.isAuthenticated && auth.user ? `${API_BASE}:${auth.user.username}:${auth.user.role}` : '');
     if (!auth.accessToken) {
       liveSync.stop();
       return;

@@ -15,6 +15,7 @@
   import { ui } from '../lib/store/ui.svelte';
   import { hasPermission } from '../lib/utils/permissions';
   import { currentQuery } from '../lib/router';
+  import { bookingPool } from '../lib/utils/management';
   import { formatBaht, formatNumber, normalizeStatus, STATUS_COLORS, todayISO, visitDateLabel } from '../lib/utils/format';
   import { exportReservationsCSV } from '../lib/utils/csv';
   import { openPrintWindow, buildSeatingReport, buildPromptPayQrCard } from '../lib/utils/print';
@@ -88,7 +89,7 @@
 
   /** Legacy rows predate the column and are always prisoner visits. */
   function bookingTypeOf(row: Reservation): string {
-    return String(row.bookingType ?? '').trim() || 'prisoner';
+    return bookingPool(row);
   }
   const isTableBooking = (row: Reservation) => bookingTypeOf(row) === 'table';
 
@@ -147,14 +148,17 @@
   });
 
   $effect(() => {
-    if (dateFilter && dates.length > 0 && !dates.includes(dateFilter)) {
-      dateFilter = '';
-    }
+    const query = currentQuery();
+    statusFilter = query.get('status') ?? '';
+    dateFilter = query.get('date') ?? '';
+    search = query.get('search') ?? '';
+    const pool = query.get('type');
+    typeFilter = pool === 'table' || pool === 'prisoner' ? pool : '';
+    page = 1;
+    selectedRefs = [];
   });
 
   onMount(() => {
-    const qStatus = currentQuery().get('status');
-    if (qStatus) statusFilter = qStatus;
     reservations.load();
     getPrisoners()
       .then((res) => {
@@ -441,6 +445,7 @@
   }
 
   async function approvePayment(row: Reservation): Promise<void> {
+    if (paymentSaving) return;
     paymentSaving = true;
     try {
       await reservations.updateStatus(row.ref, paymentMode);
@@ -449,10 +454,10 @@
         message: `${row.visitorName} · ${row.ref} สถานะเป็น "${paymentMode}"`,
         type: 'success',
       });
+      paymentSaving = false;
       closePaymentApproval();
     } catch (err) {
       ui.showAlert({ title: 'ไม่สามารถยืนยันได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
-      closePaymentApproval();
     } finally {
       paymentSaving = false;
     }

@@ -1,0 +1,127 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import vm from 'node:vm';
+import ts from 'typescript';
+
+// Execute pure TypeScript directly using the project's existing compiler.
+// Store tests stub reactivity and transport to exercise session concurrency.
+function loader(mocks = {}, globals = {}) {
+  const cache = new Map();
+  function load(file) {
+    file = path.resolve(file);
+    if (mocks[file]) return mocks[file];
+    if (cache.has(file)) return cache.get(file).exports;
+    const module = { exports: {} };
+    cache.set(file, module);
+    const source = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+    const require = spec => load(path.resolve(path.dirname(file), `${spec}.ts`));
+    vm.runInNewContext(source, { module, exports: module.exports, require, Date, Intl, URLSearchParams, console, ...globals }, { filename: file });
+    return module.exports;
+  }
+  return load;
+}
+const load = loader();
+const m = load('src/lib/utils/management.ts');
+const financial = load('src/lib/utils/dashboard.ts');
+const format = load('src/lib/utils/format.ts');
+const booking = (fields = {}) => ({ ref: 'VIS-1', status: 'ชำระแล้ว', visitDateISO: '2026-02-28', total: 100, visitorCount: 3, adultCount: 1, child5to8Count: 1, childUnder5Count: 1, prisonerId: 'P1', ...fields });
+const plain = value => JSON.parse(JSON.stringify(value));
+
+test('date ranges are inclusive, validated and compared against equal previous periods', () => {
+  assert.equal(m.rangeDays({ from: '2024-02-28', to: '2024-03-01' }), 3);
+  assert.equal(m.validDate('2026-02-30'), false);
+  assert.equal(m.rangeDays({ from: '2026-03-01', to: '2026-02-28' }), 0);
+  assert.deepEqual(plain(m.previousRange({ from: '2024-03-01', to: '2024-03-03' })), { from: '2024-02-27', to: '2024-02-29' });
+  assert.equal(m.comparison(100, 0).percent, null);
+  assert.equal(m.businessDate(new Date('2026-10-05T18:00:00Z')), '2026-10-06');
+});
+test('period metrics exclude terminal and malformed records; neither future months nor pending approvals are paid', () => {
+  const rows = [booking(), booking({ ref: 'TBL-1', status: 'รอชำระเงิน', total: 50 }), booking({ ref: 'VIS-2', status: 'ยกเลิก', total: 999 }), booking({ ref: 'VIS-3', status: 'ไม่อนุมัติ' }), booking({ ref: '', total: 999 }), booking({ ref: 'VIS-4', visitDateISO: '2026-03-01' })];
+  const selected = m.periodRows(rows, { from: '2026-02-01', to: '2026-02-28' });
+  assert.deepEqual(plain(m.periodSummary(selected)), { bookings: 2, paid: 100, pending: 50, booked: 150, completed: 0, visitors: 6 });
+  assert.equal(m.periodRows(rows, { from: '2026-02-01', to: '2026-02-28' }, 'table').length, 1);
+  assert.equal(m.amount(booking({ total: Infinity })), 0);
+  assert.equal(m.amount(booking({ total: -1 })), 0);
+});
+test('historical chart uses selected dates, fills gaps and separates VIS from TBL', () => {
+  const series = m.dailySeries([booking(), booking({ ref: 'TBL-1', status: 'รอชำระเงิน', total: 50 }), booking({ status: 'ยกเลิก' })], { from: '2026-02-27', to: '2026-03-01' });
+  assert.deepEqual(plain(series), [{ date: '2026-02-27', prisoner: 0, table: 0, paid: 0, pending: 0 }, { date: '2026-02-28', prisoner: 1, table: 1, paid: 100, pending: 50 }, { date: '2026-03-01', prisoner: 0, table: 0, paid: 0, pending: 0 }]);
+  assert.equal(m.dailySeries([], { from: '2020-01-01', to: '2026-01-01' }).length, 0);
+  assert.equal(m.bookingPool(booking({ ref: 'TBL-old', bookingType: 'prisoner' })), 'prisoner');
+});
+test('financial and kitchen counts use stored age buckets and actual prisoners; tables have no prisoners', () => {
+  const rows = [booking({ extraPrisoners: 'Second|P2|2' }), booking({ ref: 'TBL-1', bookingType: 'table', prisonerId: '', visitorCount: 0, adultCount: 0, child5to8Count: 0, childUnder5Count: 0 }), booking({ ref: 'VIS-2', status: 'ยกเลิก', total: 999 })];
+  const summary = financial.computeFinancialSummary(rows);
+  assert.equal(summary.bookings, 2);
+  assert.equal(summary.prisoners, 2);
+  assert.equal(summary.distinctPrisoners, 2);
+  assert.equal(summary.visitors, 3);
+  assert.equal(summary.people, 5);
+  assert.equal(summary.paid, 200);
+  assert.deepEqual(plain(format.computeDeptReportData(rows[0])), { adults: 1, kids5_8: 1, kidsUnder5: 1 });
+});
+test('live queues obey role permissions, exclude archives and expired holds, and sort visits earliest first', () => {
+  const now = new Date('2026-02-28T04:00:00Z');
+  const rows = [booking({ ref: 'VIS-later', status: 'รอตรวจสอบผู้เข้าร่วม', visitDateISO: '2026-03-02' }), booking({ ref: 'VIS-earlier', status: 'รอตรวจสอบผู้เข้าร่วม' }), booking({ ref: 'VIS-archive', status: 'รอตรวจสอบผู้เข้าร่วม', _archived: true }), booking({ ref: 'TBL-expired', status: 'รอชำระเงิน', holdExpiresAt: '2026-02-28T03:00:00Z' }), booking({ ref: 'VIS-discipline', status: 'รอตรวจสอบวินัย' })];
+  assert.equal(m.workQueues(rows, 'User', now).length, 0);
+  assert.equal(m.workQueues(rows, 'Tadtel', now).length, 1);
+  assert.deepEqual(plain(m.workQueues(rows, 'Tadtel', now)[0].rows.map(row => row.ref)), ['VIS-earlier', 'VIS-later']);
+  assert.equal(m.workQueues(rows, 'Finance', now).flatMap(queue => queue.rows).length, 0);
+  assert.equal(m.workQueues(rows, 'Vinai', now).length, 1);
+  assert.equal(m.workQueues(rows, 'Admin', now).length, 4);
+  assert.equal(m.workQueues(rows, 'Superadmin', now).length, 4);
+  assert.equal(m.expiredHold(booking({ ref: 'TBL-paid', holdExpiresAt: '2020-01-01' }), now), false);
+});
+test('account changes clear rows and discard a previous account response; cached loads release inFlight', async () => {
+  const auth = { isAuthenticated: true, user: { username: 'first', role: 'Admin' } };
+  let resolveFirst;
+  let calls = 0;
+  const data = new Map();
+  const storeLoad = loader({
+    [path.resolve('src/lib/store/auth.svelte.ts')]: { auth, API_BASE: 'test-api' },
+    [path.resolve('src/lib/store/liveSync.svelte.ts')]: { liveSync: { poke() {} } },
+    [path.resolve('src/lib/api/endpoints.ts')]: { getReservationsWithArchive() { calls++; return calls === 1 ? new Promise(resolve => resolveFirst = resolve) : Promise.resolve({ rows: [booking({ ref: 'VIS-second' })] }); } },
+  }, { $state: value => value, localStorage: { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value), removeItem: key => data.delete(key) } });
+  const store = storeLoad('src/lib/store/reservations.svelte.ts').reservations;
+  const first = store.load();
+  auth.user.username = 'second';
+  await store.load();
+  resolveFirst({ rows: [booking({ ref: 'VIS-first' })] });
+  await first;
+  assert.equal(store.rows[0].ref, 'VIS-second');
+  store.rows = [];
+  store.loadedAt = null;
+  await store.load(); // restore valid account-scoped cache
+  await store.refresh(); // must reach the server after a synchronous cache hit
+  assert.equal(calls, 3);
+  store.setSession('');
+  assert.equal(store.rows.length, 0);
+  assert.equal(store.loadedAt, null);
+});
+
+test('route fallback respects menus and drilldown query preserves Thai status, date and reference', () => {
+  const auth = { isAuthenticated: true, user: { role: 'Finance' } };
+  const hashState = { value: '#/dashboard' };
+  const mocks = {
+    [path.resolve('src/lib/store/auth.svelte.ts')]: { auth },
+    [path.resolve('src/lib/store/hash.svelte.ts')]: { hashState },
+  };
+  for (const component of ['Login', 'Reservations', 'EventLog', 'Users', 'Prisoners', 'Connection', 'Settings']) {
+    mocks[path.resolve(`src/routes/${component}.svelte.ts`)] = { default: {} };
+  }
+  const router = loader(mocks)('src/lib/router.ts');
+  assert.equal(router.resolveRoute().path, '/reservations');
+  hashState.value = '#/users';
+  auth.user.role = 'User';
+  assert.equal(router.resolveRoute().path, '/dashboard');
+  hashState.value = `#/reservations?${new URLSearchParams({ status: 'รอตรวจสอบวินัย', date: '2026-10-06', search: 'VIS-123' })}`;
+  auth.user.role = 'Admin';
+  assert.equal(router.currentPath(), '/reservations');
+  assert.equal(router.currentQuery().get('status'), 'รอตรวจสอบวินัย');
+  assert.equal(router.currentQuery().get('date'), '2026-10-06');
+  assert.equal(router.currentQuery().get('search'), 'VIS-123');
+  auth.isAuthenticated = false;
+  assert.equal(router.resolveRoute().path, '/login');
+});

@@ -26,9 +26,6 @@
   import type { Reservation } from '../api/types';
   import { getSlipByRef, generatePromptPayQr } from '../api/endpoints';
   import { decodeBase64Image } from '../utils/base64';
-  import { verifySlipOCR } from '../utils/slipVerification';
-  import { ui } from '../store/ui.svelte';
-  import { reservations } from '../store/reservations.svelte';
 
   let { open, row, onclose, canViewSlip }: {
     open: boolean;
@@ -110,64 +107,8 @@
     };
   });
 
-  // --- Auto-slip verification (runs once per open when status = รอชำระเงิน) ---
-  let slipVerified = $state(false);
-  let slipVerifying = $state(false);
-
-  $effect(() => {
-    if (!open || !row || slipVerified || slipVerifying) return;
-    const status = normalizeStatus(row.status);
-    if (status !== 'รอชำระเงิน') return;
-
-    const slipBase = String(row.slipImage ?? '').trim();
-    const isSentinel = !slipBase || slipBase.startsWith('SLIP_UPLOADED:');
-    const imageRaw = fetchedSlip || (slipBase && !isSentinel ? slipBase : '');
-    if (!imageRaw) return;
-
-    slipVerifying = true;
-    verifySlipOCR(imageRaw, {
-      customerName: row.visitorName ?? '',
-      requiredAmount: Number(row.total) || 0,
-    })
-      .then(async (result) => {
-        if (result.error || !result.success) {
-          ui.showToast(`ตรวจสอบสลิปไม่สำเร็จ: ${result.error ?? 'ไม่ทราบข้อผิดพลาด'} — กรุณาตรวจสอบด้วยตนเอง`, 'warning', 6000);
-          slipVerified = true;
-          return;
-        }
-
-        if (result.targetStatus === 'เสร็จสิ้น') {
-          await reservations.updateStatus(row.ref, 'เสร็จสิ้น');
-          ui.showAlert({
-            title: 'ชำระเงินสำเร็จ',
-            message: `ชื่อ "${result.extractedName}" ✓ · จำนวนเงิน ${result.extractedAmount.toLocaleString()} บาท ✓\nสถานะเปลี่ยนเป็น "เสร็จสิ้น" อัตโนมัติ`,
-            type: 'success',
-          });
-          onclose();
-        } else {
-          const reasons: string[] = [];
-          if (!result.nameMatched) reasons.push(`ชื่อ "${result.extractedName}" ไม่ตรง`);
-          if (!result.amountMatched) reasons.push(`จำนวนเงิน ${result.extractedAmount.toLocaleString()} บาท ไม่ตรง`);
-          ui.showToast(`รอเจ้าหน้าที่ตรวจสอบสลิป — ${reasons.join(', ')}`, 'info', 6000);
-        }
-        slipVerified = true;
-      })
-      .catch(() => {
-        ui.showToast('ไม่สามารถตรวจสอบสลิปได้ — กรุณาตรวจสอบด้วยตนเอง', 'warning', 5000);
-        slipVerified = true;
-      })
-      .finally(() => {
-        slipVerifying = false;
-      });
-  });
-
-  // Reset verification state when modal closes or row changes
-  $effect(() => {
-    if (!open) {
-      slipVerified = false;
-      slipVerifying = false;
-    }
-  });
+  // Detail viewing is read-only. Server QR verification and explicit payment
+  // approval remain available in their existing panels and approval modals.
 
   // Only feed a non-expiring source to <img>. A data-URI slip never expires and
   // can come straight from the list. A signed HTTPS URL (R2-backed) DOES expire,
@@ -567,12 +508,6 @@
               </button>
               <p class="text-center text-[11px] text-slate-400">คลิกเพื่อขยายสลิปขนาดเต็ม</p>
             </div>
-            {#if slipVerifying}
-              <div class="flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
-                <span class="h-4 w-4 animate-spin rounded-full border-2 border-blue-600/30 border-t-blue-600"></span>
-                กำลังตรวจสอบสลิปอัตโนมัติ...
-              </div>
-            {/if}
             <SlipVerifyPanel
               ref={row.ref}
               status={String(row.slip_verify_status ?? '')}

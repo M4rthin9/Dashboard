@@ -1,576 +1,203 @@
-<script lang="ts">
+﻿<script lang="ts">
   import { onMount } from 'svelte';
   import type { EChartsOption } from 'echarts';
+  import { ArrowRight, ArrowUpRight, CalendarDays, CheckCircle2, ClipboardList, Coins, RefreshCw, Users, Wallet } from '@lucide/svelte';
   import type { Reservation } from '../lib/api/types';
-  import {
-    ArrowRight,
-    Check,
-    CheckCircle2,
-    Coins,
-    Crown,
-    ReceiptText,
-    RefreshCw,
-    Sparkles,
-    TrendingUp,
-    Users,
-    Wallet,
-    X,
-  } from '@lucide/svelte';
   import Card from '../lib/components/ui/Card.svelte';
   import Spinner from '../lib/components/ui/Spinner.svelte';
-  import EChart from '../lib/components/charts/EChart.svelte';
+  import ChartPanel from '../lib/components/dashboard/ChartPanel.svelte';
   import FloorPlan from '../lib/components/dashboard/FloorPlan.svelte';
   import PaymentApprovalModal from '../lib/components/PaymentApprovalModal.svelte';
+  import VisitorApprovalModal from '../lib/components/VisitorApprovalModal.svelte';
   import ReservationDetailModal from '../lib/components/ReservationDetailModal.svelte';
   import { auth } from '../lib/store/auth.svelte';
   import { reservations } from '../lib/store/reservations.svelte';
+  import { liveSync } from '../lib/store/liveSync.svelte';
   import { ui } from '../lib/store/ui.svelte';
   import { navigate } from '../lib/router';
-  import { hasPermission } from '../lib/utils/permissions';
-  import { formatBaht, formatNumber, formatDateThai, normalizeStatus, STATUS_COLORS } from '../lib/utils/format';
-  import {
-    computeRevenueKpis,
-    computeTrend,
-    computeRevenueSummary,
-    computeStatusDistribution,
-    computeWingCounts,
-    computeMonthlyRevenue,
-    computeFunnel,
-    computeVisitorTypes,
-    computeDailyRevenue,
-    computeAlerts,
-    computePaymentQueue,
-    computeTodaysVisits,
-  } from '../lib/utils/dashboard';
+  import { hasPermission, visibleMenu, roleLabel } from '../lib/utils/permissions';
+  import { formatBaht, formatNumber, normalizeStatus, visitDateLabel, STATUS_COLORS } from '../lib/utils/format';
+  import { computeMonthlyRevenue, computeStatusDistribution, computeVisitorTypes, computeWingCounts } from '../lib/utils/dashboard';
+  import { businessDate, shiftDate, rangeDays, previousRange, bookingPool, activeBooking, peopleCount, scopedReservations, periodRows, periodSummary, comparison, dailySeries, workQueues, visitOrder, expiredHold, validDate, type BookingPool } from '../lib/utils/management';
 
+  let now = $state(new Date());
+  const today = $derived(businessDate(now));
+  let from = $state(shiftDate(businessDate(), -13));
+  let to = $state(businessDate());
+  let pool = $state<BookingPool>('all');
+  let view = $state<'overview' | 'analytics' | 'schedule'>('overview');
+  let queueStatus = $state('');
   const role = $derived(auth.user?.role ?? 'User');
-  const isAdminOrSuper = $derived(role === 'Superadmin' || role === 'Admin');
-  const canConfirmPayment = $derived(isAdminOrSuper || hasPermission(role, 'confirm_payment'));
-  const canRejectPayment = $derived(isAdminOrSuper || hasPermission(role, 'reject_payment'));
+  const canViewDetail = $derived(hasPermission(role, 'view_detail'));
   const canViewSlip = $derived(hasPermission(role, 'view_slip'));
+  const allowedMenus = $derived(visibleMenu(role));
+  const range = $derived({ from, to });
+  const days = $derived(rangeDays(range));
+  const validRange = $derived(days > 0 && days <= 366);
+  const scope = $derived(scopedReservations(reservations.rows, role, today));
+  const current = $derived(validRange ? periodRows(scope, range, pool) : []);
+  const previous = $derived(previousRange(range));
+  const summary = $derived(periodSummary(current));
+  const baseline = $derived(periodSummary(validRange ? periodRows(scope, previous, pool) : []));
+  const daily = $derived(validRange ? dailySeries(current, range) : []);
+  const live = $derived(scope.filter(row => !row._archived && activeBooking(row) && !expiredHold(row, now)));
+  const todaysVisits = $derived(live.filter(row => row.visitDateISO?.trim() === today).sort(visitOrder));
+  const upcoming = $derived(live.filter(row => String(row.visitDateISO ?? '').trim() > today && String(row.visitDateISO).trim() <= shiftDate(today, 7)));
+  const queues = $derived(workQueues(reservations.rows, role, now));
+  const selectedQueue = $derived(queues.find(queue => queue.status === queueStatus) ?? queues[0]);
+  const outstanding = $derived(queues.reduce((total, queue) => total + queue.rows.length, 0));
+  const missingDates = $derived(scope.filter(row => !validDate(String(row.visitDateISO ?? '').trim())).length);
+  const missingAmounts = $derived(current.filter(row => activeBooking(row) && (row.total == null || String(row.total).trim() === '' || !Number.isFinite(Number(row.total)) || Number(row.total) < 0)).length);
+  const heldExpired = $derived(scope.filter(row => !row._archived && expiredHold(row, now)).length);
+  const oldestVisit = $derived(selectedQueue?.rows[0]?.visitDateISO);
 
-  const rows = $derived(reservations.rows);
-  const revenue = $derived(computeRevenueKpis(rows));
-  const trend = $derived(computeTrend(rows));
-  const revSum = $derived(computeRevenueSummary(rows));
-  const statusDist = $derived(computeStatusDistribution(rows));
-  const wings = $derived(computeWingCounts(rows));
-  const monthly = $derived(computeMonthlyRevenue(rows));
-  const funnel = $derived(computeFunnel(rows));
-  const visitorTypes = $derived(computeVisitorTypes(rows));
-  const dailyRevenue = $derived(computeDailyRevenue(rows));
-  // Charts above cover history (archive included); these are work to act on
-  // now, and an archived booking is never actionable.
-  const liveRows = $derived(rows.filter((r) => !r._archived));
-  const alerts = $derived(computeAlerts(liveRows));
-  const paymentQueue = $derived(computePaymentQueue(liveRows));
-  const todaysVisits = $derived(computeTodaysVisits(liveRows));
-
-  const statusFilterCards = $derived.by(() => {
-    const defs = [
-      { status: 'รอตรวจสอบผู้เข้าร่วม', label: 'รอตรวจสอบผู้เข้าร่วม', icon: Users, color: 'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-400', bar: 'from-violet-500 to-purple-600' },
-      { status: 'รอตรวจสอบวินัย', label: 'รอตรวจสอบวินัย', icon: Crown, color: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400', bar: 'from-amber-500 to-amber-600' },
-      { status: 'รอชำระเงิน', label: 'รอชำระเงิน', icon: ReceiptText, color: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400', bar: 'from-blue-600 to-blue-700' },
-      { status: 'ชำระแล้ว', label: 'ชำระแล้ว', icon: Wallet, color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400', bar: 'from-emerald-600 to-teal-700' },
-    ];
-    return defs.map((d) => ({ ...d, count: statusDist[d.status] ?? 0 }));
+  const metrics = $derived([
+    { key: 'bookings', label: 'การจองที่ยังมีผล', value: summary.bookings, previous: baseline.bookings, money: false, note: `${formatNumber(summary.visitors)} ผู้เยี่ยมที่ลงทะเบียน`, icon: CalendarDays, tone: 'crimson' },
+    { key: 'paid', label: 'มูลค่าการจองที่ชำระแล้ว', value: summary.paid, previous: baseline.paid, money: true, note: 'สถานะ ชำระแล้ว / เสร็จสิ้น', icon: Coins, tone: 'emerald' },
+    { key: 'pending', label: 'มูลค่าการจองรอชำระ', value: summary.pending, previous: baseline.pending, money: true, note: 'เฉพาะสถานะ รอชำระเงิน', icon: Wallet, tone: 'gold' },
+    { key: 'completed', label: 'ดำเนินการเสร็จสิ้น', value: summary.completed, previous: baseline.completed, money: false, note: 'ยืนยันเสร็จสิ้นในระบบ', icon: CheckCircle2, tone: 'slate' },
+  ]);
+  const textColor = $derived(ui.darkMode ? '#cbd5e1' : '#64748b');
+  const gridColor = $derived(ui.darkMode ? '#293446' : '#ece9e4');
+  const barBase = $derived<EChartsOption>({
+    animationDuration: 250,
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { bottom: 0, itemWidth: 9, itemHeight: 9, textStyle: { color: textColor, fontSize: 11 } },
+    grid: { left: 12, right: 12, top: 20, bottom: 42, containLabel: true },
+    xAxis: { type: 'category', data: daily.map(point => point.date.slice(5)), axisLabel: { color: textColor, fontSize: 10 }, axisTick: { show: false }, axisLine: { show: false } },
+    yAxis: { type: 'value', minInterval: 1, axisLabel: { color: textColor, fontSize: 10 }, splitLine: { lineStyle: { color: gridColor, type: 'dashed' } } },
   });
-
-  function goToStatus(status: string): void {
-    navigate(`/reservations?status=${encodeURIComponent(status)}`);
+  const bookingOption = $derived<EChartsOption>({ ...barBase, series: [
+    { name: 'เยี่ยมผู้ต้องขัง', type: 'bar', stack: 'bookings', barMaxWidth: 22, data: daily.map(point => point.prisoner), itemStyle: { color: ui.darkMode ? '#df8984' : '#a92928' } },
+    { name: 'จองโต๊ะ (TBL)', type: 'bar', stack: 'bookings', barMaxWidth: 22, data: daily.map(point => point.table), itemStyle: { color: '#d3ac60', borderRadius: [3, 3, 0, 0] } },
+  ] });
+  const moneyOption = $derived<EChartsOption>({ ...barBase, tooltip: { trigger: 'axis', valueFormatter: value => formatBaht(value) }, series: [
+    { name: 'ชำระแล้ว', type: 'bar', stack: 'money', barMaxWidth: 22, data: daily.map(point => point.paid), itemStyle: { color: '#238a75' } },
+    { name: 'รอชำระ', type: 'bar', stack: 'money', barMaxWidth: 22, data: daily.map(point => point.pending), itemStyle: { color: '#d3ac60', borderRadius: [3, 3, 0, 0] } },
+  ] });
+  const states = $derived(Object.entries(computeStatusDistribution(current)));
+  const wings = $derived(computeWingCounts(current.filter(row => activeBooking(row) && bookingPool(row) === 'prisoner')));
+  const visitorTypes = $derived(computeVisitorTypes(current));
+  const ageRows = $derived([{ label: 'ผู้ใหญ่', value: visitorTypes.adult }, { label: 'เด็ก 5–8 ปี', value: visitorTypes.child5to8 }, { label: 'เด็กต่ำกว่า 5 ปี', value: visitorTypes.childUnder5 }]);
+  const monthly = $derived(computeMonthlyRevenue(scope.filter(row => pool === 'all' || bookingPool(row) === pool), 6));
+  function horizontal(labels: string[], values: number[], colors: string[] = ['#a92928']): EChartsOption {
+    return { tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } }, grid: { left: 8, right: 30, top: 10, bottom: 10, containLabel: true }, xAxis: { type: 'value', minInterval: 1, axisLabel: { color: textColor }, splitLine: { lineStyle: { color: gridColor, type: 'dashed' } } }, yAxis: { type: 'category', inverse: true, data: labels, axisTick: { show: false }, axisLine: { show: false }, axisLabel: { color: textColor, fontSize: 11, width: 140, overflow: 'truncate' } }, series: [{ type: 'bar', barMaxWidth: 18, label: { show: true, position: 'right', color: textColor }, data: values.map((value, i) => ({ value, itemStyle: { color: colors[i % colors.length], borderRadius: [0, 4, 4, 0] } })) }] };
   }
-
-  const textColor = $derived(ui.darkMode ? '#cbd5e1' : '#475569');
-  const axisLine = $derived(ui.darkMode ? '#334155' : '#e2e8f0');
-
-  const trendOption = $derived<EChartsOption>({
-    tooltip: { trigger: 'axis' },
-    grid: { left: 40, right: 16, top: 24, bottom: 28 },
-    xAxis: {
-      type: 'category',
-      data: trend.map((p) => p.date.slice(5)),
-      axisLine: { lineStyle: { color: axisLine } },
-      axisLabel: { color: textColor },
-    },
-    yAxis: {
-      type: 'value',
-      minInterval: 1,
-      splitLine: { lineStyle: { color: axisLine, type: 'dashed' } },
-      axisLabel: { color: textColor },
-    },
-    series: [
-      {
-        name: 'การจอง',
-        type: 'line',
-        smooth: true,
-        data: trend.map((p) => p.count),
-        areaStyle: { opacity: 0.12 },
-        itemStyle: { color: '#1e3a5f' },
-        lineStyle: { color: '#1e3a5f' },
-      },
-    ],
-  });
-
-  const revenueOption = $derived<EChartsOption>({
-    tooltip: { trigger: 'item', formatter: '{b}: {c} บาท ({d}%)' },
-    legend: { bottom: 0, textStyle: { color: textColor } },
-    series: [
-      {
-        type: 'pie',
-        radius: ['45%', '70%'],
-        center: ['50%', '42%'],
-        label: { show: false },
-        data: [
-          { name: 'ชำระแล้ว', value: revSum.paid, itemStyle: { color: '#059669' } },
-          { name: 'ค้างชำระ', value: revSum.unpaid, itemStyle: { color: '#c9a227' } },
-        ],
-      },
-    ],
-    graphic: [
-      {
-        type: 'text',
-        left: 'center',
-        top: '38%',
-        style: { text: formatBaht(revSum.totalBooked), fontSize: 14, fontWeight: 700, fill: textColor },
-      },
-    ],
-  });
-
-  const statusOption = $derived<EChartsOption>({
-    tooltip: { trigger: 'item' },
-    legend: { type: 'scroll', bottom: 0, textStyle: { color: textColor } },
-    series: [
-      {
-        type: 'pie',
-        radius: ['40%', '68%'],
-        center: ['50%', '44%'],
-        label: { show: false },
-        data: Object.entries(statusDist).map(([name, value]) => ({
-          name,
-          value,
-          itemStyle: { color: STATUS_COLORS[name] ?? '#94a3b8' },
-        })),
-      },
-    ],
-  });
-
-  const wingOption = $derived<EChartsOption>({
-    tooltip: { trigger: 'axis' },
-    grid: { left: 40, right: 16, top: 16, bottom: 28 },
-    xAxis: { type: 'category', data: wings.map((w) => w.wing), axisLabel: { color: textColor, interval: 0 }, axisLine: { lineStyle: { color: axisLine } } },
-    yAxis: { type: 'value', minInterval: 1, splitLine: { lineStyle: { color: axisLine, type: 'dashed' } }, axisLabel: { color: textColor } },
-    series: [{ type: 'bar', data: wings.map((w) => w.count), itemStyle: { color: '#1e3a5f', borderRadius: [4, 4, 0, 0] } }],
-  });
-
-  const monthlyOption = $derived<EChartsOption>({
-    tooltip: { trigger: 'axis', valueFormatter: (v) => formatBaht(v) },
-    grid: { left: 56, right: 16, top: 16, bottom: 28 },
-    xAxis: { type: 'category', data: monthly.map((m) => m.label), axisLine: { lineStyle: { color: axisLine } }, axisLabel: { color: textColor } },
-    yAxis: { type: 'value', splitLine: { lineStyle: { color: axisLine, type: 'dashed' } }, axisLabel: { color: textColor } },
-    series: [{ type: 'bar', data: monthly.map((m) => m.revenue), itemStyle: { color: '#1e3a5f', borderRadius: [4, 4, 0, 0] } }],
-  });
-
-  const funnelOption = $derived<EChartsOption>({
-    tooltip: { trigger: 'item', formatter: '{b}: {c} รายการ' },
-    series: [
-      {
-        type: 'funnel',
-        left: 8,
-        right: 8,
-        top: 8,
-        bottom: 8,
-        label: { color: '#fff', formatter: '{b} {c}' },
-        itemStyle: { borderColor: ui.darkMode ? '#0f172a' : '#fff', borderWidth: 2 },
-        data: funnel.map((f, i) => ({ ...f, itemStyle: { color: Object.values(STATUS_COLORS)[i] ?? '#1e3a5f' } })),
-      },
-    ],
-  });
-
-  const visitorOption = $derived<EChartsOption>({
-    tooltip: { trigger: 'item' },
-    legend: { bottom: 0, textStyle: { color: textColor } },
-    series: [
-      {
-        type: 'pie',
-        radius: ['42%', '68%'],
-        center: ['50%', '42%'],
-        label: { show: false },
-        data: [
-          { name: 'ผู้ใหญ่', value: visitorTypes.adult, itemStyle: { color: '#1e3a5f' } },
-          { name: 'เด็ก 5-8 ขวบ', value: visitorTypes.child5to8, itemStyle: { color: '#2563eb' } },
-          { name: 'เด็กต่ำกว่า 5 ขวบ', value: visitorTypes.childUnder5, itemStyle: { color: '#c9a227' } },
-        ],
-      },
-    ],
-  });
-
-  const dailyRevenueOption = $derived<EChartsOption>({
-    tooltip: { trigger: 'axis', valueFormatter: (v) => formatBaht(v) },
-    legend: { bottom: 0, textStyle: { color: textColor } },
-    grid: { left: 56, right: 16, top: 24, bottom: 40 },
-    xAxis: { type: 'category', data: dailyRevenue.map((d) => d.date.slice(5)), axisLine: { lineStyle: { color: axisLine } }, axisLabel: { color: textColor } },
-    yAxis: { type: 'value', splitLine: { lineStyle: { color: axisLine, type: 'dashed' } }, axisLabel: { color: textColor } },
-    series: [
-      { name: 'ชำระแล้ว', type: 'bar', stack: 'rev', data: dailyRevenue.map((d) => d.paid), itemStyle: { color: '#059669' } },
-      { name: 'รอชำระ', type: 'bar', stack: 'rev', data: dailyRevenue.map((d) => d.pending), itemStyle: { color: '#c9a227' } },
-    ],
-  });
-
-  const kpiCards = $derived.by(() => {
-    const base = [
-      {
-        id: 'fund',
-        label: 'ยอดรายได้ (เดือนนี้)',
-        value: formatBaht(revenue.mtdTotal),
-        sub: `${formatNumber(revenue.mtdCount)} รายการในเดือนนี้`,
-        icon: Coins,
-        grad: 'from-amber-500 to-amber-600',
-        chip: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400',
-      },
-      {
-        id: 'paid',
-        label: 'ชำระแล้ว / รอชำระ',
-        value: `${formatBaht(revenue.paidTotal)} / ${formatBaht(revenue.pendingTotal)}`,
-        sub: `${revenue.paidPct}% ชำระแล้ว`,
-        icon: Wallet,
-        grad: 'from-emerald-600 to-teal-700',
-        chip: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400',
-        valueCls: 'text-green-700 dark:text-green-400',
-      },
-      {
-        id: 'bookings',
-        label: 'จำนวนการจองทั้งหมด',
-        value: formatNumber(revenue.bookingCount),
-        sub: `${formatBaht(revenue.grandTotal)} รายได้รวม`,
-        icon: TrendingUp,
-        grad: 'from-blue-800 to-blue-950',
-        chip: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400',
-      },
-      {
-        id: 'today',
-        label: 'การจองวันนี้',
-        value: formatNumber(revenue.todayCount),
-        sub: `จาก ${formatNumber(todaysVisits.length)} รายการ`,
-        icon: Users,
-        grad: 'from-purple-600 to-indigo-700',
-        chip: 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-400',
-      },
-    ];
-    return base;
-  });
+  const statusOption = $derived(horizontal(states.map(([label]) => label), states.map(([, value]) => value), states.map(([label]) => STATUS_COLORS[label] ?? '#94a3b8')));
+  const wingOption = $derived(horizontal(wings.map(point => point.wing), wings.map(point => point.count), ['#b97872']));
+  const ageOption = $derived(horizontal(ageRows.map(point => point.label), ageRows.map(point => point.value), ['#238a75', '#d3ac60', '#8094a9']));
+  const monthlyOption = $derived<EChartsOption>({ ...barBase, legend: { show: false }, xAxis: { type: 'category', data: monthly.map(point => point.label), axisTick: { show: false }, axisLine: { show: false }, axisLabel: { color: textColor } }, tooltip: { trigger: 'axis', valueFormatter: value => formatBaht(value) }, series: [{ name: 'มูลค่าการจอง', type: 'bar', barMaxWidth: 30, data: monthly.map(point => point.revenue), itemStyle: { color: '#b97872', borderRadius: [4, 4, 0, 0] } }] });
 
   onMount(() => {
-    reservations.load();
+    void reservations.load().catch(() => {});
+    const timer = setInterval(() => now = new Date(), 60_000);
+    return () => clearInterval(timer);
   });
-
-  let paymentRow = $state<Reservation | null>(null);
-  let paymentMode = $state<'ชำระแล้ว' | 'เสร็จสิ้น'>('ชำระแล้ว');
-  let showPaymentApproval = $state(false);
-  let paymentSaving = $state(false);
-
-  function openPaymentApproval(row: Reservation, mode: 'ชำระแล้ว' | 'เสร็จสิ้น'): void {
-    paymentRow = row;
-    paymentMode = mode;
-    showPaymentApproval = true;
+  function preset(length: number): void { from = shiftDate(today, 1 - length); to = today; }
+  function openList(status = '', extra: Record<string, string> = {}): void {
+    const query = new URLSearchParams({ ...(status ? { status } : {}), ...extra });
+    navigate(`/reservations${query.size ? `?${query}` : ''}`);
   }
-
-  function closePaymentApproval(): void {
-    if (paymentSaving) return;
-    showPaymentApproval = false;
-    paymentRow = null;
-  }
-
-  async function approvePayment(row: Reservation): Promise<void> {
-    paymentSaving = true;
-    try {
-      await reservations.updateStatus(row.ref, paymentMode);
-      ui.showAlert({
-        title: paymentMode === 'เสร็จสิ้น' ? 'ยืนยันการเสร็จสิ้นสำเร็จ' : 'ยืนยันการชำระเงินสำเร็จ',
-        message: `${row.visitorName ?? ''} · ${row.ref} สถานะเป็น "${paymentMode}"`,
-        type: 'success',
-      });
-      closePaymentApproval();
-    } catch (err) {
-      ui.showAlert({ title: 'ไม่สามารถยืนยันได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
-      closePaymentApproval();
-    } finally {
-      paymentSaving = false;
-    }
-  }
-
-  async function rejectPaid(row: Reservation): Promise<void> {
-    const name = String(row.visitorName ?? row.ref ?? '');
-    if (!window.confirm(`ยืนยันปฏิเสธรายการ "${name}" (${row.ref}) ? สถานะจะเปลี่ยนเป็น "ไม่อนุมัติ"`)) return;
-    try {
-      await reservations.updateStatus(row.ref, 'ไม่อนุมัติ');
-      ui.showAlert({ title: 'ปฏิเสธรายการสำเร็จ', message: `${name} · ${row.ref}`, type: 'success' });
-    } catch (err) {
-      ui.showAlert({ title: 'ไม่สามารถปฏิเสธได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
-    }
-  }
-
+  async function refresh(): Promise<void> { try { await reservations.refresh(); } catch { /* Visible store error. */ } }
   let detailRow = $state<Reservation | null>(null);
-  let showDetail = $state(false);
-
-  function openDetail(row: Reservation): void {
-    detailRow = row;
-    showDetail = true;
+  let paymentRow = $state<Reservation | null>(null);
+  let visitorRow = $state<Reservation | null>(null);
+  let paymentMode = $state<'ชำระแล้ว' | 'เสร็จสิ้น'>('ชำระแล้ว');
+  let saving = $state(false);
+  function review(row: Reservation): void {
+    const s = normalizeStatus(row.status);
+    if (s === 'รอตรวจสอบผู้เข้าร่วม' && hasPermission(role, 'visitor_approval')) { visitorRow = row; return; }
+    if (['รอชำระเงิน', 'ชำระแล้ว'].includes(s) && hasPermission(role, 'confirm_payment')) { paymentMode = s === 'ชำระแล้ว' ? 'เสร็จสิ้น' : 'ชำระแล้ว'; paymentRow = row; return; }
+    openList(s, { search: row.ref });
   }
-
-  function closeDetail(): void {
-    showDetail = false;
-    detailRow = null;
+  async function approvePayment(row: Reservation): Promise<void> {
+    if (saving || !hasPermission(role, 'confirm_payment')) return;
+    saving = true;
+    try { await reservations.updateStatus(row.ref, paymentMode); ui.showToast(`${row.ref} · ${paymentMode}`, 'success'); paymentRow = null; }
+    catch (err) { ui.showAlert({ title: 'ไม่สามารถยืนยันได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' }); }
+    finally { saving = false; }
   }
 </script>
 
-<div class="flex flex-col gap-6">
-  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 p-5 text-white shadow-lg shadow-black/25 sm:p-6">
-    <div class="pointer-events-none absolute -right-12 -top-14 h-56 w-56 rounded-full bg-amber-400/10 blur-3xl" aria-hidden="true"></div>
-    <div class="pointer-events-none absolute -bottom-20 right-12 h-48 w-48 rounded-full bg-amber-400/5 blur-2xl" aria-hidden="true"></div>
-    <div class="pointer-events-none absolute left-8 top-4 h-px w-24 bg-gradient-to-r from-transparent to-amber-400/60" aria-hidden="true"></div>
-    <div class="relative flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <div class="flex items-center gap-2 text-xs font-medium text-white/80">
-          <Sparkles class="h-3.5 w-3.5" />
-          {formatDateThai(new Date())}
-        </div>
-        <h2 class="mt-1 text-2xl font-bold tracking-tight">สวัสดี, {auth.displayName}</h2>
-        <p class="mt-1 text-sm text-white/80">
-          ยินดีต้อนรับสู่ระบบจอง C&amp;C Café · การจองวันนี้ {formatNumber(todaysVisits.length)} รายการ
-        </p>
-      </div>
-      <div class="flex items-center gap-2.5">
-        <button
-          class="inline-flex items-center gap-1.5 rounded-xl bg-white/15 px-4 py-2.5 text-sm font-medium text-white transition-colors duration-150 hover:bg-white/25"
-          onclick={() => reservations.refresh()}
-        >
-          <RefreshCw class="h-4 w-4" />
-          รีเฟรช
-        </button>
-        <button
-          class="inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-blue-800 shadow transition-colors duration-150 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-blue-700 focus-visible:outline-offset-2"
-          onclick={() => navigate('/reservations')}
-        >
-          เปิดตารางการจอง
-          <ArrowRight class="h-4 w-4" />
-        </button>
-      </div>
+<div class="management-dashboard flex flex-col gap-6">
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div><p class="mb-2 text-[10px] font-semibold tracking-[0.18em] text-blue-700 dark:text-blue-300">C&C CAFÉ / MANAGEMENT</p><h2 class="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl dark:text-white">ภาพรวมการดำเนินงาน</h2><p class="mt-2 text-sm text-slate-500">ข้อมูลเพื่อวางแผน และงานที่พร้อมให้คุณดำเนินการ</p></div>
+    <button class="quick-link" disabled={reservations.loading} onclick={() => void refresh()}><RefreshCw class="h-4 w-4 {reservations.loading ? 'animate-spin' : ''}" />อัปเดตข้อมูล</button>
+  </div>
+
+  <div class="dashboard-hero relative overflow-hidden rounded-2xl p-5 text-white sm:p-6">
+    <div class="relative z-10 flex flex-wrap items-center justify-between gap-6">
+      <div><p class="text-xs text-white/65">{visitDateLabel(today)} · {roleLabel(role)}</p><h3 class="mt-2 text-xl font-medium">สวัสดี, {auth.displayName}</h3><p class="mt-1 text-xs text-white/65">{role === 'Superadmin' || role === 'Admin' || role === 'User' ? 'ภาพรวมข้อมูลที่โหลดจากระบบ' : 'เฉพาะข้อมูลตามขอบเขตบทบาทของคุณ'}</p></div>
+      <div class="flex flex-wrap gap-6 sm:gap-10"><div><p class="text-[11px] text-white/65">การจองที่ยังมีผลวันนี้</p><p class="mt-1 text-3xl font-semibold tabular-nums">{reservations.loadedAt == null && !scope.length ? '—' : formatNumber(todaysVisits.length)}</p></div><div><p class="text-[11px] text-white/65">งานในคิวของคุณ</p><p class="mt-1 text-3xl font-semibold tabular-nums text-amber-200">{reservations.loadedAt == null && !scope.length ? '—' : formatNumber(outstanding)}</p></div><div><p class="text-[11px] text-white/65">การจองใน 7 วันข้างหน้า</p><p class="mt-1 text-3xl font-semibold tabular-nums">{reservations.loadedAt == null && !scope.length ? '—' : formatNumber(upcoming.length)}</p></div></div>
     </div>
   </div>
 
-  {#if reservations.loading && reservations.rows.length === 0}
-    <div class="flex items-center justify-center py-16">
-      <Spinner />
-    </div>
-  {:else if reservations.error && reservations.rows.length === 0}
-    <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-      {reservations.error}
-    </div>
-  {:else}
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {#each kpiCards as k (k.id)}
-        {@const KIcon = k.icon}
-        <div class="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 transition-all duration-200 ease-out hover:shadow-lg dark:border-slate-700/60 dark:bg-slate-900 dark:hover:shadow-xl">
-          <div class="pointer-events-none absolute inset-x-0 top-0 z-0 h-1 bg-gradient-to-r {k.grad}" aria-hidden="true"></div>
-          <div class="relative flex items-center justify-between gap-3">
-            <div class="min-w-0 flex-1">
-              <p class="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">{k.label}</p>
-              <p class="mt-1 text-xl font-bold tracking-tight text-slate-900 dark:text-white {k.valueCls ?? ''}">{k.value}</p>
-              <p class="mt-0.5 text-xs text-slate-400 dark:text-slate-500">{k.sub}</p>
-            </div>
-            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400">
-              <KIcon class="h-5 w-5" />
-            </div>
-          </div>
-        </div>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <nav class="dashboard-tabs flex max-w-full gap-1 overflow-x-auto rounded-xl p-1" aria-label="มุมมองแดชบอร์ด">
+      {#each [{ key: 'overview' as const, label: 'ภาพรวมและคิวงาน' }, { key: 'analytics' as const, label: 'วิเคราะห์ข้อมูล' }, ...(canViewDetail ? [{ key: 'schedule' as const, label: 'การจองรายวัน' }] : [])] as tab (tab.key)}
+        <button class="whitespace-nowrap rounded-lg px-4 py-2 text-xs font-medium {view === tab.key ? 'bg-white text-blue-800 shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 dark:text-slate-400'}" aria-pressed={view === tab.key} onclick={() => view = tab.key}>{tab.label}</button>
       {/each}
-    </div>
+    </nav>
+    <p class="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400" aria-live="polite"><span class="h-1.5 w-1.5 rounded-full {reservations.error || !liveSync.connected ? 'bg-amber-500' : reservations.loadedAt ? 'bg-emerald-500' : 'bg-slate-400'}"></span>{reservations.loading ? 'กำลังอัปเดต...' : !liveSync.connected ? 'กำลังเชื่อมต่อใหม่ · ข้อมูลอาจยังไม่อัปเดต' : reservations.loadedAt ? `ข้อมูลล่าสุด ${new Date(reservations.loadedAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'รอโหลดข้อมูล'}</p>
+  </div>
 
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {#each statusFilterCards as s (s.status)}
-        {@const SIcon = s.icon}
-        <div class="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 transition-all duration-200 ease-out hover:shadow-lg dark:border-slate-700/60 dark:bg-slate-900 dark:hover:shadow-xl">
-          <div class="pointer-events-none absolute inset-x-0 top-0 z-0 h-1 bg-gradient-to-r {s.bar}" aria-hidden="true"></div>
-          <div class="flex items-center justify-between gap-3">
-            <div class="min-w-0 flex-1">
-              <p class="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">{s.label}</p>
-              <p class="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{formatNumber(s.count)}</p>
-              <p class="mt-0.5 text-xs text-slate-400 dark:text-slate-500">รายการ</p>
-            </div>
-            <div class="flex h-10 w-10 items-center justify-center rounded-xl {s.color}">
-              <SIcon class="h-5 w-5" />
-            </div>
-          </div>
-          <button
-            class="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition-colors duration-150 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-            onclick={() => goToStatus(s.status)}
-          >
-            ดูรายการ
-            <ArrowRight class="h-3.5 w-3.5" />
-          </button>
+  {#if reservations.error}<div role="alert" class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">{reservations.error}{#if scope.length} · แสดงข้อมูลที่โหลดไว้ล่าสุด{/if}<button class="ml-3 underline" onclick={() => void refresh()}>ลองใหม่</button></div>{/if}
+  {#if reservations.loading && !scope.length}<div class="flex justify-center py-20"><Spinner /></div>
+  {:else if reservations.loadedAt || scope.length}
+    {#if view === 'schedule' && canViewDetail}
+      <FloorPlan rows={scope} ondetail={row => detailRow = row} />
+    {:else}
+      <section class="rounded-2xl border border-slate-200/80 bg-white p-4 dark:border-slate-700 dark:bg-slate-900" aria-label="ตัวกรองสถิติ">
+        <div class="flex flex-wrap items-end gap-3"><div><label for="dashboard-from" class="mb-1.5 block text-[11px] text-slate-500">วันเข้าเยี่ยม / ใช้บริการ ตั้งแต่</label><input id="dashboard-from" type="date" bind:value={from} class="management-input" /></div><div><label for="dashboard-to" class="mb-1.5 block text-[11px] text-slate-500">ถึงวันที่</label><input id="dashboard-to" type="date" bind:value={to} class="management-input" /></div><div><label for="dashboard-pool" class="mb-1.5 block text-[11px] text-slate-500">ประเภทการจอง</label><select id="dashboard-pool" bind:value={pool} class="management-input"><option value="all">ทุกประเภท</option><option value="prisoner">เยี่ยมผู้ต้องขัง (VIS)</option><option value="table">จองโต๊ะ (TBL)</option></select></div><div class="ml-auto flex gap-1">{#each [7, 14, 30, 90] as length (length)}<button class="rounded-lg border px-2.5 py-2 text-xs {days === length && to === today ? 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300' : 'border-slate-200 text-slate-500 dark:border-slate-700'}" onclick={() => preset(length)}>{length} วัน</button>{/each}</div></div>
+        <p class="mt-3 text-[11px] leading-relaxed text-slate-400">สถิติอิงวันที่เข้าเยี่ยม / ใช้บริการ ไม่ใช่วันที่โอนเงิน · {reservations.includeArchive ? 'รวมข้อมูลย้อนหลังที่เก็บถาวร' : 'กำลังดูเฉพาะข้อมูลปัจจุบัน'}{#if !reservations.includeArchive}<button class="ml-2 text-blue-700 underline dark:text-blue-300" onclick={() => { void reservations.toggleArchive().catch(() => {}); }}>รวมข้อมูลย้อนหลัง</button>{/if}</p>
+      </section>
+      {#if !validRange}<div role="alert" class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">เลือกวันที่เริ่มต้นก่อนวันที่สิ้นสุด และช่วงไม่เกิน 366 วัน</div>
+      {:else}
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {#each metrics as metric (metric.key)}{@const Icon = metric.icon}{@const change = comparison(metric.value, metric.previous)}
+            <article class="management-metric {metric.tone}"><div class="flex items-center justify-between gap-2"><p class="text-xs font-medium text-slate-500 dark:text-slate-400">{metric.label}</p><span class="metric-icon"><Icon class="h-4 w-4" /></span></div><p class="mt-3 break-words text-2xl font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">{metric.money ? formatBaht(metric.value) : formatNumber(metric.value)}</p><p class="mt-1 text-[11px] text-slate-400">{metric.note}</p><div class="mt-4 border-t border-slate-100 pt-3 text-[11px] tabular-nums text-slate-500 dark:border-slate-800 dark:text-slate-400">{change.percent === null ? metric.value > 0 ? 'ช่วงก่อนหน้าไม่มีข้อมูลเปรียบเทียบ' : 'ไม่มีรายการในทั้งสองช่วง' : `${change.delta > 0 ? '+' : ''}${change.percent}% · ${change.delta > 0 ? '+' : ''}${metric.money ? formatBaht(change.delta) : formatNumber(change.delta)}`}<span class="mt-1 block text-[10px] text-slate-400">เทียบ {visitDateLabel(previous.from)} – {visitDateLabel(previous.to)}</span></div></article>
+          {/each}
         </div>
-      {/each}
-    </div>
-
-    <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
-      <Card title="ชำระแล้ว" subtitle="รายการที่ชำระเงินแล้ว" interactive>
-        {#if alerts.length === 0}
-          <p class="py-8 text-center text-sm text-slate-400 dark:text-slate-500">ไม่มีการจองที่ชำระเงินแล้ว</p>
-        {:else}
-          <div class="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
-            {#each alerts.slice(0, 5) as r (r.ref)}
-              {@const s = normalizeStatus(r.status)}
-              <div class="flex items-center gap-3 py-2.5 text-sm">
-                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
-                  <CheckCircle2 class="h-4 w-4" />
-                </div>
-                <div class="min-w-0 flex-1">
-                  <button
-                    class="font-mono text-xs font-semibold text-blue-700 hover:underline dark:text-blue-400"
-                    onclick={() => openDetail(r)}
-                    title="ดูรายละเอียด"
-                  >
-                    {r.ref}
-                  </button>
-                  <div class="truncate text-xs text-slate-500 dark:text-slate-400">{r.visitorName}</div>
-                </div>
-                <div class="flex items-center gap-1.5">
-                  <span class="whitespace-nowrap text-xs font-semibold text-emerald-700 dark:text-emerald-400">{formatBaht(r.total)}</span>
-                  {#if s === 'ชำระแล้ว' && canConfirmPayment}
-                    <button
-                      class="shrink-0 rounded-lg border border-emerald-200 bg-white p-1 text-emerald-600 transition-colors duration-150 hover:bg-emerald-50 dark:border-emerald-900 dark:bg-slate-800 dark:hover:bg-emerald-950/30"
-                      title="ยืนยันเสร็จสิ้น"
-                      onclick={() => openPaymentApproval(r, 'เสร็จสิ้น')}
-                    >
-                      <Check class="h-3.5 w-3.5" />
-                    </button>
-                  {/if}
-                  {#if s === 'ชำระแล้ว' && canRejectPayment}
-                    <button
-                      class="shrink-0 rounded-lg border border-red-200 bg-white p-1 text-red-600 transition-colors duration-150 hover:bg-red-50 dark:border-red-900 dark:bg-slate-800 dark:hover:bg-red-950/30"
-                      title="ปฏิเสธรายการ"
-                      onclick={() => rejectPaid(r)}
-                    >
-                      <X class="h-3.5 w-3.5" />
-                    </button>
-                  {/if}
-                </div>
-              </div>
-            {/each}
+        {#if missingDates || missingAmounts || heldExpired}<p class="rounded-xl border border-slate-200 px-4 py-3 text-xs leading-relaxed text-slate-500 dark:border-slate-700 dark:text-slate-400">{#if missingDates}ข้อมูลขาดวันที่ที่ใช้คำนวณ {formatNumber(missingDates)} รายการ · {/if}{#if missingAmounts}ยอดเงินไม่สมบูรณ์ในช่วงที่เลือก {formatNumber(missingAmounts)} รายการ · {/if}{#if heldExpired}การจองโต๊ะหมดเวลาชำระ {formatNumber(heldExpired)} รายการ ไม่รวมในคิวงาน{/if}</p>{/if}
+        {#if !current.length}<p class="rounded-xl bg-white p-4 text-center text-sm text-slate-500 dark:bg-slate-900">ไม่พบการจองในช่วงวันที่และประเภทที่เลือก</p>{/if}
+        <div class="grid gap-5 xl:grid-cols-2">
+          <ChartPanel title="การจองตามวันใช้บริการ" description="จำนวนการจองที่ยังมีผล แยก VIS / TBL · ไม่รวมยกเลิกและไม่อนุมัติ" option={bookingOption} empty={!summary.bookings} columns={['วันที่', 'เยี่ยมผู้ต้องขัง', 'จองโต๊ะ']} rows={daily.map(point => ({ label: visitDateLabel(point.date), values: [point.prisoner, point.table] }))} />
+          <ChartPanel title="มูลค่าการจองตามวันใช้บริการ" description="ชำระแล้วและรอชำระ · ไม่ใช่กระแสเงินสดตามวันที่โอน" option={moneyOption} empty={summary.paid + summary.pending === 0} columns={['วันที่', 'ชำระแล้ว', 'รอชำระ']} rows={daily.map(point => ({ label: visitDateLabel(point.date), values: [formatBaht(point.paid), formatBaht(point.pending)] }))} />
+        </div>
+        {#if view === 'analytics'}
+          <div class="grid gap-5 xl:grid-cols-2">
+            <ChartPanel title="สถานะการจองในช่วงที่เลือก" description="สถานะปัจจุบันของแต่ละรายการ รวมยกเลิกและไม่อนุมัติ" option={statusOption} empty={!states.length} columns={['สถานะ', 'รายการ']} rows={states.map(([label, value]) => ({ label, values: [value] }))} />
+            <ChartPanel title="การจองเยี่ยมตามแดนหลัก" description="นับการจองที่ยังมีผลตามแดนของผู้ต้องขังหลัก ไม่ใช่จำนวนผู้ต้องขัง" option={wingOption} empty={!wings.length} columns={['แดนหลัก', 'การจอง']} rows={wings.map(point => ({ label: point.wing, values: [point.count] }))} />
+            <ChartPanel title="ผู้เยี่ยมที่ลงทะเบียนแยกตามอายุ" description="จำนวนจากข้อมูลผู้เยี่ยมที่ระบบบันทึก ไม่ใช่การเช็กอินจริง" option={ageOption} empty={!ageRows.some(point => point.value > 0)} columns={['ประเภทผู้เยี่ยม', 'คน']} rows={ageRows.map(point => ({ label: point.label, values: [point.value] }))} />
+            <ChartPanel title="มูลค่าการจอง 6 เดือนล่าสุด" description="ช่วงคงที่ 6 เดือนรวมเดือนปัจจุบัน · ตามประเภทที่เลือก · ไม่รวมยกเลิก/ไม่อนุมัติ" option={monthlyOption} empty={!monthly.some(point => point.count > 0)} columns={['เดือน', 'มูลค่าการจอง', 'รายการ']} rows={monthly.map(point => ({ label: point.label, values: [formatBaht(point.revenue), point.count] }))} />
           </div>
+          <p class="text-xs text-slate-400">มูลค่าการจองที่ยังมีผลในช่วงที่เลือก {formatBaht(summary.booked)} รวมรายการที่กำลังตรวจสอบ · สถานะเสร็จสิ้นคือการดำเนินงานเสร็จในระบบ</p>
         {/if}
-      </Card>
+      {/if}
 
-      <Card title="คิวชำระเงิน" subtitle="รายการที่รอชำระ" interactive>
-        {#if paymentQueue.length === 0}
-          <p class="py-8 text-center text-sm text-slate-400 dark:text-slate-500">ไม่มีรายการรอชำระ</p>
-        {:else}
-          <div class="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
-            {#each paymentQueue.slice(0, 5) as r (r.ref)}
-              <div class="flex items-center justify-between gap-2 py-2.5 text-sm">
-                <div class="flex min-w-0 items-center gap-3">
-                  <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-lg dark:bg-blue-950">
-                    {r.slipImage || r.status === 'ชำระแล้ว' || r.status === 'เสร็จสิ้น' ? '🧾' : '💳'}
-                  </div>
-                  <div class="min-w-0">
-                    <div class="truncate font-medium text-slate-700 dark:text-slate-200">{r.visitorName}</div>
-                    <div class="truncate text-xs text-slate-400">{r.ref} · {r.prisonerName}</div>
-                  </div>
-                </div>
-                <div class="whitespace-nowrap font-semibold text-slate-700 dark:text-slate-200">{formatBaht(r.total)}</div>
-                {#if canConfirmPayment}
-                  <button
-                    class="shrink-0 rounded-xl bg-blue-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors duration-150 hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-blue-700 focus-visible:outline-offset-2"
-                    onclick={() => openPaymentApproval(r, 'ชำระแล้ว')}
-                  >
-                    ยืนยัน
-                  </button>
-                {/if}
-              </div>
-            {/each}
-          </div>
+      {#if view === 'overview'}
+        <div class="flex flex-wrap items-end justify-between gap-3"><div><p class="text-[10px] font-semibold tracking-widest text-blue-700 dark:text-blue-300">DAILY OPERATIONS</p><h3 class="mt-1 text-lg font-semibold text-slate-900 dark:text-white">คิวงานของคุณ</h3><p class="mt-1 text-xs text-slate-500">ข้อมูลปัจจุบันตามสิทธิ์ของคุณ · เรียงวันใช้บริการใกล้สุดก่อน · ไม่ใช้ตัวกรองสถิติด้านบน</p></div>{#if allowedMenus.includes('reservations')}<a href="#/reservations" class="quick-link">จัดการการจองทั้งหมด <ArrowUpRight class="h-3.5 w-3.5" /></a>{/if}</div>
+        {#if queues.length}
+          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{#each queues as queue (queue.status)}<button class="work-queue-card {selectedQueue?.status === queue.status ? 'active' : ''}" aria-pressed={selectedQueue?.status === queue.status} onclick={() => queueStatus = queue.status}><span class="flex items-center justify-between gap-2 text-xs"><span>{queue.label}</span><ArrowRight class="h-3.5 w-3.5" /></span><span class="mt-3 block text-2xl font-semibold tabular-nums">{formatNumber(queue.rows.length)}</span><span class="mt-1 block text-[11px] opacity-65">{queue.action}</span></button>{/each}</div>
         {/if}
-      </Card>
-
-      <Card title="การจองวันนี้" subtitle="{formatNumber(todaysVisits.length)} รายการ" interactive>
-        {#if todaysVisits.length === 0}
-          <p class="py-8 text-center text-sm text-slate-400 dark:text-slate-500">ไม่มีการจองวันนี้</p>
-        {:else}
-          <div class="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
-            {#each todaysVisits.slice(0, 6) as r (r.ref)}
-              <div class="flex items-center justify-between gap-2 py-2 text-sm">
-                <div class="flex min-w-0 items-center gap-2">
-                  <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
-                    <Users class="h-3.5 w-3.5" />
-                  </div>
-                  <div class="min-w-0">
-                    <div class="font-mono text-xs font-semibold text-blue-700 dark:text-blue-400">{r.ref}</div>
-                    <div class="truncate text-xs text-slate-500 dark:text-slate-400">{r.visitorName} · {r.prisonerName}</div>
-                  </div>
-                </div>
-                <span class="shrink-0 inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium {(() => {
-                  switch (normalizeStatus(r.status)) {
-                    case 'รอตรวจสอบผู้เข้าร่วม': return 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300';
-                    case 'รอตรวจสอบวินัย': return 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300';
-                    case 'รอชำระเงิน': return 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300';
-                    case 'ชำระแล้ว': return 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300';
-                    case 'เสร็จสิ้น': return 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300';
-                    case 'ไม่อนุมัติ': return 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300';
-                    case 'ยกเลิก': return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
-                    default: return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
-                  }
-                })()}">
-                  {normalizeStatus(r.status)}
-                </span>
-              </div>
-            {/each}
-          </div>
-        {/if}
-      </Card>
-    </div>
-
-    <div class="grid grid-cols-1 gap-5 xl:grid-cols-2">
-      <Card title="แนวโน้มการจอง 14 วัน" interactive>
-        <EChart option={trendOption} />
-      </Card>
-      <Card title="สรุปรายได้" interactive>
-        <EChart option={revenueOption} />
-      </Card>
-      <Card title="สัดส่วนสถานะ" interactive>
-        <EChart option={statusOption} />
-      </Card>
-      <Card title="จำนวนการจองแยกตามปีก" interactive>
-        <EChart option={wingOption} />
-      </Card>
-      <Card title="รายได้รายเดือน (6 เดือน)" interactive>
-        <EChart option={monthlyOption} />
-      </Card>
-      <Card title="สายงานสถานะ (Pipeline)" interactive>
-        <EChart option={funnelOption} />
-      </Card>
-      <Card title="ประเภทผู้เยี่ยม" interactive>
-        <EChart option={visitorOption} />
-      </Card>
-      <Card title="รายได้รายวัน (14 วัน)" interactive>
-        <EChart option={dailyRevenueOption} />
-      </Card>
-    </div>
-
-    <FloorPlan />
+        <div class="grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
+          <Card title={selectedQueue?.label ?? 'ข้อมูลสำหรับบทบาทของคุณ'} subtitle={selectedQueue ? `${formatNumber(selectedQueue.rows.length)} รายการ · ${oldestVisit ? `วันใช้บริการแรก ${visitDateLabel(oldestVisit)}` : 'ไม่มีรายการค้างในคิวนี้'}` : 'บทบาทนี้ไม่มีงานอนุมัติในแดชบอร์ด'} padding={false}>
+            {#if selectedQueue?.rows.length}
+              <div class="overflow-x-auto"><table class="w-full min-w-[540px] text-left text-xs"><caption class="sr-only">คิวงาน {selectedQueue.label}</caption><thead><tr class="border-b border-slate-100 text-slate-400 dark:border-slate-800"><th scope="col" class="px-5 py-3 font-normal">การจอง / ผู้เยี่ยม</th><th scope="col" class="px-3 py-3 font-normal">วันใช้บริการ</th><th scope="col" class="px-3 py-3 text-right font-normal">มูลค่า</th><th scope="col" class="px-5 py-3 text-right font-normal">ดำเนินการ</th></tr></thead><tbody>{#each selectedQueue.rows.slice(0, 6) as row (row.ref)}<tr class="border-b border-slate-100 last:border-0 dark:border-slate-800"><td class="px-5 py-3"><button class="font-mono font-semibold text-blue-700 hover:underline dark:text-blue-300" onclick={() => detailRow = row}>{row.ref}</button><p class="mt-1 max-w-44 truncate text-slate-600 dark:text-slate-300">{row.visitorName || '—'}</p><p class="mt-0.5 text-[10px] text-slate-400">{bookingPool(row) === 'table' ? 'จองโต๊ะ (TBL)' : 'เยี่ยมผู้ต้องขัง'}</p></td><td class="px-3 py-3 text-slate-600 dark:text-slate-300">{visitDateLabel(row.visitDate, row.visitDateISO)}{#if row.visitDateISO && row.visitDateISO < today}<span class="mt-1 block text-[10px] text-amber-700 dark:text-amber-300">ผ่านวันใช้บริการแล้ว</span>{/if}</td><td class="whitespace-nowrap px-3 py-3 text-right tabular-nums text-slate-700 dark:text-slate-200">{formatBaht(row.total)}</td><td class="px-5 py-3 text-right"><button class="rounded-lg border border-slate-200 px-3 py-2 text-[11px] font-medium text-slate-700 hover:border-blue-300 hover:text-blue-700 dark:border-slate-700 dark:text-slate-200" onclick={() => review(row)}>{selectedQueue.action}</button></td></tr>{/each}</tbody></table></div>
+              <div class="border-t border-slate-100 px-5 py-3 dark:border-slate-800"><button class="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300" onclick={() => openList(selectedQueue?.status)}>ดูคิวทั้งหมด {formatNumber(selectedQueue.rows.length)} รายการ <ArrowRight class="h-3.5 w-3.5" /></button></div>
+            {:else}<div class="flex min-h-48 flex-col items-center justify-center gap-3 px-5 py-8 text-center"><CheckCircle2 class="h-8 w-8 text-emerald-600" /><p class="text-sm text-slate-600 dark:text-slate-300">{selectedQueue ? 'ไม่มีงานค้างในคิวนี้' : 'ใช้ภาพรวมและสถิติในการติดตามข้อมูล'}</p><p class="text-xs text-slate-400">{selectedQueue ? 'รายการใหม่จะแสดงเมื่อระบบอัปเดตข้อมูล' : 'การอนุมัติเป็นหน้าที่ของเจ้าหน้าที่ตามสิทธิ์'}</p></div>{/if}
+          </Card>
+          <Card title="การจองที่ยังมีผลวันนี้" subtitle={`${formatNumber(todaysVisits.length)} การจอง · ${formatNumber(todaysVisits.reduce((total, row) => total + peopleCount(row), 0))} คนตามข้อมูลการจอง`}>
+            {#if canViewDetail}{#each todaysVisits.slice(0, 5) as row (row.ref)}<button class="flex w-full items-center gap-3 border-b border-slate-100 py-3 text-left last:border-0 dark:border-slate-800" onclick={() => detailRow = row}><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800"><Users class="h-4 w-4" /></span><span class="min-w-0 flex-1"><span class="block truncate text-xs font-medium text-slate-700 dark:text-slate-200">{row.visitorName || row.ref}</span><span class="mt-0.5 block text-[10px] text-slate-400">{row.ref} · {normalizeStatus(row.status)}</span></span><ArrowUpRight class="h-3.5 w-3.5 text-slate-400" /></button>{:else}<p class="py-10 text-center text-sm text-slate-400">ไม่มีการจองที่ยังมีผลในวันนี้</p>{/each}{:else}<div class="flex min-h-32 items-center justify-center gap-3"><CalendarDays class="h-6 w-6 text-slate-400" /><p class="text-sm text-slate-500">{formatNumber(todaysVisits.length)} การจองวันนี้</p></div>{/if}
+            {#if allowedMenus.includes('reservations')}<button class="mt-4 flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300" onclick={() => openList('', { date: today })}>เปิดการจองวันนี้ <ArrowRight class="h-3.5 w-3.5" /></button>{/if}
+          </Card>
+        </div>
+      {/if}
+      {#if allowedMenus.includes('reports')}<a href="#/reports" class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 dark:border-slate-700 dark:bg-slate-900"><span class="flex items-center gap-3"><ClipboardList class="h-5 w-5 text-blue-700 dark:text-blue-300" /><span><span class="block text-sm font-medium text-slate-700 dark:text-slate-200">รายงานและเอกสารสำหรับเจ้าหน้าที่</span><span class="mt-1 block text-xs text-slate-400">ทะเบียนผู้เยี่ยม · ปกครองกลาง · ครัวและเบเกอรี่ · ส่งออกข้อมูล</span></span></span><ArrowUpRight class="h-4 w-4 text-slate-400" /></a>{/if}
+    {/if}
   {/if}
-
-  <PaymentApprovalModal
-    open={showPaymentApproval}
-    row={paymentRow}
-    mode={paymentMode}
-    onclose={closePaymentApproval}
-    onapprove={approvePayment}
-  />
-
-  <ReservationDetailModal
-    open={showDetail}
-    row={detailRow}
-    canViewSlip={canViewSlip}
-    onclose={closeDetail}
-  />
 </div>
+
+<PaymentApprovalModal open={paymentRow !== null} row={paymentRow} mode={paymentMode} onclose={() => { if (!saving) paymentRow = null; }} onapprove={approvePayment} />
+<VisitorApprovalModal open={visitorRow !== null} row={visitorRow} onclose={() => visitorRow = null} />
+<ReservationDetailModal open={detailRow !== null && canViewDetail} row={detailRow} {canViewSlip} onclose={() => detailRow = null} />

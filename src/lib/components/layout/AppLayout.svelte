@@ -14,7 +14,7 @@
   );
 </script>
 
-<div class="flex min-h-screen w-full bg-slate-50 dark:bg-slate-950">
+<div class="workspace-shell flex min-h-screen w-full bg-slate-50 dark:bg-slate-950">
   <Sidebar />
   <div class="flex min-w-0 flex-1 flex-col">
     <Topbar />
@@ -29,7 +29,7 @@
     <ChatWidget
       systemPrompt={isAdmin ? ADMIN_SYSTEM_PROMPT : VISITOR_SYSTEM_PROMPT}
       title={isAdmin ? 'ผู้ช่วย Admin' : 'ผู้ช่วยจองโต๊ะ'}
-      subtitle={isAdmin ? 'ถามได้เลย关于ระบบ' : 'สอบถามข้อมูลการจอง'}
+      subtitle={isAdmin ? 'สอบถามข้อมูลเกี่ยวกับระบบ' : 'สอบถามข้อมูลการจอง'}
     />
   {/if}
 </div>

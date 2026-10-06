@@ -1,47 +1,11 @@
 <script lang="ts">
-  import type { Component } from 'svelte';
-  import {
-    BarChart3,
-    CalendarDays,
-    ClipboardList,
-    LayoutDashboard,
-    Link2,
-    MoreHorizontal,
-    QrCode,
-    Settings,
-    UserRound,
-    Users,
-    Utensils,
-    Wallet,
-    X,
-  } from '@lucide/svelte';
+  import { menuFor, navGroups } from '../../utils/navigation';
+  import { MoreHorizontal, X } from '@lucide/svelte';
   import { auth } from '../../store/auth.svelte';
   import { currentPath, navigate } from '../../router';
-  import { visibleMenu } from '../../utils/permissions';
 
-  interface NavItem {
-    path: string;
-    label: string;
-    icon: Component;
-  }
-
-  const NAV_ITEMS: Record<string, NavItem> = {
-    home: { path: '/dashboard', label: 'หน้าหลัก', icon: LayoutDashboard },
-    reservations: { path: '/reservations', label: 'ระบบจอง', icon: CalendarDays },
-    reports: { path: '/reports', label: 'รายงาน', icon: BarChart3 },
-    reports_overall: { path: '/reports/overall', label: 'รายงานการเงิน', icon: Wallet },
-    reports_tables: { path: '/reports/tables', label: 'โต๊ะ (TBL)', icon: Utensils },
-    eventlog: { path: '/eventlog', label: 'บันทึกเหตุการณ์', icon: ClipboardList },
-    users: { path: '/users', label: 'ผู้ใช้', icon: Users },
-    prisoners: { path: '/prisoners', label: 'ผู้ต้องขัง', icon: UserRound },
-    connection: { path: '/connection', label: 'การเชื่อมต่อ', icon: Link2 },
-    promptpay: { path: '/promptpay', label: 'PromptPay QR', icon: QrCode },
-    settings: { path: '/settings', label: 'ตั้งค่า', icon: Settings },
-  };
-
-  let items = $derived(
-    visibleMenu(auth.user?.role).map((key) => NAV_ITEMS[key]).filter(Boolean)
-  );
+  let items = $derived(menuFor(auth.user?.role));
+  let groups = $derived(navGroups.map(group => ({ ...group, items: items.filter(item => group.keys.includes(item.key)) })).filter(group => group.items.length));
   let activePath = $derived(currentPath());
   let moreOpen = $state(false);
 
@@ -98,9 +62,10 @@
         class="relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1"
         onclick={() => (moreOpen = true)}
         aria-label="เมนูเพิ่มเติม"
+        aria-expanded={moreOpen}
       >
         <span class="flex h-8 w-14 items-center justify-center rounded-full">
-          <MoreHorizontal class="h-5 w-5 text-slate-400" />
+          <MoreHorizontal class="h-5 w-5 {moreItems.some(item => item.path === activePath) ? 'text-blue-700 dark:text-blue-300' : 'text-slate-400'}" />
         </span>
         <span class="text-[10px] font-medium leading-none text-slate-500 dark:text-slate-400">เพิ่มเติม</span>
       </button>
@@ -130,7 +95,7 @@
       </button>
     </div>
     <div class="grid max-h-[55vh] grid-cols-3 gap-2 overflow-y-auto px-4 pb-5 pt-1">
-      {#each moreItems as item (item.path)}
+      {#each groups as group (group.label)}<p class="col-span-3 px-1 pt-3 text-xs font-semibold text-slate-400">{group.label}</p>{#each group.items as item (item.path)}
         {@const Icon = item.icon}
         {@const isActive = activePath === item.path}
         <button
@@ -142,7 +107,7 @@
           <Icon class="h-5 w-5" />
           <span class="text-xs font-medium leading-tight">{item.label}</span>
         </button>
-      {/each}
+      {/each}{/each}
     </div>
   </div>
 {/if}

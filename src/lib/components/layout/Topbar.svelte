@@ -1,13 +1,17 @@
 <script lang="ts">
-  import { Moon, Sun, LogOut, ChevronDown, Wifi, WifiOff } from '@lucide/svelte';
+  import { Moon, Sun, LogOut, ChevronDown, Wifi, WifiOff, Search, X } from '@lucide/svelte';
+  import { menuFor } from '../../utils/navigation';
   import { ui } from '../../store/ui.svelte';
   import { auth } from '../../store/auth.svelte';
-  import { currentPath, routes, navigate } from '../../router';
+  import { resolveRoute, navigate } from '../../router';
   import { roleLabel } from '../../utils/permissions';
 
-  let route = $derived(routes.find((r) => r.path === currentPath()));
+  let route = $derived(resolveRoute());
   let online = $state(navigator.onLine);
   let menuOpen = $state(false);
+  let search = $state('');
+  let searchOpen = $state(false);
+  let results = $derived(menuFor(auth.user?.role).filter(item => `${item.label} ${item.description}`.toLowerCase().includes(search.trim().toLowerCase())));
 
   $effect(() => {
     const on = () => (online = true);
@@ -29,7 +33,7 @@
 
 <svelte:window
   onkeydown={(e) => {
-    if (e.key === 'Escape') menuOpen = false;
+    if (e.key === 'Escape') { menuOpen = false; searchOpen = false; }
   }}
 />
 
@@ -39,7 +43,24 @@
     <h1 class="truncate text-base font-semibold text-slate-900 dark:text-slate-100">{route?.title ?? ''}</h1>
   </div>
 
-  <div class="flex shrink-0 items-center gap-1.5">
+  <div class="flex items-center gap-1.5">
+    <div class="relative mr-2 hidden sm:block">
+      <div class="relative z-20 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 dark:border-slate-700 dark:bg-slate-800">
+        <Search class="h-4 w-4 shrink-0 text-slate-400" />
+        <input aria-label="ค้นหาเมนู" placeholder="ค้นหาเมนู..." class="w-28 bg-transparent py-2 text-xs text-slate-700 outline-none focus:w-36 lg:w-44 dark:text-slate-200" bind:value={search} onfocus={() => searchOpen = true} onkeydown={(e) => { if (e.key === 'Enter' && results[0]) { navigate(results[0].path); searchOpen = false; search = ''; } }} />
+        {#if search}<button aria-label="ล้างการค้นหา" onclick={() => search = ''}><X class="h-3.5 w-3.5 text-slate-400" /></button>{/if}
+      </div>
+      {#if searchOpen}
+        <button class="fixed inset-0 z-10 cursor-default" aria-label="ปิดการค้นหา" onclick={() => searchOpen = false}></button>
+        <div class="absolute right-0 top-full z-20 mt-2 max-h-96 w-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+          <p class="px-3 py-2 text-[10px] font-semibold text-slate-400">ไปยังเมนู</p>
+          {#each results as item (item.key)}
+            {@const Icon = item.icon}
+            <a href="#{item.path}" onclick={() => { searchOpen = false; search = ''; }} class="flex items-center gap-3 rounded-xl p-3 hover:bg-blue-50 dark:hover:bg-slate-800"><Icon class="h-4 w-4 shrink-0 text-blue-700 dark:text-blue-300" /><span><span class="block text-sm text-slate-800 dark:text-white">{item.label}</span><span class="text-[11px] text-slate-400">{item.description}</span></span></a>
+          {:else}<p class="p-3 text-sm text-slate-500">ไม่พบเมนูที่ค้นหา</p>{/each}
+        </div>
+      {/if}
+    </div>
     <div class="hidden items-center gap-3 sm:flex">
       <span
         class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium {online

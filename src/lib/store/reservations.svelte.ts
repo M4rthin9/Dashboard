@@ -3,6 +3,7 @@ import { ApiError } from '../api/errors';
 import type { Reservation } from '../api/types';
 import { normalizeStatus, STATUS_LABELS } from '../utils/format';
 import { liveSync } from './liveSync.svelte';
+import { auth, API_BASE } from './auth.svelte';
 
 const CACHE_KEY = 'ccc_reservations_cache';
 const CACHE_TTL = 5 * 60 * 1000;
@@ -24,12 +25,31 @@ class ReservationsStore {
   includeArchive = $state(true);
 
   private inFlight: Promise<void> | null = null;
+  private owner = '';
+  private generation = 0;
+
+  setSession(owner: string): void {
+    if (this.owner === owner) return;
+    this.owner = owner;
+    this.generation++;
+    this.rows = [];
+    this.error = '';
+    this.loadedAt = null;
+    this.loading = false;
+    this.includeArchive = true;
+    this.inFlight = null;
+    if (!owner) {
+      try { localStorage.removeItem(CACHE_KEY); } catch { /* storage unavailable */ }
+    }
+  }
 
   async load(force = false): Promise<void> {
+    this.setSession(auth.isAuthenticated && auth.user ? `${API_BASE}:${auth.user.username}:${auth.user.role}` : '');
+    if (!this.owner) return;
     if (!force && this.rows.length > 0 && this.loadedAt && Date.now() - this.loadedAt < CACHE_TTL) return;
     if (this.inFlight) return this.inFlight;
-
-    this.inFlight = (async () => {
+    const generation = this.generation;
+    const task = (async () => {
       this.loading = true;
       this.error = '';
       try {
@@ -40,19 +60,23 @@ class ReservationsStore {
           return;
         }
         const data = await getReservationsWithArchive(this.includeArchive);
+        if (generation !== this.generation) return;
         this.applyRows(data.rows ?? []);
         this.loadedAt = Date.now();
         this.writeCache();
       } catch (err) {
+        if (generation !== this.generation) return;
         this.error = err instanceof Error ? err.message : 'ไม่สามารถโหลดข้อมูลได้';
         throw err;
-      } finally {
+      }
+    })();
+    this.inFlight = task;
+    try { await task; } finally {
+      if (generation === this.generation) {
         this.loading = false;
         this.inFlight = null;
       }
-    })();
-
-    return this.inFlight;
+    }
   }
 
   async refresh(): Promise<void> {
@@ -95,7 +119,7 @@ class ReservationsStore {
       const parsed = JSON.parse(raw);
       // A list cached in the other mode (or before the flag existed) is the
       // wrong list — refetch rather than show it.
-      if (Array.isArray(parsed.rows) && parsed.archive === this.includeArchive) return parsed;
+      if (Array.isArray(parsed.rows) && parsed.owner === this.owner && parsed.archive === this.includeArchive) return parsed;
       return null;
     } catch {
       return null;
@@ -104,7 +128,7 @@ class ReservationsStore {
 
   private writeCache(): void {
     try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ rows: this.rows, t: Date.now(), archive: this.includeArchive }));
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ rows: this.rows, t: Date.now(), archive: this.includeArchive, owner: this.owner }));
     } catch {
       // storage full or unavailable — ignore
     }

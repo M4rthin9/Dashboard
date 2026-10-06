@@ -13,13 +13,14 @@
   import { exportReservationsCSV } from '../lib/utils/csv';
   import {
     computeRevenueSummary, computeStatusDistribution, computeWingCounts,
-    computeDailyRevenue, computeMonthlyRevenue, computeVisitorTypes,
+    computeMonthlyRevenue, computeVisitorTypes,
   } from '../lib/utils/dashboard';
   import { openPrintWindow, buildDisciplinaryReport, buildGateRegistrationReport, buildKitchenReport, buildTableRegistrationReport } from '../lib/utils/print';
+  import { dailySeries, bookingPool, visitorCount, rangeDays } from '../lib/utils/management';
   import type { Reservation } from '../lib/api/types';
 
   function isTable(r: Reservation): boolean {
-    return String(r.bookingType ?? '').trim() === 'table' || String(r.ref ?? '').toUpperCase().startsWith('TBL-');
+    return bookingPool(r) === 'table';
   }
 
   let from = $state(todayISO());
@@ -39,7 +40,7 @@
   const summary = $derived(computeRevenueSummary(inRange));
   const statusDist = $derived(computeStatusDistribution(inRange));
   const wingCounts = $derived(computeWingCounts(inRange));
-  const daily = $derived(computeDailyRevenue(inRange, Math.max(1, Math.min(60, diffDays(from, to)))));
+  const daily = $derived(dailySeries(inRange, { from, to }));
   const monthly = $derived(computeMonthlyRevenue(reservations.rows, 6));
   const visitorTypes = $derived(computeVisitorTypes(inRange));
 
@@ -84,10 +85,6 @@
     series: [{ type: 'line', smooth: true, data: monthly.map((m) => m.revenue), itemStyle: { color: '#1e3a5f' }, areaStyle: { opacity: 0.15 } }],
   });
 
-  function diffDays(a: string, b: string): number {
-    const d = (new Date(b).getTime() - new Date(a).getTime()) / 86400000;
-    return Math.max(1, Math.round(d) + 1);
-  }
 
   onMount(() => {
     reservations.load();
@@ -176,7 +173,7 @@
     let people = 0;
     let revenue = 0;
     for (const r of tableDayRows) {
-      people += Number(r.visitorCount) || 1;
+      people += visitorCount(r);
       revenue += Number(r.total) || 0;
     }
     return { tables: tableDayRows.length, people, revenue };
@@ -354,11 +351,11 @@
     </div>
 
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <Card title="รายได้ต่อวัน">
-        <EChart option={dailyOption} height="300px" />
+      <Card title="มูลค่าการจองตามวันใช้บริการ" subtitle="ชำระแล้ว / รอชำระ แยกตามวันที่ใช้บริการ">
+        {#if rangeDays({ from, to }) > 0 && rangeDays({ from, to }) <= 366}<EChart option={dailyOption} height="300px" label="มูลค่าการจองตามวันใช้บริการในช่วงที่เลือก" />{:else}<p role="alert" class="py-8 text-sm text-amber-700">เลือกช่วงวันที่ที่ถูกต้อง ไม่เกิน 366 วัน</p>{/if}
       </Card>
-      <Card title="รายได้ต่อเดือน (6 เดือนล่าสุด)">
-        <EChart option={monthlyOption} height="300px" />
+      <Card title="มูลค่าการจอง 6 เดือนล่าสุด" subtitle="ช่วงคงที่รวมเดือนปัจจุบัน · ไม่ใช่รายได้ตามวันที่โอน">
+        <EChart option={monthlyOption} height="300px" label="มูลค่าการจอง 6 เดือนล่าสุดตามวันใช้บริการ" />
       </Card>
       <Card title="สถานะการจอง">
         <EChart option={statusOption} height="300px" />

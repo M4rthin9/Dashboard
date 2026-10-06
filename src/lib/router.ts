@@ -53,7 +53,8 @@ export function currentQuery(): URLSearchParams {
 
 export function resolveRoute(): RouteDef {
   const path = currentPath();
-  const fallback = routes.find((r) => r.path === '/dashboard')!;
+  const allowed = visibleMenu(auth.user?.role ?? 'User');
+  const fallback = routes.find((r) => r.path !== '/login' && allowed.includes(r.key) && (!r.roles || r.roles.includes(auth.user?.role ?? 'User'))) ?? routes[0];
   const candidate = routes.find((r) => r.path === path) ?? fallback;
 
   if (candidate.path === '/login') {

@@ -56,8 +56,13 @@ export function prisonersOf(row: Reservation): PrisonerEntry[] {
 }
 
 export function computeDeptReportData(row: Reservation): { adults: number; kids5_8: number; kidsUnder5: number } {
+  const stored = [row.adultCount, row.child5to8Count, row.childUnder5Count].map(Number);
+  const count = Number(row.visitorCount);
+  if (stored.every(n => Number.isFinite(n) && n >= 0) && Number.isFinite(count) && stored.reduce((a, b) => a + b, 0) === count) {
+    return { adults: stored[0], kids5_8: stored[1], kidsUnder5: stored[2] };
+  }
   const extras = parseExtraVisitors(row);
-  let adults = 1;
+  let adults = row.visitorApproved === 'no' ? 0 : 1;
   let kids5_8 = 0;
   let kidsUnder5 = 0;
   extras.forEach((v) => {
