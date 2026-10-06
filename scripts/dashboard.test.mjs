@@ -51,6 +51,11 @@ test('historical chart uses selected dates, fills gaps and separates VIS from TB
   assert.equal(m.dailySeries([], { from: '2020-01-01', to: '2026-01-01' }).length, 0);
   assert.equal(m.bookingPool(booking({ ref: 'TBL-old', bookingType: 'prisoner' })), 'prisoner');
 });
+test('booking and archive tables are disjoint even for past live bookings and future archived bookings', () => {
+  const rows = [booking({ ref: 'VIS-live-old', visitDateISO: '2020-01-01' }), booking({ ref: 'TBL-live-cancelled', status: 'ยกเลิก' }), booking({ ref: 'VIS-archived', _archived: true, visitDateISO: '2030-01-01' }), booking({ ref: 'TBL-archived', _archived: true, status: 'ไม่อนุมัติ' }), booking({ ref: '', _archived: true })];
+  assert.deepEqual(plain(m.reservationViewRows(rows, false).map(row => row.ref)), ['VIS-live-old', 'TBL-live-cancelled']);
+  assert.deepEqual(plain(m.reservationViewRows(rows, true).map(row => row.ref)), ['VIS-archived', 'TBL-archived']);
+});
 test('financial and kitchen counts use stored age buckets and actual prisoners; tables have no prisoners', () => {
   const rows = [booking({ extraPrisoners: 'Second|P2|2' }), booking({ ref: 'TBL-1', bookingType: 'table', prisonerId: '', visitorCount: 0, adultCount: 0, child5to8Count: 0, childUnder5Count: 0 }), booking({ ref: 'VIS-2', status: 'ยกเลิก', total: 999 })];
   const summary = financial.computeFinancialSummary(rows);
@@ -96,6 +101,13 @@ test('account changes clear rows and discard a previous account response; cached
   await store.load(); // restore valid account-scoped cache
   await store.refresh(); // must reach the server after a synchronous cache hit
   assert.equal(calls, 3);
+  store.includeArchive = false;
+  await store.ensureArchive();
+  assert.equal(store.includeArchive, true);
+  assert.equal(calls, 4);
+  await store.ensureArchive(true);
+  assert.equal(calls, 5);
+  assert.equal(store.daySummary('2026-02-28', [booking({ _archived: true })]).counts['ชำระแล้ว'], 1);
   store.setSession('');
   assert.equal(store.rows.length, 0);
   assert.equal(store.loadedAt, null);
@@ -113,8 +125,12 @@ test('route fallback respects menus and drilldown query preserves Thai status, d
   }
   const router = loader(mocks)('src/lib/router.ts');
   assert.equal(router.resolveRoute().path, '/reservations');
+  hashState.value = '#/reservations/archive';
+  assert.equal(router.resolveRoute().path, '/reservations/archive');
   hashState.value = '#/users';
   auth.user.role = 'User';
+  assert.equal(router.resolveRoute().path, '/dashboard');
+  hashState.value = '#/reservations/archive';
   assert.equal(router.resolveRoute().path, '/dashboard');
   hashState.value = `#/reservations?${new URLSearchParams({ status: 'รอตรวจสอบวินัย', date: '2026-10-06', search: 'VIS-123' })}`;
   auth.user.role = 'Admin';

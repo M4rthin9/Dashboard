@@ -1,10 +1,11 @@
 import type { Component } from 'svelte';
-import { LayoutDashboard, CalendarDays, BarChart3, Wallet, ClipboardList, Users, UserRound, Link2, QrCode, Settings, Utensils } from '@lucide/svelte';
+import { LayoutDashboard, CalendarDays, Archive, BarChart3, Wallet, ClipboardList, Users, UserRound, Link2, QrCode, Settings, Utensils } from '@lucide/svelte';
 import { visibleMenu } from './permissions';
 export interface NavItem { key: string; path: string; label: string; description: string; icon: Component }
 export const navigation: NavItem[] = [
   { key: 'home', path: '/dashboard', label: 'ภาพรวม', description: 'การจองวันนี้และงานที่ต้องดำเนินการ', icon: LayoutDashboard },
   { key: 'reservations', path: '/reservations', label: 'จัดการการจอง', description: 'ตรวจสอบ อนุมัติ และติดตามการจอง', icon: CalendarDays },
+  { key: 'reservations_archive', path: '/reservations/archive', label: 'การจองย้อนหลัง', description: 'ค้นหาและตรวจสอบการจองที่เก็บถาวร', icon: Archive },
   { key: 'prisoners', path: '/prisoners', label: 'ผู้ต้องขัง', description: 'ข้อมูลผู้ต้องขังและวินัย', icon: UserRound },
   { key: 'reports', path: '/reports', label: 'สรุปการจอง', description: 'สถิติและรายงานการจอง', icon: BarChart3 },
   { key: 'reports_overall', path: '/reports/overall', label: 'รายงานการเงิน', description: 'รายได้และการชำระเงิน', icon: Wallet },
@@ -16,7 +17,7 @@ export const navigation: NavItem[] = [
   { key: 'settings', path: '/settings', label: 'ตั้งค่าระบบ', description: 'การจองและการตั้งค่าทั่วไป', icon: Settings },
 ];
 export const navGroups = [
-  { label: 'งานประจำวัน', keys: ['home', 'reservations', 'prisoners'] },
+  { label: 'งานประจำวัน', keys: ['home', 'reservations', 'reservations_archive', 'prisoners'] },
   { label: 'รายงานและการเงิน', keys: ['reports', 'reports_overall', 'reports_tables', 'promptpay'] },
   { label: 'ดูแลระบบ', keys: ['users', 'eventlog', 'connection', 'settings'] },
 ];

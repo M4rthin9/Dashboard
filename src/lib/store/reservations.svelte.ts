@@ -83,6 +83,16 @@ class ReservationsStore {
     await this.load(true);
   }
 
+  async ensureArchive(force = false): Promise<void> {
+    if (this.inFlight) await this.inFlight;
+    if (!this.includeArchive) {
+      this.includeArchive = true;
+      await this.load(true);
+    } else {
+      await this.load(force);
+    }
+  }
+
   async toggleArchive(): Promise<void> {
     this.includeArchive = !this.includeArchive;
     await this.load(true);
@@ -234,8 +244,8 @@ class ReservationsStore {
     return ref;
   }
 
-  daySummary(dateISO: string): DaySummary {
-    const dayRows = this.rows.filter((r) => String(r.visitDateISO ?? '').trim() === dateISO && r.ref && String(r.ref).trim());
+  daySummary(dateISO: string, rows: Reservation[] = this.rows): DaySummary {
+    const dayRows = rows.filter((r) => String(r.visitDateISO ?? '').trim() === dateISO && r.ref && String(r.ref).trim());
     const counts: Record<string, number> = {};
     let totalAmount = 0;
     let pendingDiscipline = 0;

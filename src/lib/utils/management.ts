@@ -32,6 +32,10 @@ export function bookingPool(row: Reservation): Exclude<BookingPool, 'all'> {
 export function activeBooking(row: Reservation): boolean {
   return !!String(row.ref ?? '').trim() && STATUS_STEPS.includes(normalizeStatus(row.status)) && !terminal.includes(normalizeStatus(row.status));
 }
+/** Partition by the server's archive marker, not visit date or booking status. */
+export function reservationViewRows(rows: Reservation[], archived: boolean): Reservation[] {
+  return rows.filter(row => !!String(row.ref ?? '').trim() && !!row._archived === archived);
+}
 export function amount(row: Reservation): number {
   const n = Number(row.total);
   return Number.isFinite(n) && n >= 0 ? n : 0;

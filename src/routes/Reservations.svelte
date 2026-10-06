@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { Archive, Ban, Check, Download, Eye, Pencil, Plus, Printer, QrCode, RotateCcw, RefreshCw, Search, Trash2, Users, X } from '@lucide/svelte';
   import Card from '../lib/components/ui/Card.svelte';
   import Spinner from '../lib/components/ui/Spinner.svelte';
@@ -14,8 +14,8 @@
   import { reservations } from '../lib/store/reservations.svelte';
   import { ui } from '../lib/store/ui.svelte';
   import { hasPermission } from '../lib/utils/permissions';
-  import { currentQuery } from '../lib/router';
-  import { bookingPool } from '../lib/utils/management';
+  import { currentQuery, currentPath } from '../lib/router';
+  import { bookingPool, reservationViewRows } from '../lib/utils/management';
   import { formatBaht, formatNumber, normalizeStatus, STATUS_COLORS, todayISO, visitDateLabel } from '../lib/utils/format';
   import { exportReservationsCSV } from '../lib/utils/csv';
   import { openPrintWindow, buildSeatingReport, buildPromptPayQrCard } from '../lib/utils/print';
@@ -55,6 +55,8 @@
   let qrPrinting = $state('');
 
   const role = $derived(auth.user?.role ?? 'User');
+  const archiveView = $derived(currentPath() === '/reservations/archive');
+  const viewRows = $derived(reservationViewRows(reservations.rows, archiveView));
   const isSuper = $derived(role === 'Superadmin');
   const isAdminOrSuper = $derived(role === 'Superadmin' || role === 'Admin');
   const canApproveParticipant = $derived(isAdminOrSuper || hasPermission(role, 'approve_participant'));
@@ -78,13 +80,13 @@
   };
 
   const statuses = $derived(
-    Array.from(new Set(reservations.rows.map((r) => normalizeStatus(r.status)).filter(Boolean))).sort()
+    Array.from(new Set(viewRows.map((r) => normalizeStatus(r.status)).filter(Boolean))).sort()
   );
   const dates = $derived(
-    Array.from(new Set(reservations.rows.map((r) => String(r.visitDateISO ?? '').trim()).filter(Boolean))).sort().reverse()
+    Array.from(new Set(viewRows.map((r) => String(r.visitDateISO ?? '').trim()).filter(Boolean))).sort().reverse()
   );
   const wings = $derived(
-    Array.from(new Set(reservations.rows.map((r) => String(r.wing ?? '').trim()).filter(Boolean))).sort()
+    Array.from(new Set(viewRows.map((r) => String(r.wing ?? '').trim()).filter(Boolean))).sort()
   );
 
   /** Legacy rows predate the column and are always prisoner visits. */
@@ -102,10 +104,9 @@
   const filtered = $derived.by(() => {
     const allowed = roleStatusFilter[role] ?? null;
     const q = search.trim().toLowerCase();
-    return reservations.rows.filter((r) => {
+    return viewRows.filter((r) => {
       if (!r.ref || String(r.ref).trim() === '') return false;
-      if (r._archived && !reservations.includeArchive) return false;
-      if (role === 'Vinai' && isExpired(r)) return false;
+      if (!archiveView && role === 'Vinai' && isExpired(r)) return false;
       if (allowed) {
         const s = normalizeStatus(r.status);
         if (!allowed.includes(s)) return false;
@@ -141,7 +142,7 @@
   const totalPages = $derived(Math.max(1, Math.ceil(sorted.length / pageSize)));
   const pagedRows = $derived(sorted.slice((page - 1) * pageSize, page * pageSize));
 
-  const daySummary = $derived(dateFilter ? reservations.daySummary(dateFilter) : null);
+  const daySummary = $derived(dateFilter ? reservations.daySummary(dateFilter, filtered) : null);
 
   $effect(() => {
     if (page > totalPages) page = totalPages;
@@ -149,6 +150,7 @@
 
   $effect(() => {
     const query = currentQuery();
+    const isArchive = archiveView;
     statusFilter = query.get('status') ?? '';
     dateFilter = query.get('date') ?? '';
     search = query.get('search') ?? '';
@@ -156,6 +158,16 @@
     typeFilter = pool === 'table' || pool === 'prisoner' ? pool : '';
     page = 1;
     selectedRefs = [];
+    wingFilter = '';
+    showDetail = false;
+    showApproval = false;
+    showPaymentApproval = false;
+    formMode = null;
+    detailRow = null;
+    cancelMode = null;
+    deleteTarget = null;
+    revertTarget = null;
+    if (isArchive) untrack(() => { void reservations.ensureArchive().catch(() => {}); });
   });
 
   onMount(() => {
@@ -206,6 +218,13 @@
 
   function clearSelection(): void {
     selectedRefs = [];
+  }
+
+  async function refreshRows(): Promise<void> {
+    try {
+      if (archiveView) await reservations.ensureArchive(true);
+      else await reservations.refresh();
+    } catch { /* The store exposes the loading error. */ }
   }
 
   async function doUpdateStatus(row: Reservation, newStatus: string): Promise<void> {
@@ -597,7 +616,7 @@
 {/snippet}
 
 <div class="flex flex-col gap-4">
-  <Card title="ระบบจอง" subtitle="ตารางการจองทั้งหมด" interactive>
+  <Card title={archiveView ? 'การจองย้อนหลัง' : 'ระบบจอง'} subtitle={archiveView ? 'การจองที่เก็บถาวร แยกจากตารางการจองปัจจุบัน' : 'ตารางการจองปัจจุบัน ไม่รวมข้อมูลที่เก็บถาวร'} interactive>
     <div class="flex flex-col gap-4">
       <div class="flex flex-col gap-3">
         <div class="relative">
@@ -654,18 +673,17 @@
           <option value="table">จองโต๊ะ (ไม่มีผู้ต้องขัง)</option>
         </select>
 
-        <button
+        <a
           class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-3.5 py-2 text-sm text-slate-600 transition-colors duration-150 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
-          onclick={() => reservations.toggleArchive()}
-          title={reservations.includeArchive ? 'ซ่อนข้อมูลย้อนหลัง' : 'แสดงข้อมูลย้อนหลัง'}
+          href={archiveView ? '#/reservations' : '#/reservations/archive'}
         >
           <Archive class="h-4 w-4" />
-          {reservations.includeArchive ? 'รวมย้อนหลัง' : 'ปัจจุบัน'}
-        </button>
+          {archiveView ? 'กลับไปการจองปัจจุบัน' : 'เปิดการจองย้อนหลัง'}
+        </a>
 
         <button
           class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-3.5 py-2 text-sm text-slate-600 transition-colors duration-150 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
-          onclick={() => reservations.refresh()}
+          onclick={() => void refreshRows()}
           disabled={reservations.loading}
           aria-label="โหลดข้อมูลใหม่"
         >
@@ -694,7 +712,7 @@
           </button>
         {/if}
 
-        {#if isAdminOrSuper}
+        {#if isAdminOrSuper && !archiveView}
           <button
             class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-emerald-600 focus-visible:outline-offset-2"
             onclick={openCreate}
@@ -718,7 +736,7 @@
           <div class="text-sm font-semibold text-slate-700 dark:text-slate-200">
             รวม {formatBaht(daySummary.totalAmount)}
           </div>
-          {#if daySummary.pendingParticipant > 0 && canApproveParticipant}
+          {#if !archiveView && daySummary.pendingParticipant > 0 && canApproveParticipant}
             <button
               class="inline-flex items-center gap-1 rounded-xl bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors duration-150 hover:bg-amber-700 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-amber-600 focus-visible:outline-offset-2"
               onclick={() => runBatch('รอตรวจสอบวินัย')}
@@ -728,7 +746,7 @@
               อนุมัติผู้เข้าร่วมทั้งหมด ({daySummary.pendingParticipant})
             </button>
           {/if}
-          {#if daySummary.pendingDiscipline > 0 && canApproveDiscipline}
+          {#if !archiveView && daySummary.pendingDiscipline > 0 && canApproveDiscipline}
             <button
               class="inline-flex items-center gap-1 rounded-xl bg-blue-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors duration-150 hover:bg-blue-800 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-blue-700 focus-visible:outline-offset-2"
               onclick={() => runBatch('รอชำระเงิน')}
@@ -764,21 +782,21 @@
         </div>
       {/if}
 
-      {#if reservations.loading && reservations.rows.length === 0}
+      {#if reservations.loading && viewRows.length === 0}
         <div class="flex items-center justify-center py-16">
           <Spinner />
         </div>
-      {:else if reservations.error && reservations.rows.length === 0}
+      {:else if reservations.error && viewRows.length === 0}
         <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
           {reservations.error}
-          <button class="ml-2 font-medium underline" onclick={() => reservations.refresh()}>ลองใหม่</button>
+          <button class="ml-2 font-medium underline" onclick={() => void refreshRows()}>ลองใหม่</button>
         </div>
       {:else}
         <div class="hidden overflow-x-auto rounded-xl border border-slate-200 md:block dark:border-slate-700">
           <table class="w-full min-w-[860px] text-left text-sm">
             <thead>
               <tr class="bg-slate-50 dark:bg-slate-800/50">
-                <th class="w-8 shrink-0 px-3 py-2.5 text-xs font-medium text-slate-500 dark:text-slate-400">
+                {#if !archiveView}<th class="w-8 shrink-0 px-3 py-2.5 text-xs font-medium text-slate-500 dark:text-slate-400">
                   <input
                     type="checkbox"
                     aria-label="เลือกทั้งหมด"
@@ -789,7 +807,7 @@
                       selectedRefs = allSelected ? selectedRefs.filter((r) => !selectable.includes(r)) : [...new Set([...selectedRefs, ...selectable])];
                     }}
                   />
-                </th>
+                </th>{/if}
                 <th class="min-w-[90px] cursor-pointer px-3 py-2.5 font-medium text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100" onclick={() => toggleSort('ref')}>REF{sortIcon('ref')}</th>
                 <th class="min-w-[200px] cursor-pointer px-3 py-2.5 font-medium text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100" onclick={() => toggleSort('prisonerName')}>ผู้ต้องขัง / ผู้เยี่ยม{sortIcon('prisonerName')}</th>
                 <th class="min-w-[80px] cursor-pointer px-3 py-2.5 font-medium text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100" onclick={() => toggleSort('wing')}>ปีก{sortIcon('wing')}</th>
@@ -806,8 +824,8 @@
                 {@const archived = !!row._archived}
                 {@const terminal = s === 'เสร็จสิ้น' || s === 'ไม่อนุมัติ' || s === 'ยกเลิก'}
                 {@const expired = isExpired(row)}
-                <tr class="border-b border-slate-200 last:border-0 hover:bg-slate-50/50 dark:border-slate-800 dark:hover:bg-slate-800/30 {archived ? 'opacity-60' : ''}">
-                  <td class="px-3 py-2.5 text-center">
+                <tr class="border-b border-slate-200 last:border-0 hover:bg-slate-50/50 dark:border-slate-800 dark:hover:bg-slate-800/30">
+                  {#if !archiveView}<td class="px-3 py-2.5 text-center">
                     <input
                       type="checkbox"
                       aria-label="เลือกแถว"
@@ -816,7 +834,7 @@
                       onchange={() => toggleSelect(row.ref)}
                       class="rounded border-slate-300 text-blue-700 focus:ring-blue-600 dark:border-slate-600"
                     />
-                  </td>
+                  </td>{/if}
                   <td class="px-3 py-2.5">
                     <button
                       class="font-mono text-xs font-semibold text-blue-700 hover:text-blue-800 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
@@ -862,6 +880,8 @@
                       <div class="flex items-center justify-end gap-1.5 whitespace-normal">
                         {@render rowActions(row, s, terminal, expired)}
                       </div>
+                    {:else}
+                      <button class="rounded-xl border border-slate-200 p-1.5 text-slate-500 dark:border-slate-700 dark:text-slate-300" title="ดูรายละเอียด" onclick={() => openDetail(row)}><Eye class="h-4 w-4" /></button>
                     {/if}
                   </td>
                 </tr>
@@ -881,17 +901,17 @@
             {@const archived = !!row._archived}
             {@const terminal = s === 'เสร็จสิ้น' || s === 'ไม่อนุมัติ' || s === 'ยกเลิก'}
             {@const expired = isExpired(row)}
-            <div class="rounded-xl border border-slate-200 bg-white p-3.5 dark:border-slate-700 dark:bg-slate-900 {archived ? 'opacity-60' : ''}">
+            <div class="rounded-xl border border-slate-200 bg-white p-3.5 dark:border-slate-700 dark:bg-slate-900">
               <div class="flex items-start justify-between gap-2">
                 <div class="flex items-start gap-2.5">
-                  <input
+                  {#if !archiveView}<input
                     type="checkbox"
                     aria-label="เลือกแถว"
                     checked={selectedRefs.includes(row.ref)}
                     disabled={archived}
                     onchange={() => toggleSelect(row.ref)}
                     class="mt-1 rounded border-slate-300 text-blue-700 focus:ring-blue-600 dark:border-slate-600"
-                  />
+                  />{/if}
                   <div>
                     <button
                       class="font-mono text-xs font-semibold text-blue-700 hover:underline dark:text-blue-400"
@@ -929,6 +949,8 @@
                   <div class="flex flex-wrap items-center justify-end gap-1.5">
                     {@render rowActions(row, s, terminal, expired)}
                   </div>
+                {:else}
+                  <button class="rounded-xl border border-slate-200 p-1.5 text-slate-500 dark:border-slate-700 dark:text-slate-300" title="ดูรายละเอียด" onclick={() => openDetail(row)}><Eye class="h-4 w-4" /></button>
                 {/if}
               </div>
             </div>

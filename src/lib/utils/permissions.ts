@@ -20,11 +20,11 @@ export const PERMISSIONS: Record<Role, string[]> = {
 };
 
 export const SIDEBAR_MENU: Record<Role, string[]> = {
-  Superadmin: ['home', 'reservations', 'reports', 'reports_overall', 'reports_tables', 'eventlog', 'users', 'prisoners', 'connection', 'promptpay', 'settings'],
-  Admin: ['home', 'reservations', 'reports', 'reports_overall', 'reports_tables', 'eventlog', 'prisoners', 'connection'],
-  Finance: ['reservations', 'reports', 'reports_overall', 'reports_tables'],
-  Vinai: ['home', 'reservations', 'reports', 'reports_overall', 'reports_tables', 'prisoners'],
-  Tadtel: ['home', 'reservations', 'reports', 'reports_overall', 'reports_tables'],
+  Superadmin: ['home', 'reservations', 'reservations_archive', 'reports', 'reports_overall', 'reports_tables', 'eventlog', 'users', 'prisoners', 'connection', 'promptpay', 'settings'],
+  Admin: ['home', 'reservations', 'reservations_archive', 'reports', 'reports_overall', 'reports_tables', 'eventlog', 'prisoners', 'connection'],
+  Finance: ['reservations', 'reservations_archive', 'reports', 'reports_overall', 'reports_tables'],
+  Vinai: ['home', 'reservations', 'reservations_archive', 'reports', 'reports_overall', 'reports_tables', 'prisoners'],
+  Tadtel: ['home', 'reservations', 'reservations_archive', 'reports', 'reports_overall', 'reports_tables'],
   User: ['home'],
 };
 

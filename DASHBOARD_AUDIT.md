@@ -70,3 +70,11 @@ Audit date: 6 October 2026. Source audit completed before this pass changed appl
 - Account and API identity scope the reservation cache. Logout/identity changes reset visible data; stale in-flight responses cannot overwrite a new session. Cached loads release their request lock.
 - Regression tests cover dates/leap years, metric exclusions, historical series, VIS/TBL classification, financial headcounts, six built-in roles, archived/expired queues, account races and cached reloads. No production API calls are made by tests.
 - No dependency added. Automated validation uses `npm test`, `npm run check`, `npm run lint` and `npm run build`. Browser interaction and production database verification remain outside the validation available in this environment.
+
+## Separate archived reservation menu
+
+- `/reservations` contains only records without the server `_archived` marker; `/reservations/archive` contains only archived records. Past-dated live bookings are retained in the current table until the backend archives them. Dashboard/report historical analytics still use the complete loaded dataset.
+- The archive menu is available to the same built-in staff roles as the booking menu, in desktop navigation, mobile navigation and menu search. User remains dashboard-only. Existing status restrictions for Finance/Tadtel are retained; Vinai can inspect archived history without the live-table past-date exclusion.
+- Shared filtering, sorting, pagination, details, CSV and print functionality operates on the selected table. Archive browsing loads historical data even if history was previously disabled. Refresh/retry requests preserve archive coverage.
+- Archive bulk selection, bulk approvals and new-booking creation are hidden. Existing Superadmin correction controls remain available. Archived rows retain full text contrast and a details action for other staff.
+- Added regression coverage for disjoint table membership (including past live and future archived records), archive route access and archive loading/refresh.
