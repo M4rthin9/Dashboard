@@ -173,6 +173,13 @@ test('route fallback respects menus and drilldown query preserves Thai status, d
       assert.equal(router.resolveRoute().path, route);
     }
   }
+  hashState.value = '#/notifications';
+  auth.user.role = 'Superadmin';
+  assert.equal(router.resolveRoute().path, '/notifications');
+  for (const role of ['Admin', 'Finance', 'Vinai', 'Tadtel', 'User']) {
+    auth.user.role = role;
+    assert.notEqual(router.resolveRoute().path, '/notifications');
+  }
   hashState.value = '#/users';
   auth.user.role = 'User';
   assert.equal(router.resolveRoute().path, '/dashboard');

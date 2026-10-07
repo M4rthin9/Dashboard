@@ -31,6 +31,7 @@ export const routes: RouteDef[] = [
   { path: '/reports/tables', key: 'reports_tables', title: 'รายงานโต๊ะ (TBL)', loader: () => import('../routes/TableReport.svelte') },
   { path: '/eventlog', key: 'eventlog', title: 'บันทึกเหตุการณ์', component: EventLog, roles: ['Superadmin', 'Admin'] },
   { path: '/users', key: 'users', title: 'ผู้ใช้', component: Users, roles: ['Superadmin'] },
+  { path: '/notifications', key: 'notifications', title: 'ส่งแจ้งเตือน', loader: () => import('../routes/Notifications.svelte'), roles: ['Superadmin'] },
   { path: '/prisoners', key: 'prisoners', title: 'ผู้ต้องขัง', component: Prisoners },
   { path: '/connection', key: 'connection', title: 'การเชื่อมต่อ', component: Connection },
   { path: '/promptpay', key: 'promptpay', title: 'PromptPay QR', loader: () => import('../routes/PromptPay.svelte') },

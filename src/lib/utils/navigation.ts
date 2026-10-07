@@ -1,5 +1,5 @@
 import type { Component } from 'svelte';
-import { LayoutDashboard, CalendarDays, Archive, BarChart3, Wallet, ClipboardList, Users, UserRound, Link2, QrCode, Settings, Utensils } from '@lucide/svelte';
+import { LayoutDashboard, CalendarDays, Archive, BarChart3, Wallet, ClipboardList, Users, UserRound, Link2, QrCode, Settings, Utensils, Bell } from '@lucide/svelte';
 import { visibleMenu } from './permissions';
 export interface NavItem { key: string; path: string; label: string; description: string; icon: Component }
 export const navigation: NavItem[] = [
@@ -13,6 +13,7 @@ export const navigation: NavItem[] = [
   { key: 'reports_overall', path: '/reports/overall', label: 'รายงานการเงิน', description: 'รายได้และการชำระเงิน', icon: Wallet },
   { key: 'reports_tables', path: '/reports/tables', label: 'รายงานโต๊ะ (TBL)', description: 'รายงานการใช้โต๊ะ', icon: Utensils },
   { key: 'promptpay', path: '/promptpay', label: 'PromptPay QR', description: 'จัดการ QR สำหรับชำระเงิน', icon: QrCode },
+  { key: 'notifications', path: '/notifications', label: 'ส่งแจ้งเตือน', description: 'ส่งข่าวสารให้ผู้สมัครรับการแจ้งเตือน', icon: Bell },
   { key: 'users', path: '/users', label: 'ผู้ใช้งาน', description: 'บัญชีและสิทธิ์การใช้งาน', icon: Users },
   { key: 'eventlog', path: '/eventlog', label: 'บันทึกเหตุการณ์', description: 'ติดตามกิจกรรมในระบบ', icon: ClipboardList },
   { key: 'connection', path: '/connection', label: 'การเชื่อมต่อ', description: 'ตรวจสอบบริการที่เชื่อมต่อ', icon: Link2 },
@@ -21,7 +22,7 @@ export const navigation: NavItem[] = [
 export const navGroups = [
   { label: 'งานประจำวัน', keys: ['home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'prisoners'] },
   { label: 'รายงานและการเงิน', keys: ['reports', 'reports_overall', 'reports_tables', 'promptpay'] },
-  { label: 'ดูแลระบบ', keys: ['users', 'eventlog', 'connection', 'settings'] },
+  { label: 'ดูแลระบบ', keys: ['notifications', 'users', 'eventlog', 'connection', 'settings'] },
 ];
 export function menuFor(role: string | undefined): NavItem[] {
   const allowed = visibleMenu(role);

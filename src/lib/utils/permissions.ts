@@ -20,7 +20,7 @@ export const PERMISSIONS: Record<Role, string[]> = {
 };
 
 export const SIDEBAR_MENU: Record<Role, string[]> = {
-  Superadmin: ['home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables', 'eventlog', 'users', 'prisoners', 'connection', 'promptpay', 'settings'],
+  Superadmin: ['home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables', 'notifications', 'eventlog', 'users', 'prisoners', 'connection', 'promptpay', 'settings'],
   Admin: ['home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables', 'eventlog', 'prisoners', 'connection'],
   Finance: ['reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables'],
   Vinai: ['home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables', 'prisoners'],

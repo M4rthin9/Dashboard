@@ -280,3 +280,24 @@ export function getPushSubscribers(limit = 100): Promise<
 export function promoImageUrl(id: string): string {
   return `${API_BASE}/api/promo/image?id=${encodeURIComponent(id)}`;
 }
+
+export interface PushAnnouncement {
+  id: string;
+  subject: string;
+  body: string;
+  url: string;
+  createdBy: string;
+  createdAt: string;
+  total: number;
+  pending: number;
+  sent: number;
+  failed: number;
+}
+
+export function getPushAnnouncements(): Promise<ApiResult & { recipients: number; pushEnabled: boolean; rows: PushAnnouncement[] }> {
+  return callAction('getPushAnnouncements', {}, { auth: true });
+}
+
+export function sendPushAnnouncement(message: Pick<PushAnnouncement, 'id' | 'subject' | 'body' | 'url'>): Promise<ApiResult & { deliveryStarted: boolean }> {
+  return callAction('sendPushAnnouncement', message, { auth: true });
+}
