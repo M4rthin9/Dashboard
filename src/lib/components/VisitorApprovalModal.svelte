@@ -52,6 +52,10 @@
     extras.reduce((n, e) => n + (e.approved === 'yes' ? 1 : 0), 0) + (mainApproved === 'yes' ? 1 : 0)
   );
   const totalPeople = $derived(extras.length + 1);
+  const pendingCount = $derived(
+    extras.filter((e) => e.approved !== 'yes' && e.approved !== 'no').length +
+      (mainApproved === 'yes' || mainApproved === 'no' ? 0 : 1)
+  );
 
   const mainFee = $derived(visitorFee(String(row?.relation ?? ''), String(row?.visitorAge ?? '')));
 
@@ -91,6 +95,10 @@
     return (parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '');
   }
 
+  function requestClose(): void {
+    if (!busy) onclose();
+  }
+
   async function setMainApproval(val: string): Promise<void> {
     if (!row || busy) return;
     if (val === 'no') {
@@ -102,12 +110,18 @@
     busy = true;
     try {
       await reservations.updateVisitorApproval(row.ref, val);
-      ui.showAlert({
-        title: val === 'yes' ? 'อนุมัติผู้เยี่ยมหลักแล้ว' : 'ปฏิเสธผู้เยี่ยมหลัก · ยกเลิกการจองแล้ว',
-        message: val === 'yes' ? `${row.visitorName} ได้รับอนุมัติแล้ว` : `${row.visitorName} ถูกปฏิเสธ และการจองถูกยกเลิกแล้ว`,
-        type: val === 'yes' ? 'success' : 'warning',
-      });
-      onclose();
+      if (val === 'no') {
+        ui.showAlert({
+          title: 'ปฏิเสธผู้เยี่ยมหลัก · ยกเลิกการจองแล้ว',
+          message: `${row.visitorName} ถูกปฏิเสธ และการจองถูกยกเลิกแล้ว`,
+          type: 'warning',
+        });
+        onclose();
+      } else {
+        ui.showToast(`${row.visitorName} ได้รับอนุมัติแล้ว`, 'success');
+        // Check only after the save succeeds; optimistic updates can still fail.
+        if (pendingCount === 0) onclose();
+      }
     } catch (err) {
       ui.showAlert({ title: 'ไม่สามารถอัปเดตการอนุมัติได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
     } finally {
@@ -125,8 +139,8 @@
       // hardcoded 'yes' here silently approved a main visitor nobody had
       // reviewed yet.
       await reservations.updateVisitorApproval(row.ref, undefined, current.join(';;'));
-      ui.showAlert({ title: 'อัปเดตการอนุมัติผู้เยี่ยมร่วมแล้ว', message: 'บันทึกการอนุมัติผู้เข้าร่วมเรียบร้อย', type: 'success' });
-      onclose();
+      ui.showToast('บันทึกการอนุมัติผู้เข้าร่วมเรียบร้อย', 'success');
+      if (pendingCount === 0) onclose();
     } catch (err) {
       ui.showAlert({ title: 'ไม่สามารถอัปเดตการอนุมัติได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
     } finally {
@@ -138,7 +152,7 @@
 <Modal
   {open}
   title={row ? `ตรวจสอบผู้เข้าร่วม · ${row.ref}` : 'ตรวจสอบผู้เข้าร่วม'}
-  onclose={onclose}
+  onclose={requestClose}
   width="max-w-xl"
   accent="blue"
   icon={ShieldCheck}
@@ -152,6 +166,7 @@
           <span class="rounded-full bg-white px-2.5 py-1 text-xs ring-1 ring-blue-200 dark:bg-slate-900 dark:ring-blue-900">
             อนุมัติแล้ว {approvedCount}/{totalPeople}
           </span>
+          <span class="text-xs">รอตัดสิน {pendingCount} คน</span>
         </div>
       </div>
 
@@ -268,6 +283,6 @@
     </div>
   {/if}
   {#snippet footer()}
-    <Button variant="outline" onclick={onclose}>ปิด</Button>
+    <Button variant="outline" onclick={requestClose} disabled={busy}>ปิด</Button>
   {/snippet}
 </Modal>
