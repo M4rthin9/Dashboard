@@ -224,6 +224,10 @@ export function saveSettings(settings: Record<string, unknown>): Promise<ApiResu
   return callAction('saveSettings', { settings }, { auth: true });
 }
 
+export function setTableBookingStatus(enabled: boolean): Promise<ApiResult & { opensAt?: string }> {
+  return callAction('setTableBookingStatus', { enabled }, { auth: true });
+}
+
 /** Store one home-page advert image (data URI) in R2; the id then goes into `promo.ads`. */
 export function uploadPromoImage(image: string): Promise<ApiResult & { id?: string; url?: string }> {
   return callAction('uploadPromoImage', { image }, { auth: true });

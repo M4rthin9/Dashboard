@@ -1,5 +1,6 @@
 import { formatNumber, visitDateLabel, parseExtraVisitors, computeDeptReportData, prisonersOf, normalizeStatus, STATUS_COLORS } from './format';
 import { monthLabel } from './dashboard';
+import { bookingPool } from './management';
 import type { Reservation } from '../api/types';
 import type { FinancialDayRow, FinancialMonthRow, FinancialSummary } from './dashboard';
 
@@ -268,7 +269,7 @@ function paymentBoxClass(status: string): string {
 }
 
 function isTableBooking(r: Reservation): boolean {
-  return String(r.bookingType ?? '').trim() === 'table' || String(r.ref ?? '').toUpperCase().startsWith('TBL-');
+  return bookingPool(r) === 'table';
 }
 
 function renderSeatingBlocks(rows: Reservation[], startIndex: number): string {
@@ -395,7 +396,7 @@ export function buildSeatingReport(rows: Reservation[], filterLabel?: string): s
     <div style="text-align:center; margin-bottom:20px;">
       <h1 style="font-size:22px; margin:0 0 4px; font-weight:700; color:#312e81;">🪑 รายงานการจัดโต๊ะ</h1>
       <h2 style="font-size:16px; margin:0 0 2px; font-weight:700; color:#1e1b4b;">ร้าน Chance &amp; Change Cafe · ทัณฑสถานบำบัดพิเศษกลาง</h2>
-      <div style="font-size:12px; color:#555;">เรียงตามเลขที่อ้างอิง · รายงานแยกการจองผู้ต้องขัง และการจองโต๊ะ (TBL)</div>
+      <div style="font-size:12px; color:#555;">เรียงตามเลขที่อ้างอิง · ${prisoner.length && table.length ? 'รายงานแยกการจองเยี่ยม (VIS) และการจองโต๊ะ (TBL)' : table.length ? 'การจองโต๊ะสำหรับบุคคลภายนอก (TBL)' : 'การจองเยี่ยมผู้ต้องขัง (VIS)'}</div>
       ${filterLabel ? `<div class="report-meta">${escapeHtml(filterLabel)}</div>` : ''}
     </div>
   `;
@@ -407,8 +408,8 @@ export function buildSeatingReport(rows: Reservation[], filterLabel?: string): s
   }
 
   if (table.length > 0) {
-    html += `<div style="page-break-before:always;"></div>`;
-    html += sectionHead('2) การจองโต๊ะ (TBL)', `${table.length} โต๊ะ`);
+    if (prisoner.length > 0) html += `<div style="page-break-before:always;"></div>`;
+    html += sectionHead(`${prisoner.length > 0 ? '2' : '1'}) การจองโต๊ะ (TBL)`, `${table.length} โต๊ะ`);
     html += renderSeatingBlocks(table, prisoner.length);
     html += renderSeatingSummary(table, false);
   }

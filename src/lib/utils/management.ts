@@ -32,9 +32,18 @@ export function bookingPool(row: Reservation): Exclude<BookingPool, 'all'> {
 export function activeBooking(row: Reservation): boolean {
   return !!String(row.ref ?? '').trim() && STATUS_STEPS.includes(normalizeStatus(row.status)) && !terminal.includes(normalizeStatus(row.status));
 }
-/** Partition by the server's archive marker, not visit date or booking status. */
-export function reservationViewRows(rows: Reservation[], archived: boolean): Reservation[] {
-  return rows.filter(row => !!String(row.ref ?? '').trim() && !!row._archived === archived);
+/** The route owns the pool; query filters cannot change it. */
+export function reservationPageScope(path: string) {
+  const table = path === '/reservations/tables' || path === '/reservations/tables/archive';
+  return { pool: table ? 'table' as const : 'prisoner' as const, archived: path.endsWith('/archive') };
+}
+export function reservationHref(pool: Exclude<BookingPool, 'all'>, query = new URLSearchParams(), archived = false): string {
+  const base = pool === 'table' ? '/reservations/tables' : '/reservations';
+  return `${base}${archived ? '/archive' : ''}${query.size ? `?${query}` : ''}`;
+}
+/** Partition by pool and the server's archive marker, not visit date or status. */
+export function reservationViewRows(rows: Reservation[], archived: boolean, pool: BookingPool = 'all'): Reservation[] {
+  return rows.filter(row => !!String(row.ref ?? '').trim() && !!row._archived === archived && (pool === 'all' || bookingPool(row) === pool));
 }
 export function amount(row: Reservation): number {
   const n = Number(row.total);

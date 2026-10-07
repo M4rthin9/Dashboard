@@ -16,6 +16,7 @@
   import Modal from './ui/Modal.svelte';
   import { formatBaht, formatNumber, normalizeStatus, parseExtraPrisoners, STATUS_STEPS, statusColor, type PrisonerEntry } from '../utils/format';
   import { ui } from '../store/ui.svelte';
+  import { bookingPool } from '../utils/management';
   import type { Prisoner, Reservation } from '../api/types';
 
   const RELATION_OPTIONS = ['บิดา / มารดา', 'แฟน/ภรรยา', 'บุตร / ธิดา', 'พี่ / น้อง', 'ญาติ', 'เพื่อน', 'ทนายความ', 'อื่น ๆ'];
@@ -64,7 +65,7 @@
       : PRICING.MAIN_VISITOR;
   }
 
-  let { open, mode, row, prisoners, onclose, onsubmit, saving, width = 'max-w-3xl' }: {
+  let { open, mode, row, prisoners, onclose, onsubmit, saving, width = 'max-w-3xl', fixedBookingType }: {
     open: boolean;
     mode: 'edit' | 'create';
     row: Reservation | null;
@@ -73,6 +74,7 @@
     onsubmit: (fields: Record<string, unknown>) => Promise<void>;
     saving: boolean;
     width?: string;
+    fixedBookingType?: 'prisoner' | 'table';
   } = $props();
 
   interface ExtraVisitor {
@@ -237,8 +239,7 @@
       visitorAge = String(row.visitorAge ?? '');
       religion = String(row.religion ?? '');
       allergy = String(row.allergy ?? '');
-      // Legacy rows predate the column and are always prisoner visits.
-      bookingType = String(row.bookingType ?? '').trim() || 'prisoner';
+      bookingType = bookingPool(row);
       prisonerId = String(row.prisonerId ?? '');
       prisonerName = String(row.prisonerName ?? '');
       wing = String(row.wing ?? '');
@@ -255,7 +256,7 @@
     } else if (mode === 'create') {
       const now = new Date();
       visitDateISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      bookingType = 'prisoner';
+      bookingType = fixedBookingType ?? 'prisoner';
       visitorName = '';
       visitorId = '';
       visitorPhone = '';
@@ -394,7 +395,9 @@
       submit();
     }}
   >
-    {#if mode === 'create'}
+    {#if mode === 'create' && fixedBookingType}
+      <p class="rounded-xl bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">{fixedBookingType === 'table' ? 'จองโต๊ะสำหรับบุคคลภายนอก (TBL)' : 'จองเยี่ยมผู้ต้องขัง (VIS)'}</p>
+    {:else if mode === 'create'}
       <!-- Staff can take either kind of booking (e.g. a table booked over the
            phone). The type is fixed once created, so it is only offered here. -->
       <section class="flex flex-col gap-2">

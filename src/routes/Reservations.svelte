@@ -15,7 +15,7 @@
   import { ui } from '../lib/store/ui.svelte';
   import { hasPermission } from '../lib/utils/permissions';
   import { currentQuery, currentPath } from '../lib/router';
-  import { bookingPool, reservationViewRows } from '../lib/utils/management';
+  import { bookingPool, reservationPageScope, reservationHref, reservationViewRows } from '../lib/utils/management';
   import { formatBaht, formatNumber, normalizeStatus, STATUS_COLORS, todayISO, visitDateLabel } from '../lib/utils/format';
   import { exportReservationsCSV } from '../lib/utils/csv';
   import { openPrintWindow, buildSeatingReport, buildPromptPayQrCard } from '../lib/utils/print';
@@ -26,8 +26,6 @@
   let statusFilter = $state('');
   let dateFilter = $state('');
   let wingFilter = $state('');
-  /** '' = both pools, 'prisoner' = visit bookings, 'table' = no-prisoner tables. */
-  let typeFilter = $state('');
   let page = $state(1);
   let pageSize = $state(10);
   let sortKey = $state('timestamp');
@@ -55,8 +53,11 @@
   let qrPrinting = $state('');
 
   const role = $derived(auth.user?.role ?? 'User');
-  const archiveView = $derived(currentPath() === '/reservations/archive');
-  const viewRows = $derived(reservationViewRows(reservations.rows, archiveView));
+  const pageScope = $derived(reservationPageScope(currentPath()));
+  const tableView = $derived(pageScope.pool === 'table');
+  const archiveView = $derived(pageScope.archived);
+  const pageLabel = $derived(tableView ? 'การจองโต๊ะ (TBL)' : 'การจองเยี่ยม (VIS)');
+  const viewRows = $derived(reservationViewRows(reservations.rows, archiveView, pageScope.pool));
   const isSuper = $derived(role === 'Superadmin');
   const isAdminOrSuper = $derived(role === 'Superadmin' || role === 'Admin');
   const canApproveParticipant = $derived(isAdminOrSuper || hasPermission(role, 'approve_participant'));
@@ -89,11 +90,7 @@
     Array.from(new Set(viewRows.map((r) => String(r.wing ?? '').trim()).filter(Boolean))).sort()
   );
 
-  /** Legacy rows predate the column and are always prisoner visits. */
-  function bookingTypeOf(row: Reservation): string {
-    return bookingPool(row);
-  }
-  const isTableBooking = (row: Reservation) => bookingTypeOf(row) === 'table';
+  const isTableBooking = (row: Reservation) => bookingPool(row) === 'table';
 
   function isExpired(row: Reservation): boolean {
     const iso = String(row.visitDateISO ?? '').trim();
@@ -114,7 +111,6 @@
       if (statusFilter && normalizeStatus(r.status) !== statusFilter) return false;
       if (dateFilter && String(r.visitDateISO ?? '').trim() !== dateFilter) return false;
       if (wingFilter && String(r.wing ?? '').trim() !== wingFilter) return false;
-      if (typeFilter && bookingTypeOf(r) !== typeFilter) return false;
       if (q && !JSON.stringify(r).toLowerCase().includes(q)) return false;
       return true;
     });
@@ -154,8 +150,6 @@
     statusFilter = query.get('status') ?? '';
     dateFilter = query.get('date') ?? '';
     search = query.get('search') ?? '';
-    const pool = query.get('type');
-    typeFilter = pool === 'table' || pool === 'prisoner' ? pool : '';
     page = 1;
     selectedRefs = [];
     wingFilter = '';
@@ -342,7 +336,8 @@
       return;
     }
     let refs = cancelMode === 'bulk' ? selectedRefs : [cancelRef];
-    const allRows = reservations.rows.filter((r) => refs.includes(r.ref));
+    const allRows = viewRows.filter((r) => refs.includes(r.ref));
+    refs = allRows.map((r) => r.ref);
     // Superadmin cancels through the forced updateStatus path, which the
     // backend allows on expired/archived/any-status bookings — no skip list.
     const expired = isSuper ? [] : allRows.filter((r) => isExpired(r));
@@ -378,7 +373,7 @@
   }
 
   async function runBatch(nextStatus: string): Promise<void> {
-    if (!dateFilter) return;
+    if (!dateFilter || tableView) return;
     const target = normalizeStatus(nextStatus);
     const batch = filtered.filter((r) => !r._archived && normalizeStatus(r.status) === (target === 'รอตรวจสอบวินัย' ? 'รอตรวจสอบผู้เข้าร่วม' : 'รอตรวจสอบวินัย'));
     if (batch.length === 0) return;
@@ -407,7 +402,7 @@
       ui.showAlert({ title: 'ไม่มีข้อมูล', message: 'ไม่มีข้อมูลตาม filter ที่เลือก', type: 'warning' });
       return;
     }
-    exportReservationsCSV(sorted);
+    exportReservationsCSV(sorted, `CC_Cafe_${tableView ? 'TBL' : 'VIS'}${archiveView ? '_Archive' : ''}_${todayISO()}.csv`);
     ui.showAlert({ title: 'ส่งออกไฟล์ CSV สำเร็จ', message: `ส่งออก ${sorted.length} รายการเรียบร้อย`, type: 'success' });
   }
 
@@ -423,7 +418,7 @@
     if (dateFilter) filterParts.push(`วันที่ ${visitDateLabel(dateFilter)}`);
     else filterParts.push('ทุกวัน');
     if (wingFilter) filterParts.push(`แดน ${wingFilter}`);
-    if (typeFilter) filterParts.push(`ประเภท ${typeFilter === 'table' ? 'จองโต๊ะ' : 'เยี่ยมผู้ต้องขัง'}`);
+    filterParts.push(pageLabel);
     if (search.trim()) filterParts.push(`ค้นหา "${search.trim()}"`);
     filterParts.push('สถานะ เสร็จสิ้น');
     const filterLabel = filterParts.length > 0 ? `ตัวกรอง: ${filterParts.join(' · ')}` : undefined;
@@ -516,14 +511,13 @@
           type: 'success',
         });
       } else if (formMode === 'create') {
-        const ref = await reservations.createBooking(fields);
+        const ref = await reservations.createBooking({ ...fields, bookingType: pageScope.pool });
         ui.showAlert({
           title: 'สร้างการจองสำเร็จ',
           message: [
             `เลขที่การจอง: ${ref}`,
-            `ผู้เยี่ยม: ${String(fields.visitorName ?? '')}`,
-            `ผู้ต้องขัง: ${String(fields.prisonerName ?? '')}`,
-            `ปีก: ${String(fields.wing ?? '')}`,
+            `${tableView ? 'ผู้จอง' : 'ผู้เยี่ยม'}: ${String(fields.visitorName ?? '')}`,
+            ...(!tableView ? [`ผู้ต้องขัง: ${String(fields.prisonerName ?? '')}`, `ปีก: ${String(fields.wing ?? '')}`] : []),
             `วันเข้างาน: ${visitDateLabel(String(fields.visitDate ?? ''), String(fields.visitDateISO ?? ''))}`,
             `จำนวน: ${formatNumber(Number(fields.visitorCount) || 0)} คน · ${formatBaht(Number(fields.total) || 0)}`,
           ].join('\n'),
@@ -541,7 +535,7 @@
 </script>
 
 {#snippet rowActions(row: Reservation, s: string, terminal: boolean, expired: boolean)}
-  {#if s === 'รอตรวจสอบผู้เข้าร่วม' && canApproveParticipant}
+  {#if !tableView && s === 'รอตรวจสอบผู้เข้าร่วม' && canApproveParticipant}
     <button class="shrink-0 rounded-xl border border-green-200 bg-white p-1.5 text-green-600 hover:bg-green-50 dark:border-green-900 dark:bg-slate-800 dark:hover:bg-green-950/30" title="อนุมัติผู้เข้าร่วม" onclick={() => doUpdateStatus(row, 'รอตรวจสอบวินัย')}>
       <Check class="h-4 w-4" />
     </button>
@@ -551,7 +545,7 @@
       </button>
     {/if}
   {/if}
-  {#if s === 'รอตรวจสอบวินัย' && canApproveDiscipline}
+  {#if !tableView && s === 'รอตรวจสอบวินัย' && canApproveDiscipline}
     <button class="shrink-0 rounded-xl border border-green-200 bg-white p-1.5 text-green-600 hover:bg-green-50 dark:border-green-900 dark:bg-slate-800 dark:hover:bg-green-950/30" title="อนุมัติวินัย" onclick={() => doUpdateStatus(row, 'รอชำระเงิน')}>
       <Check class="h-4 w-4" />
     </button>
@@ -616,7 +610,7 @@
 {/snippet}
 
 <div class="flex flex-col gap-4">
-  <Card title={archiveView ? 'การจองย้อนหลัง' : 'ระบบจอง'} subtitle={archiveView ? 'การจองที่เก็บถาวร แยกจากตารางการจองปัจจุบัน' : 'ตารางการจองปัจจุบัน ไม่รวมข้อมูลที่เก็บถาวร'} interactive>
+  <Card title={archiveView ? `${pageLabel} · ย้อนหลัง` : pageLabel} subtitle={tableView ? (archiveView ? 'ประวัติการจองโต๊ะสำหรับบุคคลภายนอกที่เก็บถาวร' : 'จัดการการจองโต๊ะสำหรับบุคคลภายนอก') : (archiveView ? 'ประวัติการจองเยี่ยมผู้ต้องขังที่เก็บถาวร' : 'จัดการการจองเยี่ยมผู้ต้องขัง')} interactive>
     <div class="flex flex-col gap-4">
       <div class="flex flex-col gap-3">
         <div class="relative">
@@ -624,7 +618,7 @@
           <input
             type="search"
             bind:value={search}
-            placeholder="ค้นหาชื่อผู้เยี่ยม, ผู้ต้องขัง, REF, ปีก, เบอร์โทร"
+            placeholder={tableView ? 'ค้นหาชื่อผู้จอง, REF, เบอร์โทร' : 'ค้นหาชื่อผู้เยี่ยม, ผู้ต้องขัง, REF, ปีก, เบอร์โทร'}
             class="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 transition-colors duration-150 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
           />
         </div>
@@ -652,7 +646,7 @@
           {/each}
         </select>
 
-        <select
+        {#if !tableView}<select
           bind:value={wingFilter}
           class="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 transition-colors duration-150 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 sm:flex-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
           aria-label="กรองตามแดน"
@@ -661,21 +655,11 @@
           {#each wings as w (w)}
             <option value={w}>{w}</option>
           {/each}
-        </select>
-
-        <select
-          bind:value={typeFilter}
-          class="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 transition-colors duration-150 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 sm:flex-none dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-          aria-label="กรองตามประเภทการจอง"
-        >
-          <option value="">ทุกประเภท</option>
-          <option value="prisoner">เยี่ยมผู้ต้องขัง</option>
-          <option value="table">จองโต๊ะ (ไม่มีผู้ต้องขัง)</option>
-        </select>
+        </select>{/if}
 
         <a
           class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-3.5 py-2 text-sm text-slate-600 transition-colors duration-150 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
-          href={archiveView ? '#/reservations' : '#/reservations/archive'}
+          href={`#${reservationHref(pageScope.pool, undefined, !archiveView)}`}
         >
           <Archive class="h-4 w-4" />
           {archiveView ? 'กลับไปการจองปัจจุบัน' : 'เปิดการจองย้อนหลัง'}
@@ -718,7 +702,7 @@
             onclick={openCreate}
           >
             <Plus class="h-4 w-4" />
-            สร้างการจอง
+            สร้างการจอง {tableView ? 'TBL' : 'VIS'}
           </button>
         {/if}
       </div>
@@ -736,7 +720,7 @@
           <div class="text-sm font-semibold text-slate-700 dark:text-slate-200">
             รวม {formatBaht(daySummary.totalAmount)}
           </div>
-          {#if !archiveView && daySummary.pendingParticipant > 0 && canApproveParticipant}
+          {#if !tableView && !archiveView && daySummary.pendingParticipant > 0 && canApproveParticipant}
             <button
               class="inline-flex items-center gap-1 rounded-xl bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors duration-150 hover:bg-amber-700 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-amber-600 focus-visible:outline-offset-2"
               onclick={() => runBatch('รอตรวจสอบวินัย')}
@@ -746,7 +730,7 @@
               อนุมัติผู้เข้าร่วมทั้งหมด ({daySummary.pendingParticipant})
             </button>
           {/if}
-          {#if !archiveView && daySummary.pendingDiscipline > 0 && canApproveDiscipline}
+          {#if !tableView && !archiveView && daySummary.pendingDiscipline > 0 && canApproveDiscipline}
             <button
               class="inline-flex items-center gap-1 rounded-xl bg-blue-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors duration-150 hover:bg-blue-800 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-blue-700 focus-visible:outline-offset-2"
               onclick={() => runBatch('รอชำระเงิน')}
@@ -809,8 +793,8 @@
                   />
                 </th>{/if}
                 <th class="min-w-[90px] cursor-pointer px-3 py-2.5 font-medium text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100" onclick={() => toggleSort('ref')}>REF{sortIcon('ref')}</th>
-                <th class="min-w-[200px] cursor-pointer px-3 py-2.5 font-medium text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100" onclick={() => toggleSort('prisonerName')}>ผู้ต้องขัง / ผู้เยี่ยม{sortIcon('prisonerName')}</th>
-                <th class="min-w-[80px] cursor-pointer px-3 py-2.5 font-medium text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100" onclick={() => toggleSort('wing')}>ปีก{sortIcon('wing')}</th>
+                <th class="min-w-[200px] cursor-pointer px-3 py-2.5 font-medium text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100" onclick={() => toggleSort(tableView ? 'visitorName' : 'prisonerName')}>{tableView ? 'ผู้จอง / เบอร์โทร' : 'ผู้ต้องขัง / ผู้เยี่ยม'}{sortIcon(tableView ? 'visitorName' : 'prisonerName')}</th>
+                {#if !tableView}<th class="min-w-[80px] cursor-pointer px-3 py-2.5 font-medium text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100" onclick={() => toggleSort('wing')}>ปีก{sortIcon('wing')}</th>{/if}
                 <th class="min-w-[100px] cursor-pointer px-3 py-2.5 font-medium text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100" onclick={() => toggleSort('visitDateISO')}>วันที่{sortIcon('visitDateISO')}</th>
                 <th class="min-w-[90px] cursor-pointer px-3 py-2.5 text-right font-medium text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100" onclick={() => toggleSort('total')}>ยอด{sortIcon('total')}</th>
                 <th class="min-w-[110px] px-3 py-2.5 font-medium text-slate-700 dark:text-slate-300">สถานะ</th>
@@ -861,7 +845,7 @@
                       </div>
                     </div>
                   </td>
-                  <td class="px-3 py-2.5 font-medium">{isTableBooking(row) ? '—' : (row.wing ?? '—')}</td>
+                  {#if !tableView}<td class="px-3 py-2.5 font-medium">{row.wing ?? '—'}</td>{/if}
                   <td class="px-3 py-2.5 whitespace-nowrap">{visitDateLabel(row.visitDate, row.visitDateISO)}</td>
                   <td class="px-3 py-2.5 text-right whitespace-nowrap">
                     <div>{formatNumber(row.visitorCount)} คน</div>
@@ -873,7 +857,7 @@
                     </span>
                   </td>
                   <td class="px-3 py-2.5">
-                    <StatusSteps status={row.status} />
+                    <StatusSteps status={row.status} bookingType={pageScope.pool} />
                   </td>
                    <td class="px-3 py-2.5">
                     {#if !archived || isSuper}
@@ -944,7 +928,7 @@
               </div>
 
               <div class="mt-2.5 flex items-center justify-between gap-2 border-t border-slate-100 pt-2.5 dark:border-slate-800">
-                <StatusSteps status={row.status} />
+                <StatusSteps status={row.status} bookingType={pageScope.pool} />
                 {#if !archived || isSuper}
                   <div class="flex flex-wrap items-center justify-end gap-1.5">
                     {@render rowActions(row, s, terminal, expired)}
@@ -1092,6 +1076,7 @@
   open={formMode !== null}
   mode={formMode ?? 'create'}
   row={formMode === 'edit' ? detailRow : null}
+  fixedBookingType={pageScope.pool}
   {prisoners}
   onclose={closeForm}
   onsubmit={submitForm}

@@ -22,8 +22,10 @@ export interface RouteDef {
 export const routes: RouteDef[] = [
   { path: '/login', key: 'login', title: 'เข้าสู่ระบบ', component: Login },
   { path: '/dashboard', key: 'home', title: 'หน้าหลัก', loader: () => import('../routes/Dashboard.svelte') },
-  { path: '/reservations', key: 'reservations', title: 'ระบบจอง', component: Reservations },
-  { path: '/reservations/archive', key: 'reservations_archive', title: 'การจองย้อนหลัง', component: Reservations },
+  { path: '/reservations', key: 'reservations', title: 'การจองเยี่ยม (VIS)', component: Reservations },
+  { path: '/reservations/archive', key: 'reservations_archive', title: 'การจองเยี่ยมย้อนหลัง (VIS)', component: Reservations },
+  { path: '/reservations/tables', key: 'reservations_tables', title: 'การจองโต๊ะ (TBL)', component: Reservations },
+  { path: '/reservations/tables/archive', key: 'reservations_tables_archive', title: 'การจองโต๊ะย้อนหลัง (TBL)', component: Reservations },
   { path: '/reports', key: 'reports', title: 'รายงาน', loader: () => import('../routes/Reports.svelte') },
   { path: '/reports/overall', key: 'reports_overall', title: 'รายงานการเงิน', loader: () => import('../routes/OverallReport.svelte') },
   { path: '/reports/tables', key: 'reports_tables', title: 'รายงานโต๊ะ (TBL)', loader: () => import('../routes/TableReport.svelte') },

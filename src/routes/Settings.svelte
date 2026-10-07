@@ -6,7 +6,7 @@
   import { API_BASE, auth } from '../lib/store/auth.svelte';
   import { ui } from '../lib/store/ui.svelte';
   import { hasPermission } from '../lib/utils/permissions';
-  import { archiveOldReservations, getSettings, saveSettings } from '../lib/api/endpoints';
+  import { archiveOldReservations, getSettings, saveSettings, setTableBookingStatus } from '../lib/api/endpoints';
   import BookingWindowCard from '../lib/components/settings/BookingWindowCard.svelte';
   import PromoCard from '../lib/components/settings/PromoCard.svelte';
   import PdpaCard from '../lib/components/settings/PdpaCard.svelte';
@@ -21,13 +21,23 @@
   let paymentEnabled = $state(true);
   let paymentClosedMessage = $state('');
   let paymentSaving = $state(false);
-  let tableMaintenance = $state(true);
-  let tableMaintenanceSaving = $state(false);
+  let tableBookingEnabled = $state(false);
+  let tableBookingSaving = $state(false);
+  let tableBookingOpensAt = $state('');
+  let now = $state(Date.now());
+  const tableBookingScheduled = $derived(tableBookingEnabled && Date.parse(tableBookingOpensAt) > now);
+  const tableCountdown = $derived(Math.max(0, Math.ceil((Date.parse(tableBookingOpensAt) - now) / 1000)));
+  const tableCountdownText = $derived([Math.floor(tableCountdown / 3600), Math.floor(tableCountdown / 60) % 60, tableCountdown % 60].map(n => String(n).padStart(2, '0')).join(':'));
+  const tableOpeningLabel = $derived(tableBookingOpensAt ? new Intl.DateTimeFormat('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(tableBookingOpensAt)) : '');
   let archiving = $state(false);
 
   const isManager = $derived(auth.user?.role === 'Superadmin' || auth.user?.role === 'Admin' || hasPermission(auth.user?.role ?? '', 'manage_users'));
 
   onMount(fetchSettings);
+  onMount(() => {
+    const timer = window.setInterval(() => now = Date.now(), 1000);
+    return () => window.clearInterval(timer);
+  });
 
   async function fetchSettings(): Promise<void> {
     if (!isManager) return;
@@ -43,8 +53,12 @@
       paymentEnabled = payment.enabled !== false;
       paymentClosedMessage = typeof payment.closedMessage === 'string' ? payment.closedMessage : '';
       const tableBooking = (serverSettings.tableBooking ?? {}) as Record<string, unknown>;
-      // Absent means maintenance is ON — preserves current coming-soon behaviour.
-      tableMaintenance = tableBooking.maintenance !== false;
+      // Legacy maintenance also closes bookings; the button updates both flags.
+      tableBookingEnabled = tableBooking.enabled !== false && tableBooking.maintenance === false;
+      const opening = Date.parse(String(tableBooking.opensAt ?? ''));
+      tableBookingOpensAt = Number.isFinite(opening) ? new Date(opening).toISOString() : '';
+      now = Date.now();
+      if (tableBooking.opensAt && !Number.isFinite(opening)) tableBookingEnabled = false;
     } catch (err) {
       ui.showAlert({ title: 'ไม่สามารถโหลดตั้งค่าได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
     } finally {
@@ -105,29 +119,22 @@
     }
   }
 
-  /** Read-merge-write so the toggle never clobbers perDay/holdMinutes/seats etc
-   *  that share the same tableBooking key in the admin_settings blob. */
-  async function saveTableMaintenanceSwitch(next: boolean): Promise<void> {
-    tableMaintenanceSaving = true;
+  /** The server saves the opening two hours ahead and preserves other settings. */
+  async function saveTableBookingSwitch(next: boolean): Promise<void> {
+    tableBookingSaving = true;
     try {
-      const current = await getSettings();
-      const existingTb = (current.settings?.tableBooking ?? {}) as Record<string, unknown>;
-      const merged = {
-        ...(current.settings ?? {}),
-        tableBooking: { ...existingTb, maintenance: next },
-      };
-      const res = await saveSettings(merged as Record<string, unknown>);
+      const res = await setTableBookingStatus(next);
       if (res.status !== 'ok') {
         ui.showAlert({ title: 'บันทึกไม่สำเร็จ', message: String(res.message ?? 'เกิดข้อผิดพลาด'), type: 'error' });
         return;
       }
-      tableMaintenance = next;
-      ui.showToast(next ? 'เปิดโหมดบำรุงรักษาจองโต๊ะแล้ว' : 'ปิดโหมดบำรุงรักษา เปิดหน้าจองโต๊ะแล้ว', 'success');
+      tableBookingEnabled = next;
+      ui.showToast(next ? 'เริ่มนับถอยหลัง 2 ชั่วโมงก่อนเปิดรับจองโต๊ะ (TBL)' : 'ปิดรับจองโต๊ะ (TBL) และยกเลิกเวลาเปิดแล้ว', 'success');
       await fetchSettings();
     } catch (err) {
       ui.showAlert({ title: 'เกิดข้อผิดพลาด', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
     } finally {
-      tableMaintenanceSaving = false;
+      tableBookingSaving = false;
     }
   }
 
@@ -238,27 +245,32 @@
       {/if}
     </Card>
 
-    <Card title="การจองโต๊ะ" subtitle="เปิด/ปิดโหมดบำรุงรักษาของหน้าการจองโต๊ะบนเว็บจอง">
+    <Card title="การจองโต๊ะ (TBL)" subtitle="เปิด/ปิดรับการจองโต๊ะสำหรับบุคคลภายนอก">
       {#if loading}
         <div class="flex items-center justify-center py-10"><Spinner /></div>
       {:else}
-        <div class="flex items-center justify-between gap-4 rounded-xl border p-4 {tableMaintenance ? 'border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30' : 'border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30'}">
+        <div class="flex items-center justify-between gap-4 rounded-xl border p-4 {tableBookingEnabled ? 'border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30' : 'border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30'}">
           <div>
-            <p class="text-sm font-semibold {tableMaintenance ? 'text-amber-700 dark:text-amber-300' : 'text-green-700 dark:text-green-300'}">
-              {tableMaintenance ? 'เปิดโหมดบำรุงรักษา (อยู่ระหว่างพัฒนา)' : 'ปิดโหมดบำรุงรักษา'}
+            <p class="text-sm font-semibold {tableBookingEnabled ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}">
+              {tableBookingScheduled ? 'กำลังนับถอยหลังก่อนเปิดรับจองโต๊ะ (TBL)' : tableBookingEnabled ? 'เปิดรับจองโต๊ะ (TBL)' : 'ปิดรับจองโต๊ะ (TBL)'}
             </p>
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              {tableMaintenance
-                ? 'เมื่อเข้าหน้าการจองโต๊ะ ผู้เข้าร่วมจะเห็น popup แจ้งว่าบริการอยู่ระหว่างพัฒนา/บำรุงรักษา แล้วกลับไปหน้าหลัก'
-                : 'ปิด popup เตือน ผู้เข้าร่วมจะเข้าสู่แบบฟอร์มการจองโต๊ะได้ตามปกติ'}
+              {tableBookingScheduled ? 'ลูกค้าเห็นแบนเนอร์และเวลานับถอยหลัง ระบบเปิดรับจองอัตโนมัติเมื่อครบ 2 ชั่วโมง'
+                : tableBookingEnabled
+                ? 'ลูกค้าจองโต๊ะได้ตามช่วงเวลาเปิดรับจอง โดยต้องยอมรับข้อตกลงก่อนยืนยันการจอง'
+                : 'ปิดแบบฟอร์มและปฏิเสธการจองใหม่บนเซิร์ฟเวอร์ ลูกค้าที่จองแล้วตรวจสอบสถานะและชำระเงินได้ตามปกติ'}
             </p>
+            {#if tableBookingScheduled}
+              <p class="mt-3 font-mono text-3xl font-bold tabular-nums" role="timer" aria-label="เวลาที่เหลือก่อนเปิดรับจอง">{tableCountdownText}</p>
+              <p class="mt-2 text-xs text-slate-600 dark:text-slate-300">เปิดรับจอง {tableOpeningLabel} (เวลาประเทศไทย)</p>
+            {/if}
           </div>
           <button
-            class="shrink-0 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 disabled:opacity-50 {tableMaintenance ? 'bg-green-600 hover:bg-green-700' : 'bg-amber-600 hover:bg-amber-700'}"
-            onclick={() => void saveTableMaintenanceSwitch(!tableMaintenance)}
-            disabled={tableMaintenanceSaving}
+            class="shrink-0 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 disabled:opacity-50 {tableBookingEnabled ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'}"
+            onclick={() => void saveTableBookingSwitch(!tableBookingEnabled)}
+            disabled={tableBookingSaving}
           >
-            {tableMaintenanceSaving ? 'กำลังบันทึก...' : tableMaintenance ? 'ปิดโหมดบำรุงรักษา' : 'เปิดโหมดบำรุงรักษา'}
+            {tableBookingSaving ? 'กำลังบันทึก...' : tableBookingScheduled ? 'ยกเลิกการเปิดรับจอง' : tableBookingEnabled ? 'ปิดรับจองโต๊ะ' : 'เริ่มนับถอยหลัง 2 ชั่วโมง'}
           </button>
         </div>
       {/if}

@@ -1,7 +1,8 @@
 <script lang="ts">
-  let { status }: { status: string | undefined } = $props();
+  let { status, bookingType = 'prisoner' }: { status: string | undefined; bookingType?: 'prisoner' | 'table' } = $props();
 
-  const labels = ['ตรวจสอบผู้เข้าร่วม', 'ตรวจสอบวินัย', 'ยืนยันการเงิน'];
+  const labels = ['ตรวจสอบผู้เข้าร่วม', 'ตรวจสอบวินัย', 'ยืนยันการเงิน', 'เสร็จสิ้น'];
+  const steps = $derived(bookingType === 'table' ? [3, 4] : [1, 2, 3]);
 
   function stepState(step: number): 'done' | 'active' | 'pending' | 'rejected' | 'skipped' {
     const s = String(status ?? '').trim();
@@ -16,6 +17,7 @@
       if (s === 'รอชำระเงิน') return 'active';
       return ['ชำระแล้ว', 'เสร็จสิ้น'].includes(s) ? 'done' : 'pending';
     }
+    if (step === 4) return s === 'เสร็จสิ้น' ? 'done' : s === 'ชำระแล้ว' ? 'active' : 'pending';
     return 'pending';
   }
 
@@ -37,7 +39,7 @@
 </script>
 
 <div class="flex items-center gap-1" title={status ?? ''}>
-  {#each [1, 2, 3] as step, i (step)}
+  {#each steps as step, i (step)}
     {#if i > 0}
       <span class="h-px w-2 bg-slate-300 dark:bg-slate-600"></span>
     {/if}
@@ -45,7 +47,7 @@
       class="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold transition-colors {dotClasses[stepState(step)]}"
       title={labels[step - 1]}
     >
-      {stepContent(stepState(step), step)}
+      {stepContent(stepState(step), i + 1)}
     </span>
   {/each}
 </div>

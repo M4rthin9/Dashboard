@@ -18,7 +18,7 @@
   import { hasPermission, visibleMenu, roleLabel } from '../lib/utils/permissions';
   import { formatBaht, formatNumber, normalizeStatus, visitDateLabel, STATUS_COLORS } from '../lib/utils/format';
   import { computeMonthlyRevenue, computeStatusDistribution, computeVisitorTypes, computeWingCounts } from '../lib/utils/dashboard';
-  import { businessDate, shiftDate, rangeDays, previousRange, bookingPool, activeBooking, peopleCount, scopedReservations, periodRows, periodSummary, comparison, dailySeries, workQueues, visitOrder, expiredHold, validDate, type BookingPool } from '../lib/utils/management';
+  import { businessDate, shiftDate, rangeDays, previousRange, bookingPool, reservationHref, activeBooking, peopleCount, scopedReservations, periodRows, periodSummary, comparison, dailySeries, workQueues, visitOrder, expiredHold, validDate, type BookingPool } from '../lib/utils/management';
 
   let now = $state(new Date());
   const today = $derived(businessDate(now));
@@ -94,9 +94,9 @@
     return () => clearInterval(timer);
   });
   function preset(length: number): void { from = shiftDate(today, 1 - length); to = today; }
-  function openList(status = '', extra: Record<string, string> = {}): void {
+  function openList(status = '', extra: Record<string, string> = {}, bookingType: 'prisoner' | 'table' = 'prisoner'): void {
     const query = new URLSearchParams({ ...(status ? { status } : {}), ...extra });
-    navigate(`/reservations${query.size ? `?${query}` : ''}`);
+    navigate(reservationHref(bookingType, query));
   }
   async function refresh(): Promise<void> { try { await reservations.refresh(); } catch { /* Visible store error. */ } }
   let detailRow = $state<Reservation | null>(null);
@@ -108,7 +108,7 @@
     const s = normalizeStatus(row.status);
     if (s === 'รอตรวจสอบผู้เข้าร่วม' && hasPermission(role, 'visitor_approval')) { visitorRow = row; return; }
     if (['รอชำระเงิน', 'ชำระแล้ว'].includes(s) && hasPermission(role, 'confirm_payment')) { paymentMode = s === 'ชำระแล้ว' ? 'เสร็จสิ้น' : 'ชำระแล้ว'; paymentRow = row; return; }
-    openList(s, { search: row.ref });
+    openList(s, { search: row.ref }, bookingPool(row));
   }
   async function approvePayment(row: Reservation): Promise<void> {
     if (saving || !hasPermission(role, 'confirm_payment')) return;
@@ -148,7 +148,7 @@
       <FloorPlan rows={scope} ondetail={row => detailRow = row} />
     {:else}
       {#if view === 'overview'}
-        <div class="flex flex-wrap items-end justify-between gap-3"><div><p class="text-[10px] font-semibold tracking-widest text-blue-700 dark:text-blue-300">DAILY OPERATIONS</p><h3 class="mt-1 text-lg font-semibold text-slate-900 dark:text-white">คิวงานของคุณ</h3><p class="mt-1 text-xs text-slate-500">ข้อมูลปัจจุบันตามสิทธิ์ของคุณ · เรียงวันใช้บริการใกล้สุดก่อน · ไม่ใช้ตัวกรองสถิติด้านล่าง</p></div>{#if allowedMenus.includes('reservations')}<a href="#/reservations" class="quick-link">จัดการการจองทั้งหมด <ArrowUpRight class="h-3.5 w-3.5" /></a>{/if}</div>
+        <div class="flex flex-wrap items-end justify-between gap-3"><div><p class="text-[10px] font-semibold tracking-widest text-blue-700 dark:text-blue-300">DAILY OPERATIONS</p><h3 class="mt-1 text-lg font-semibold text-slate-900 dark:text-white">คิวงานของคุณ</h3><p class="mt-1 text-xs text-slate-500">ข้อมูลปัจจุบันตามสิทธิ์ของคุณ · เรียงวันใช้บริการใกล้สุดก่อน · ไม่ใช้ตัวกรองสถิติด้านล่าง</p></div><div class="flex flex-wrap gap-3">{#if allowedMenus.includes('reservations')}<a href="#/reservations" class="quick-link">จัดการ VIS <ArrowUpRight class="h-3.5 w-3.5" /></a>{/if}{#if allowedMenus.includes('reservations_tables')}<a href="#/reservations/tables" class="quick-link">จัดการ TBL <ArrowUpRight class="h-3.5 w-3.5" /></a>{/if}</div></div>
         {#if queues.length}
           <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{#each queues as queue (queue.status)}<button class="work-queue-card {selectedQueue?.status === queue.status ? 'active' : ''}" aria-pressed={selectedQueue?.status === queue.status} onclick={() => queueStatus = queue.status}><span class="flex items-center justify-between gap-2 text-xs"><span>{queue.label}</span><ArrowRight class="h-3.5 w-3.5" /></span><span class="mt-3 block text-2xl font-semibold tabular-nums">{formatNumber(queue.rows.length)}</span><span class="mt-1 block text-[11px] opacity-65">{queue.action}</span></button>{/each}</div>
         {/if}
@@ -156,12 +156,12 @@
           <Card title={selectedQueue?.label ?? 'ข้อมูลสำหรับบทบาทของคุณ'} subtitle={selectedQueue ? `${formatNumber(selectedQueue.rows.length)} รายการ · ${oldestVisit ? `วันใช้บริการแรก ${visitDateLabel(oldestVisit)}` : 'ไม่มีรายการค้างในคิวนี้'}` : 'บทบาทนี้ไม่มีงานอนุมัติในแดชบอร์ด'} padding={false}>
             {#if selectedQueue?.rows.length}
               <div class="overflow-x-auto"><table class="w-full min-w-[540px] text-left text-xs"><caption class="sr-only">คิวงาน {selectedQueue.label}</caption><thead><tr class="border-b border-slate-100 text-slate-400 dark:border-slate-800"><th scope="col" class="px-5 py-3 font-normal">การจอง / ผู้เยี่ยม</th><th scope="col" class="px-3 py-3 font-normal">วันใช้บริการ</th><th scope="col" class="px-3 py-3 text-right font-normal">มูลค่า</th><th scope="col" class="px-5 py-3 text-right font-normal">ดำเนินการ</th></tr></thead><tbody>{#each selectedQueue.rows.slice(0, 6) as row (row.ref)}<tr class="border-b border-slate-100 last:border-0 dark:border-slate-800"><td class="px-5 py-3"><button class="font-mono font-semibold text-blue-700 hover:underline dark:text-blue-300" onclick={() => detailRow = row}>{row.ref}</button><p class="mt-1 max-w-44 truncate text-slate-600 dark:text-slate-300">{row.visitorName || '—'}</p><p class="mt-0.5 text-[10px] text-slate-400">{bookingPool(row) === 'table' ? 'จองโต๊ะ (TBL)' : 'เยี่ยมผู้ต้องขัง'}</p></td><td class="px-3 py-3 text-slate-600 dark:text-slate-300">{visitDateLabel(row.visitDate, row.visitDateISO)}{#if row.visitDateISO && row.visitDateISO < today}<span class="mt-1 block text-[10px] text-amber-700 dark:text-amber-300">ผ่านวันใช้บริการแล้ว</span>{/if}</td><td class="whitespace-nowrap px-3 py-3 text-right tabular-nums text-slate-700 dark:text-slate-200">{formatBaht(row.total)}</td><td class="px-5 py-3 text-right"><button class="rounded-lg border border-slate-200 px-3 py-2 text-[11px] font-medium text-slate-700 hover:border-blue-300 hover:text-blue-700 dark:border-slate-700 dark:text-slate-200" onclick={() => review(row)}>{selectedQueue.action}</button></td></tr>{/each}</tbody></table></div>
-              <div class="border-t border-slate-100 px-5 py-3 dark:border-slate-800"><button class="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300" onclick={() => openList(selectedQueue?.status)}>ดูคิวทั้งหมด {formatNumber(selectedQueue.rows.length)} รายการ <ArrowRight class="h-3.5 w-3.5" /></button></div>
+              <div class="flex flex-wrap gap-4 border-t border-slate-100 px-5 py-3 dark:border-slate-800">{#each ['prisoner', 'table'] as type (type)}{@const queueCount = selectedQueue.rows.filter(row => bookingPool(row) === type).length}{#if queueCount}<button class="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300" onclick={() => openList(selectedQueue?.status, {}, type as 'prisoner' | 'table')}>ดูคิว {type === 'table' ? 'TBL' : 'VIS'} {formatNumber(queueCount)} รายการ <ArrowRight class="h-3.5 w-3.5" /></button>{/if}{/each}</div>
             {:else}<div class="flex min-h-48 flex-col items-center justify-center gap-3 px-5 py-8 text-center"><CheckCircle2 class="h-8 w-8 text-emerald-600" /><p class="text-sm text-slate-600 dark:text-slate-300">{selectedQueue ? 'ไม่มีงานค้างในคิวนี้' : 'ใช้ภาพรวมและสถิติในการติดตามข้อมูล'}</p><p class="text-xs text-slate-400">{selectedQueue ? 'รายการใหม่จะแสดงเมื่อระบบอัปเดตข้อมูล' : 'การอนุมัติเป็นหน้าที่ของเจ้าหน้าที่ตามสิทธิ์'}</p></div>{/if}
           </Card>
           <Card title="การจองที่ยังมีผลวันนี้" subtitle={`${formatNumber(todaysVisits.length)} การจอง · ${formatNumber(todaysVisits.reduce((total, row) => total + peopleCount(row), 0))} คนตามข้อมูลการจอง`}>
             {#if canViewDetail}{#each todaysVisits.slice(0, 5) as row (row.ref)}<button class="flex w-full items-center gap-3 border-b border-slate-100 py-3 text-left last:border-0 dark:border-slate-800" onclick={() => detailRow = row}><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800"><Users class="h-4 w-4" /></span><span class="min-w-0 flex-1"><span class="block truncate text-xs font-medium text-slate-700 dark:text-slate-200">{row.visitorName || row.ref}</span><span class="mt-0.5 block text-[10px] text-slate-400">{row.ref} · {normalizeStatus(row.status)}</span></span><ArrowUpRight class="h-3.5 w-3.5 text-slate-400" /></button>{:else}<p class="py-10 text-center text-sm text-slate-400">ไม่มีการจองที่ยังมีผลในวันนี้</p>{/each}{:else}<div class="flex min-h-32 items-center justify-center gap-3"><CalendarDays class="h-6 w-6 text-slate-400" /><p class="text-sm text-slate-500">{formatNumber(todaysVisits.length)} การจองวันนี้</p></div>{/if}
-            {#if allowedMenus.includes('reservations')}<button class="mt-4 flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300" onclick={() => openList('', { date: today })}>เปิดการจองวันนี้ <ArrowRight class="h-3.5 w-3.5" /></button>{/if}
+            <div class="mt-4 flex flex-wrap gap-4">{#if allowedMenus.includes('reservations')}<button class="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300" onclick={() => openList('', { date: today })}>เปิด VIS วันนี้ <ArrowRight class="h-3.5 w-3.5" /></button>{/if}{#if allowedMenus.includes('reservations_tables')}<button class="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300" onclick={() => openList('', { date: today }, 'table')}>เปิด TBL วันนี้ <ArrowRight class="h-3.5 w-3.5" /></button>{/if}</div>
           </Card>
         </div>
       {/if}

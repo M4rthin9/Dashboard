@@ -113,6 +113,45 @@ test('account changes clear rows and discard a previous account response; cached
   assert.equal(store.loadedAt, null);
 });
 
+test('reservation pages isolate pools and archive partitions, including legacy and explicit booking types', () => {
+  const rows = [
+    booking({ ref: 'VIS-current' }),
+    booking({ ref: 'TBL-current', bookingType: 'table' }),
+    booking({ ref: 'TBL-legacy' }),
+    booking({ ref: 'TBL-explicit-visit', bookingType: 'prisoner' }),
+    booking({ ref: 'VIS-explicit-table', bookingType: 'table' }),
+    booking({ ref: 'VIS-history', _archived: true }),
+    booking({ ref: 'TBL-history', _archived: true }),
+    booking({ ref: '', bookingType: 'table' }),
+  ];
+  for (const [route, refs] of [
+    ['/reservations', ['VIS-current', 'TBL-explicit-visit']],
+    ['/reservations/tables', ['TBL-current', 'TBL-legacy', 'VIS-explicit-table']],
+    ['/reservations/archive', ['VIS-history']],
+    ['/reservations/tables/archive', ['TBL-history']],
+  ]) {
+    const scope = m.reservationPageScope(route);
+    assert.deepEqual(plain(m.reservationViewRows(rows, scope.archived, scope.pool).map(row => row.ref)), refs);
+    assert.equal(m.reservationHref(scope.pool, undefined, scope.archived), route);
+  }
+  const query = new URLSearchParams({ status: 'รอชำระเงิน', date: '2026-10-07', search: 'TBL-current', type: 'prisoner' });
+  const href = m.reservationHref('table', query);
+  assert.equal(href.split('?')[0], '/reservations/tables');
+  assert.equal(m.reservationPageScope(href.split('?')[0]).pool, 'table');
+  assert.equal(new URLSearchParams(href.split('?')[1]).get('status'), 'รอชำระเงิน');
+});
+
+test('separate seating reports show only their pool and do not put a page break before TBL tables', () => {
+  const print = load('src/lib/utils/print.ts');
+  const tableHtml = print.buildSeatingReport([booking({ ref: 'TBL-only', bookingType: 'table', prisonerName: '' })]);
+  assert.ok(tableHtml.includes('1) การจองโต๊ะ (TBL)'));
+  assert.ok(!tableHtml.includes('การจองเยี่ยมผู้ต้องขัง'));
+  assert.ok(!tableHtml.includes('<div style="page-break-before:always;"></div>'));
+  const visitHtml = print.buildSeatingReport([booking({ ref: 'TBL-explicit-visit', bookingType: 'prisoner' })]);
+  assert.ok(visitHtml.includes('1) การจองเยี่ยมผู้ต้องขัง'));
+  assert.ok(!visitHtml.includes('การจองโต๊ะ (TBL)'));
+});
+
 test('route fallback respects menus and drilldown query preserves Thai status, date and reference', () => {
   const auth = { isAuthenticated: true, user: { role: 'Finance' } };
   const hashState = { value: '#/dashboard' };
@@ -127,8 +166,17 @@ test('route fallback respects menus and drilldown query preserves Thai status, d
   assert.equal(router.resolveRoute().path, '/reservations');
   hashState.value = '#/reservations/archive';
   assert.equal(router.resolveRoute().path, '/reservations/archive');
+  for (const role of ['Superadmin', 'Admin', 'Finance', 'Vinai', 'Tadtel']) {
+    auth.user.role = role;
+    for (const route of ['/reservations/tables', '/reservations/tables/archive']) {
+      hashState.value = `#${route}`;
+      assert.equal(router.resolveRoute().path, route);
+    }
+  }
   hashState.value = '#/users';
   auth.user.role = 'User';
+  assert.equal(router.resolveRoute().path, '/dashboard');
+  hashState.value = '#/reservations/tables';
   assert.equal(router.resolveRoute().path, '/dashboard');
   hashState.value = '#/reservations/archive';
   assert.equal(router.resolveRoute().path, '/dashboard');
