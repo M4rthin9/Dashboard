@@ -57,7 +57,6 @@
     try {
       const result = await completeRefund(row.ref, request);
       if (result.status !== 'ok') throw new Error(String(result.message || 'บันทึกคืนเงินไม่สำเร็จ'));
-      row.status = 'คืนเงินแล้ว';
       revision++;
       await reservations.refresh();
     } catch (cause) {
