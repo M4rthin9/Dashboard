@@ -5,7 +5,7 @@ import { hasPermission } from './permissions';
 export type BookingPool = 'all' | 'prisoner' | 'table';
 export interface DateRange { from: string; to: string }
 const DAY = 86_400_000;
-const terminal = ['ยกเลิก', 'ไม่อนุมัติ'];
+const terminal = ['ยกเลิก', 'ไม่อนุมัติ', 'คืนเงินแล้ว'];
 
 export function businessDate(now = new Date()): string {
   return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
@@ -60,7 +60,7 @@ export function scopedReservations(rows: Reservation[], role: string, today: str
   return rows.filter(row => {
     if (!String(row.ref ?? '').trim()) return false;
     const s = normalizeStatus(row.status);
-    if (role === 'Finance') return ['รอชำระเงิน', 'ชำระแล้ว', 'เสร็จสิ้น'].includes(s);
+    if (role === 'Finance') return ['รอชำระเงิน', 'ชำระแล้ว', 'เสร็จสิ้น', 'ยกเลิก', 'คืนเงินแล้ว'].includes(s);
     if (role === 'Tadtel') return s === 'รอตรวจสอบผู้เข้าร่วม';
     if (role === 'Vinai' && validDate(String(row.visitDateISO ?? '').trim())) return String(row.visitDateISO).trim() >= today;
     return true;

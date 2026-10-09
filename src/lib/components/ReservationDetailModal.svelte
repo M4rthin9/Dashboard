@@ -22,6 +22,9 @@
   import Badge from './ui/Badge.svelte';
   import SlipViewerModal from './SlipViewerModal.svelte';
   import SlipVerifyPanel from './SlipVerifyPanel.svelte';
+  import RefundEvidencePanel from './RefundEvidencePanel.svelte';
+  import { auth } from '../store/auth.svelte';
+  import { hasPermission } from '../utils/permissions';
   import { formatBaht, formatNumber, formatDateTimeThai, normalizeStatus, visitDateLabel, parseExtraPrisoners } from '../utils/format';
   import type { Reservation } from '../api/types';
   import { getSlipByRef, generatePromptPayQr } from '../api/endpoints';
@@ -150,6 +153,7 @@
   });
 
   const s = $derived(row ? normalizeStatus(row.status) : '');
+  const canRefundEvidence = $derived(canViewSlip && hasPermission(auth.user?.role, 'confirm_payment'));
   const visitorApproval = $derived.by(() => {
     if (!row) return '';
     const v = String(row.visitorApproved ?? '').trim();
@@ -172,6 +176,8 @@
     switch (s) {
       case 'ไม่อนุมัติ':
         return { grad: 'from-red-500/15 via-red-500/5 to-transparent', ring: 'ring-red-200 dark:ring-red-900/60', dot: 'bg-red-500' };
+      case 'คืนเงินแล้ว':
+        return { grad: 'from-violet-500/15 via-violet-500/5 to-transparent', ring: 'ring-violet-200 dark:ring-violet-900/60', dot: 'bg-violet-500' };
       case 'ยกเลิก':
         return { grad: 'from-slate-500/15 via-slate-500/5 to-transparent', ring: 'ring-slate-200 dark:ring-slate-700', dot: 'bg-slate-400' };
       case 'เสร็จสิ้น':
@@ -478,6 +484,10 @@
             <div class="mt-0.5">{row.cancelReason}</div>
           </div>
         </section>
+      {/if}
+
+      {#if canRefundEvidence}
+        {#key row.ref}<RefundEvidencePanel {row} />{/key}
       {/if}
 
       {#if canViewSlip && (hasSlip || slipLoading)}

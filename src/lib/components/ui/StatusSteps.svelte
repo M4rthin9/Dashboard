@@ -7,7 +7,7 @@
   function stepState(step: number): 'done' | 'active' | 'pending' | 'rejected' | 'skipped' {
     const s = String(status ?? '').trim();
     if (s === 'ไม่อนุมัติ') return step === 1 ? 'rejected' : 'skipped';
-    if (s === 'ยกเลิก') return 'skipped';
+    if (s === 'ยกเลิก' || s === 'คืนเงินแล้ว') return 'skipped';
     if (step === 1) return s === 'รอตรวจสอบผู้เข้าร่วม' ? 'active' : 'done';
     if (step === 2) {
       if (s === 'รอตรวจสอบวินัย') return 'active';

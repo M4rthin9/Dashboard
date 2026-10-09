@@ -38,7 +38,7 @@ const PRINT_SHARED_CSS = `
 `;
 
 export function openPrintWindow(content: string, reportName: string, printerName: string): boolean {
-  const now = new Date().toLocaleString('th-TH');
+  const now = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
   const win = window.open('', '_blank');
   if (!win) return false;
   win.document.write(`
@@ -52,7 +52,7 @@ export function openPrintWindow(content: string, reportName: string, printerName
         <button onclick="window.close()" style="background:#dc2626;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;font-size:14px;">✕ ปิด</button>
       </div>
     </div>
-    <div style="margin-top:50px;"></div>
+    <div class="no-print" style="margin-top:50px;"></div>
     <div class="print-header"><h1>ทัณฑสถานบำบัดพิเศษกลาง</h1><h2>Chance &amp; Change Cafe</h2></div>
     ${content}
     <div class="print-footer">ผู้ปริ้น: ${escapeHtml(printerName)} • พิมพ์เมื่อ ${now}</div>
@@ -260,7 +260,7 @@ const SEATING_REPORT_CSS = `
 `;
 
 const PAID_STATUSES = ['ชำระแล้ว', 'เสร็จสิ้น'];
-const HALTED_STATUSES = ['ไม่อนุมัติ', 'ยกเลิก'];
+const HALTED_STATUSES = ['ไม่อนุมัติ', 'ยกเลิก', 'คืนเงินแล้ว'];
 
 function paymentBoxClass(status: string): string {
   if (PAID_STATUSES.includes(status)) return 'payment-box paid';

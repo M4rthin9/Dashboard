@@ -6,6 +6,7 @@ import type {
   Prisoner,
   PublicUser,
   Reservation,
+  RefundEvidence,
   RolePermission,
   SlipVerifyResult,
 } from './types';
@@ -51,6 +52,10 @@ export function lookupByRef(ref: string): Promise<ApiResult & { rows?: Reservati
 
 export function getSlipByRef(ref: string): Promise<ApiResult & { slipImage?: string }> {
   return callAction('getSlipByRef', { ref }, { auth: true });
+}
+
+export function getRefundEvidence(ref: string): Promise<ApiResult & { evidence?: RefundEvidence }> {
+  return callAction('getRefundEvidence', { ref }, { auth: true });
 }
 
 /** Re-scan + re-parse the stored slip QR against the booking config. */
@@ -306,4 +311,8 @@ export function getPushAnnouncements(): Promise<ApiResult & { recipients: number
 
 export function sendPushAnnouncement(message: Pick<PushAnnouncement, 'id' | 'subject' | 'body' | 'url'>): Promise<ApiResult & { deliveryStarted: boolean }> {
   return callAction('sendPushAnnouncement', message, { auth: true });
+}
+
+export function completeRefund(ref: string, request: { amount: number; reason: string; recipient: string; account: string }): Promise<ApiResult> {
+  return callAction('completeRefund', { ref, ...request }, { auth: true });
 }

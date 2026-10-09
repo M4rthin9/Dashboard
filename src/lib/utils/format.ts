@@ -144,6 +144,7 @@ export const STATUS_LABELS: Record<string, string> = {
   'เสร็จสิ้น': 'เสร็จสิ้น',
   'ไม่อนุมัติ': 'ไม่อนุมัติ',
   'ยกเลิก': 'ยกเลิก',
+  'คืนเงินแล้ว': 'คืนเงินแล้ว',
 };
 
 export const STATUS_STEPS = ['รอตรวจสอบผู้เข้าร่วม', 'รอตรวจสอบวินัย', 'รอชำระเงิน', 'ชำระแล้ว', 'เสร็จสิ้น'];
@@ -162,6 +163,7 @@ export const STATUS_COLORS: Record<string, string> = {
   'เสร็จสิ้น': '#1e3a5f',
   'ไม่อนุมัติ': '#b91c1c',
   'ยกเลิก': '#64748b',
+  'คืนเงินแล้ว': '#7c3aed',
 };
 
 export function statusColor(status: string | undefined): string {
@@ -179,6 +181,8 @@ export function statusColor(status: string | undefined): string {
       return 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300';
     case 'ไม่อนุมัติ':
       return 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300';
+    case 'คืนเงินแล้ว':
+      return 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300';
     case 'ยกเลิก':
       return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
     default:

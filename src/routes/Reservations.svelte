@@ -74,7 +74,7 @@
   const roleStatusFilter: Record<string, string[] | null> = {
     Superadmin: null,
     Admin: null,
-    Finance: ['รอชำระเงิน', 'ชำระแล้ว', 'เสร็จสิ้น'],
+    Finance: ['รอชำระเงิน', 'ชำระแล้ว', 'เสร็จสิ้น', 'ยกเลิก', 'คืนเงินแล้ว'],
     Tadtel: ['รอตรวจสอบผู้เข้าร่วม', 'รอตรวจสอบ'],
     Vinai: null,
     User: null,
@@ -198,6 +198,7 @@
       case 'เสร็จสิ้น': return 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300';
       case 'ไม่อนุมัติ': return 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300';
       case 'ยกเลิก': return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+      case 'คืนเงินแล้ว': return 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300';
       default: return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
     }
   }
@@ -565,7 +566,7 @@
       <Check class="h-4 w-4" />
     </button>
   {/if}
-  {#if canCancel && s !== 'ยกเลิก' && (isSuper || (!terminal && !expired && !row._archived))}
+  {#if canCancel && s !== 'ยกเลิก' && s !== 'คืนเงินแล้ว' && (isSuper || (!terminal && !expired && !row._archived))}
     <button class="shrink-0 rounded-xl border border-slate-200 bg-white p-1.5 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700" title="ยกเลิก" onclick={() => openCancelSingle(row)}>
       <Ban class="h-4 w-4" />
     </button>
@@ -575,7 +576,7 @@
       <X class="h-4 w-4" />
     </button>
   {/if}
-  {#if canEdit}
+  {#if canEdit && s !== 'คืนเงินแล้ว'}
     <button class="shrink-0 rounded-xl border border-slate-200 bg-white p-1.5 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700" title={row._archived ? 'แก้ไข (ย้อนหลัง)' : 'แก้ไข'} onclick={() => openEdit(row)}>
       <Pencil class="h-4 w-4" />
     </button>
@@ -585,7 +586,7 @@
       <Users class="h-4 w-4" />
     </button>
   {/if}
-  {#if (canPrint || canConfirmPayment) && !row._archived}
+  {#if (canPrint || canConfirmPayment) && !row._archived && s !== 'คืนเงินแล้ว'}
     <button class="shrink-0 rounded-xl border border-blue-200 bg-white p-1.5 text-blue-600 hover:bg-blue-50 disabled:opacity-50 dark:border-blue-900 dark:bg-slate-800 dark:hover:bg-blue-950/30" title="พิมพ์ QR ชำระเงิน" disabled={qrPrinting === row.ref} onclick={() => void printPaymentQr(row)}>
       <QrCode class="h-4 w-4" />
     </button>
@@ -806,7 +807,7 @@
               {#each pagedRows as row (row.ref)}
                 {@const s = normalizeStatus(row.status)}
                 {@const archived = !!row._archived}
-                {@const terminal = s === 'เสร็จสิ้น' || s === 'ไม่อนุมัติ' || s === 'ยกเลิก'}
+                {@const terminal = s === 'เสร็จสิ้น' || s === 'ไม่อนุมัติ' || s === 'ยกเลิก' || s === 'คืนเงินแล้ว'}
                 {@const expired = isExpired(row)}
                 <tr class="border-b border-slate-200 last:border-0 hover:bg-slate-50/50 dark:border-slate-800 dark:hover:bg-slate-800/30">
                   {#if !archiveView}<td class="px-3 py-2.5 text-center">
@@ -883,7 +884,7 @@
           {#each pagedRows as row (row.ref)}
             {@const s = normalizeStatus(row.status)}
             {@const archived = !!row._archived}
-            {@const terminal = s === 'เสร็จสิ้น' || s === 'ไม่อนุมัติ' || s === 'ยกเลิก'}
+            {@const terminal = s === 'เสร็จสิ้น' || s === 'ไม่อนุมัติ' || s === 'ยกเลิก' || s === 'คืนเงินแล้ว'}
             {@const expired = isExpired(row)}
             <div class="rounded-xl border border-slate-200 bg-white p-3.5 dark:border-slate-700 dark:bg-slate-900">
               <div class="flex items-start justify-between gap-2">

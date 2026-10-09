@@ -86,6 +86,18 @@ export interface RolePermission {
   permissions: string[];
 }
 
+export interface RefundRecord {
+  amount: number; reason: string; recipient: string; account: string; timestamp: string; actor: string;
+}
+
+export interface RefundEvidence {
+  refund?: RefundRecord | null;
+  canCompleteRefund?: boolean;
+  booking: Reservation;
+  stages: Array<{ label: string; state: string; timestamp: string; actor: string; source: string }>;
+  slipImage: string;
+}
+
 export interface EventLog {
   timestamp: string;
   username: string;

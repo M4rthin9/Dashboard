@@ -23,10 +23,40 @@ function loader(mocks = {}, globals = {}) {
   return load;
 }
 const load = loader();
+const refunds = load('src/lib/utils/refundEvidence.ts');
+test('refund documents validate partial amounts and preserve evidence without claiming payment confirmation', () => {
+  const request = { amount: 500.5, reason: 'เหตุผล <script>test</script>', recipient: 'Customer', account: 'Bank 123' };
+  assert.equal(refunds.refundRequestError(request, 2000), '');
+  for (const amount of [0, -1, 2000.01, NaN, Infinity, 1.234]) assert.notEqual(refunds.refundRequestError({ ...request, amount }, 2000), '');
+  assert.notEqual(refunds.refundRequestError({ ...request, reason: ' ' }, 2000), '');
+  const evidence = { booking: { ref: 'VIS-12345', visitorName: '<img onerror=alert(1)>', total: 2000, status: 'ชำระแล้ว' }, stages: [{ label: 'การยืนยันชำระเงิน', state: 'ไม่พบการยืนยันชำระเงินจากเจ้าหน้าที่', timestamp: '', actor: '', source: 'ข้อมูลการจอง' }], slipImage: 'data:image/png;base64,AA==' };
+  const html = refunds.buildRefundEvidence(evidence, request);
+  assert.match(html, /บางส่วน/);
+  assert.match(html, /ไม่พบการยืนยันชำระเงินจากเจ้าหน้าที่/);
+  assert.match(html, /ไม่ใช่หลักฐานว่าได้คืนเงินแล้ว/);
+  assert.match(html, /&lt;script&gt;/);
+  assert.doesNotMatch(html, /<img onerror=alert/);
+  assert.throws(() => refunds.buildRefundEvidence({ ...evidence, slipImage: 'javascript:alert(1)' }, request));
+  assert.throws(() => refunds.buildRefundEvidence({ ...evidence, slipImage: '' }, request));
+  assert.match(refunds.buildRefundEvidence({ ...evidence, booking: { ...evidence.booking, ref: 'TBL-12345', bookingType: 'table' } }, { ...request, amount: 2000 }), /เต็มจำนวน/);
+});
 const m = load('src/lib/utils/management.ts');
 const financial = load('src/lib/utils/dashboard.ts');
 const format = load('src/lib/utils/format.ts');
 const booking = (fields = {}) => ({ ref: 'VIS-1', status: 'ชำระแล้ว', visitDateISO: '2026-02-28', total: 100, visitorCount: 3, adultCount: 1, child5to8Count: 1, childUnder5Count: 1, prisonerId: 'P1', ...fields });
+test('refunded bookings remain visible to finance and reprints use the saved partial refund', () => {
+  const row = booking({ status: 'คืนเงินแล้ว', total: 2000 });
+  assert.equal(m.activeBooking(row), false);
+  assert.equal(m.scopedReservations([row], 'Finance').length, 1);
+  assert.equal(format.STATUS_LABELS[row.status], 'คืนเงินแล้ว');
+  const refund = { amount: 500.5, reason: 'Saved refund reason', recipient: 'Saved recipient', account: 'Saved account', timestamp: '2026-10-09 12:00:00', actor: 'finance' };
+  const html = refunds.buildRefundEvidence({ booking: row, refund, stages: [], slipImage: 'data:image/png;base64,AA==' }, { amount: 2000, reason: 'New draft', recipient: 'Other recipient', account: '' });
+  assert.match(html, /500\.5/);
+  assert.match(html, /บางส่วน/);
+  assert.match(html, /Saved refund reason/);
+  assert.match(html, /บันทึกคืนเงินแล้ว/);
+  assert.doesNotMatch(html, /New draft|Other recipient/);
+});
 const plain = value => JSON.parse(JSON.stringify(value));
 
 const textCatalog = JSON.parse(fs.readFileSync('src/lib/content/frontend-text.json', 'utf8'));
