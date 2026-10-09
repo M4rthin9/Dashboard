@@ -29,6 +29,33 @@ const format = load('src/lib/utils/format.ts');
 const booking = (fields = {}) => ({ ref: 'VIS-1', status: 'ชำระแล้ว', visitDateISO: '2026-02-28', total: 100, visitorCount: 3, adultCount: 1, child5to8Count: 1, childUnder5Count: 1, prisonerId: 'P1', ...fields });
 const plain = value => JSON.parse(JSON.stringify(value));
 
+const textCatalog = JSON.parse(fs.readFileSync('src/lib/content/frontend-text.json', 'utf8'));
+const content = loader({ [path.resolve('src/lib/content/frontend-text.json.ts')]: textCatalog })('src/lib/utils/frontendContent.ts');
+test('frontend editor submits only changed keys across languages and explicit resets', () => {
+  const original = { th: { homeHeroTitle: 'Original', homeCtaBook: 'Book' }, en: { homeHeroTitle: 'English' } };
+  const draft = { th: { homeHeroTitle: 'Changed', homeCtaBook: '' }, en: {} };
+  assert.deepEqual(plain(content.contentChanges(original, draft)), { th: { homeHeroTitle: 'Changed', homeCtaBook: '' }, en: { homeHeroTitle: null } });
+  assert.deepEqual(plain(content.contentChanges(original, original)), {});
+});
+test('frontend editor preserves interpolation tokens while accepting punctuation and empty plain labels', () => {
+  assert.equal(content.contentError('homePriceBaht', 'th', '{n} บาท'), '');
+  assert.equal(content.contentError('homePriceBaht', 'th', 'บาท').length > 0, true);
+  assert.equal(content.contentError('homePriceBaht', 'th', '{n} {extra}').length > 0, true);
+  assert.equal(content.contentError('homeCtaBook', 'th', ''), '');
+  assert.equal(content.contentError('homeCtaBook', 'th', 'x'.repeat(10001)).length > 0, true);
+});
+
+test('every dashboard function belongs to one category and frontend editing is restricted to managers', () => {
+  const nav = loader({ [path.resolve('src/lib/utils/@lucide/svelte.ts')]: {} })('src/lib/utils/navigation.ts');
+  const grouped = nav.navGroups.flatMap(group => group.keys);
+  assert.equal(new Set(grouped).size, grouped.length, 'no function occurs in multiple categories');
+  assert.deepEqual([...grouped].sort(), plain(nav.navigation.map(item => item.key).sort()));
+  assert.equal(nav.menuFor('Superadmin').some(item => item.key === 'frontend_editor'), true);
+  for (const role of ['Admin', 'Finance', 'Vinai', 'Tadtel', 'User', undefined]) {
+    assert.equal(nav.menuFor(role).some(item => ['frontend_editor', 'booking_settings', 'payment_settings', 'privacy_settings'].includes(item.key)), false);
+  }
+});
+
 test('date ranges are inclusive, validated and compared against equal previous periods', () => {
   assert.equal(m.rangeDays({ from: '2024-02-28', to: '2024-03-01' }), 3);
   assert.equal(m.validDate('2026-02-30'), false);

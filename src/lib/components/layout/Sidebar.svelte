@@ -21,7 +21,7 @@
       {#if groupItems.length}
         <div class="mb-6">
           <p class="mb-2 px-3 text-[10px] font-medium tracking-wider text-white/40">{group.label}</p>
-          {#if group.label === 'รายงานและการเงิน' && groupItems.some(item => item.path.startsWith('/reports'))}
+          {#if group.label === 'รายงาน' && groupItems.some(item => item.path.startsWith('/reports'))}
             <button class="sidebar-link w-full justify-between" onclick={() => reportsOpen = !reportsOpen} aria-expanded={reportsOpen} aria-controls="report-submenu">
               <span class="flex items-center gap-3"><BarChart3 class="h-[18px] w-[18px]" />รายงาน</span><ChevronDown class="h-4 w-4 transition-transform {reportsOpen ? 'rotate-180' : ''}" />
             </button>
@@ -31,7 +31,7 @@
               {/each}
             </div>
           {/if}
-          {#each groupItems.filter(item => group.label !== 'รายงานและการเงิน' || !item.path.startsWith('/reports')) as item (item.key)}
+          {#each groupItems.filter(item => group.label !== 'รายงาน' || !item.path.startsWith('/reports')) as item (item.key)}
             {@const Icon = item.icon}
             <a href="#{item.path}" aria-current={activePath === item.path ? 'page' : undefined} class="sidebar-link {activePath === item.path ? 'selected' : ''}"><Icon class="h-[18px] w-[18px]" />{item.label}{#if activePath === item.path}<span class="ml-auto h-1.5 w-1.5 rounded-full bg-amber-300"></span>{/if}</a>
           {/each}

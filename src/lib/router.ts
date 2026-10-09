@@ -36,6 +36,10 @@ export const routes: RouteDef[] = [
   { path: '/connection', key: 'connection', title: 'การเชื่อมต่อ', component: Connection },
   { path: '/promptpay', key: 'promptpay', title: 'PromptPay QR', loader: () => import('../routes/PromptPay.svelte') },
   { path: '/settings', key: 'settings', title: 'ตั้งค่า', component: Settings },
+  { path: '/frontend-editor', key: 'frontend_editor', title: 'Frontend Editor', loader: () => import('../routes/FrontendEditor.svelte'), roles: ['Superadmin'] },
+  { path: '/booking-settings', key: 'booking_settings', title: 'การเปิดรับจองและปฏิทิน', loader: () => import('../routes/BookingSettings.svelte'), roles: ['Superadmin'] },
+  { path: '/payment-settings', key: 'payment_settings', title: 'การรับชำระเงิน', loader: () => import('../routes/PaymentSettings.svelte'), roles: ['Superadmin'] },
+  { path: '/privacy-settings', key: 'privacy_settings', title: 'คุกกี้และ PDPA', loader: () => import('../routes/PrivacySettings.svelte'), roles: ['Superadmin'] },
 ];
 
 export function navigate(path: string): void {

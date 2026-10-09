@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PushSubscribersCard from '../lib/components/settings/PushSubscribersCard.svelte';
   import { onMount } from 'svelte';
   import { Bell, RefreshCw, Send } from '@lucide/svelte';
   import Button from '../lib/components/ui/Button.svelte';
@@ -159,3 +160,5 @@
     <Button disabled={sending} loading={sending} onclick={() => { void send(); }}><Send class="h-4 w-4" />ยืนยันส่งแจ้งเตือน</Button>
   {/snippet}
 </Modal>
+
+<div class="mt-4"><PushSubscribersCard /></div>

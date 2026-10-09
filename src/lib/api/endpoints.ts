@@ -224,6 +224,12 @@ export function saveSettings(settings: Record<string, unknown>): Promise<ApiResu
   return callAction('saveSettings', { settings }, { auth: true });
 }
 
+export type FrontendContent = Partial<Record<'th' | 'en' | 'zh' | 'vi', Record<string, string>>>;
+export type FrontendChanges = Partial<Record<'th' | 'en' | 'zh' | 'vi', Record<string, string | null>>>;
+export function saveFrontendContent(changes: FrontendChanges): Promise<ApiResult & { frontendContent?: FrontendContent }> {
+  return callAction('saveFrontendContent', { changes }, { auth: true });
+}
+
 export function setTableBookingStatus(enabled: boolean): Promise<ApiResult & { opensAt?: string }> {
   return callAction('setTableBookingStatus', { enabled }, { auth: true });
 }

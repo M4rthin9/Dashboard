@@ -1,5 +1,5 @@
 import type { Component } from 'svelte';
-import { LayoutDashboard, CalendarDays, Archive, BarChart3, Wallet, ClipboardList, Users, UserRound, Link2, QrCode, Settings, Utensils, Bell } from '@lucide/svelte';
+import { LayoutDashboard, CalendarDays, Archive, BarChart3, Wallet, ClipboardList, Users, UserRound, Link2, QrCode, Settings, Utensils, Bell, PanelsTopLeft, ShieldCheck, CalendarClock, CreditCard } from '@lucide/svelte';
 import { visibleMenu } from './permissions';
 export interface NavItem { key: string; path: string; label: string; description: string; icon: Component }
 export const navigation: NavItem[] = [
@@ -17,14 +17,24 @@ export const navigation: NavItem[] = [
   { key: 'users', path: '/users', label: 'ผู้ใช้งาน', description: 'บัญชีและสิทธิ์การใช้งาน', icon: Users },
   { key: 'eventlog', path: '/eventlog', label: 'บันทึกเหตุการณ์', description: 'ติดตามกิจกรรมในระบบ', icon: ClipboardList },
   { key: 'connection', path: '/connection', label: 'การเชื่อมต่อ', description: 'ตรวจสอบบริการที่เชื่อมต่อ', icon: Link2 },
-  { key: 'settings', path: '/settings', label: 'ตั้งค่าระบบ', description: 'การจองและการตั้งค่าทั่วไป', icon: Settings },
+  { key: 'frontend_editor', path: '/frontend-editor', label: 'Frontend Editor', description: 'ข้อความทุกหน้า โปรโมชั่น รูปภาพ และประกาศ', icon: PanelsTopLeft },
+  { key: 'booking_settings', path: '/booking-settings', label: 'การเปิดรับจองและปฏิทิน', description: 'เปิด/ปิดการจอง นับถอยหลัง และกำหนดวันที่', icon: CalendarClock },
+  { key: 'payment_settings', path: '/payment-settings', label: 'การรับชำระเงิน', description: 'เปิด/ปิดการรับเงินและข้อความแจ้งผู้จอง', icon: CreditCard },
+  { key: 'privacy_settings', path: '/privacy-settings', label: 'คุกกี้และ PDPA', description: 'นโยบายความเป็นส่วนตัวและข้อมูลความยินยอม', icon: ShieldCheck },
+  { key: 'settings', path: '/settings', label: 'ตั้งค่าระบบ', description: 'ธีม การดูแลคลังข้อมูล และการตั้งค่าขั้นสูง', icon: Settings },
 ];
 export const navGroups = [
-  { label: 'งานประจำวัน', keys: ['home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'prisoners'] },
-  { label: 'รายงานและการเงิน', keys: ['reports', 'reports_overall', 'reports_tables', 'promptpay'] },
-  { label: 'ดูแลระบบ', keys: ['notifications', 'users', 'eventlog', 'connection', 'settings'] },
+  { label: 'ภาพรวม', keys: ['home'] },
+  { label: 'การจองและผู้ต้องขัง', keys: ['reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'prisoners', 'booking_settings'] },
+  { label: 'รายงาน', keys: ['reports', 'reports_overall', 'reports_tables'] },
+  { label: 'การชำระเงิน', keys: ['promptpay', 'payment_settings'] },
+  { label: 'เว็บไซต์และการสื่อสาร', keys: ['frontend_editor', 'notifications'] },
+  { label: 'ดูแลระบบ', keys: ['users', 'eventlog', 'connection', 'privacy_settings', 'settings'] },
 ];
 export function menuFor(role: string | undefined): NavItem[] {
   const allowed = visibleMenu(role);
-  return navigation.filter(item => allowed.includes(item.key));
+  return navGroups.flatMap(group => group.keys.flatMap(key => {
+    const item = navigation.find(entry => entry.key === key);
+    return item && allowed.includes(key) ? [item] : [];
+  }));
 }
