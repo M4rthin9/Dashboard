@@ -20,9 +20,9 @@ export const PERMISSIONS: Record<Role, string[]> = {
 };
 
 export const SIDEBAR_MENU: Record<Role, string[]> = {
-  Superadmin: ['home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables', 'notifications', 'eventlog', 'users', 'prisoners', 'connection', 'promptpay', 'settings', 'frontend_editor', 'booking_settings', 'payment_settings', 'privacy_settings'],
-  Admin: ['home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables', 'eventlog', 'prisoners', 'connection'],
-  Finance: ['reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables'],
+  Superadmin: ['refunds', 'home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables', 'notifications', 'eventlog', 'users', 'prisoners', 'connection', 'promptpay', 'settings', 'frontend_editor', 'booking_settings', 'payment_settings', 'privacy_settings'],
+  Admin: ['refunds', 'home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables', 'eventlog', 'prisoners', 'connection'],
+  Finance: ['reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables', 'refunds'],
   Vinai: ['home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables', 'prisoners'],
   Tadtel: ['home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables'],
   User: ['home'],

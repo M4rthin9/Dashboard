@@ -13,6 +13,7 @@ export const navigation: NavItem[] = [
   { key: 'reports_overall', path: '/reports/overall', label: 'รายงานการเงิน', description: 'รายได้และการชำระเงิน', icon: Wallet },
   { key: 'reports_tables', path: '/reports/tables', label: 'รายงานโต๊ะ (TBL)', description: 'รายงานการใช้โต๊ะ', icon: Utensils },
   { key: 'promptpay', path: '/promptpay', label: 'PromptPay QR', description: 'จัดการ QR สำหรับชำระเงิน', icon: QrCode },
+  { key: 'refunds', path: '/refunds', label: 'คืนเงิน', description: 'เลือกการจอง จัดทำเอกสาร และพิมพ์รายงานคืนเงิน', icon: Wallet },
   { key: 'notifications', path: '/notifications', label: 'ส่งแจ้งเตือน', description: 'ส่งข่าวสารให้ผู้สมัครรับการแจ้งเตือน', icon: Bell },
   { key: 'users', path: '/users', label: 'ผู้ใช้งาน', description: 'บัญชีและสิทธิ์การใช้งาน', icon: Users },
   { key: 'eventlog', path: '/eventlog', label: 'บันทึกเหตุการณ์', description: 'ติดตามกิจกรรมในระบบ', icon: ClipboardList },
@@ -27,7 +28,7 @@ export const navGroups = [
   { label: 'ภาพรวม', keys: ['home'] },
   { label: 'การจองและผู้ต้องขัง', keys: ['reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'prisoners', 'booking_settings'] },
   { label: 'รายงาน', keys: ['reports', 'reports_overall', 'reports_tables'] },
-  { label: 'การชำระเงิน', keys: ['promptpay', 'payment_settings'] },
+  { label: 'การชำระเงิน', keys: ['refunds', 'promptpay', 'payment_settings'] },
   { label: 'เว็บไซต์และการสื่อสาร', keys: ['frontend_editor', 'notifications'] },
   { label: 'ดูแลระบบ', keys: ['users', 'eventlog', 'connection', 'privacy_settings', 'settings'] },
 ];

@@ -24,6 +24,29 @@ function loader(mocks = {}, globals = {}) {
 }
 const load = loader();
 const refunds = load('src/lib/utils/refundEvidence.ts');
+const refundReports = load('src/lib/utils/refundReport.ts');
+test('refund report uses only selected evidence, preserves partial amounts and separates requested from completed', () => {
+  const request = { amount: 500.5, reason: '<script>request</script>', recipient: 'Customer', account: 'Bank 123' };
+  const first = { evidence: { booking: { ref: 'VIS-selected', visitorName: 'Selected customer', total: 2000, status: 'ยกเลิก' }, stages: [], slipImage: 'data:image/png;base64,AA==', canCompleteRefund: true }, request, ready: true, error: '' };
+  const second = { evidence: { ...first.evidence, booking: { ref: 'TBL-archived', visitorName: 'Archived customer', total: 3000, status: 'คืนเงินแล้ว', _archived: true }, refund: { ...request, amount: 750.25, reason: 'Saved reason', actor: 'finance', timestamp: '2026-10-09 13:00:00' } }, request: { ...request, amount: 3000, reason: 'Wrong draft' }, ready: true, error: '' };
+  const html = refundReports.buildRefundReport([first, second]);
+  assert.match(html, /VIS-selected/);
+  assert.match(html, /TBL-archived/);
+  assert.match(html, /ย้อนหลัง/);
+  assert.match(html, /500\.5/);
+  assert.match(html, /750\.25/);
+  assert.match(html, /Saved reason/);
+  assert.doesNotMatch(html, /Wrong draft|<script>request/);
+  assert.match(html, /&lt;script&gt;request/);
+  assert.deepEqual(JSON.parse(JSON.stringify(refundReports.refundReportTotals([first, second]))), { requested: 500.5, refunded: 750.25 });
+  assert.throws(() => refundReports.buildRefundReport([]));
+  assert.throws(() => refundReports.buildRefundReport([first, first]), /ซ้ำ/);
+  assert.throws(() => refundReports.buildRefundReport([{ ...first, ready: false }]));
+  assert.throws(() => refundReports.buildRefundReport([{ ...first, evidence: { ...first.evidence, canCompleteRefund: false } }]));
+  assert.throws(() => refundReports.buildRefundReport([{ ...first, evidence: { ...first.evidence, slipImage: '' } }]));
+  assert.throws(() => refundReports.buildRefundReport([{ ...first, request: { ...request, amount: 2000.01 } }]));
+  assert.deepEqual(JSON.parse(JSON.stringify(refundReports.refundCandidates([{ ref: 'VIS-unpaid', status: 'รอชำระเงิน' }, first.evidence.booking, second.evidence.booking]).map(row => row.ref))), ['VIS-selected', 'TBL-archived']);
+});
 test('refund documents validate partial amounts and preserve evidence without claiming payment confirmation', () => {
   const request = { amount: 500.5, reason: 'เหตุผล <script>test</script>', recipient: 'Customer', account: 'Bank 123' };
   assert.equal(refunds.refundRequestError(request, 2000), '');
@@ -81,6 +104,8 @@ test('every dashboard function belongs to one category and frontend editing is r
   assert.equal(new Set(grouped).size, grouped.length, 'no function occurs in multiple categories');
   assert.deepEqual([...grouped].sort(), plain(nav.navigation.map(item => item.key).sort()));
   assert.equal(nav.menuFor('Superadmin').some(item => item.key === 'frontend_editor'), true);
+  for (const role of ['Superadmin', 'Admin', 'Finance']) assert.equal(nav.menuFor(role).some(item => item.key === 'refunds'), true);
+  for (const role of ['Vinai', 'Tadtel', 'User', undefined]) assert.equal(nav.menuFor(role).some(item => item.key === 'refunds'), false);
   for (const role of ['Admin', 'Finance', 'Vinai', 'Tadtel', 'User', undefined]) {
     assert.equal(nav.menuFor(role).some(item => ['frontend_editor', 'booking_settings', 'payment_settings', 'privacy_settings'].includes(item.key)), false);
   }
@@ -236,6 +261,16 @@ test('route fallback respects menus and drilldown query preserves Thai status, d
   for (const role of ['Admin', 'Finance', 'Vinai', 'Tadtel', 'User']) {
     auth.user.role = role;
     assert.notEqual(router.resolveRoute().path, '/notifications');
+  }
+  hashState.value = '#/users';
+  hashState.value = '#/refunds';
+  for (const role of ['Superadmin', 'Admin', 'Finance']) {
+    auth.user.role = role;
+    assert.equal(router.resolveRoute().path, '/refunds');
+  }
+  for (const role of ['Vinai', 'Tadtel', 'User']) {
+    auth.user.role = role;
+    assert.notEqual(router.resolveRoute().path, '/refunds');
   }
   hashState.value = '#/users';
   auth.user.role = 'User';

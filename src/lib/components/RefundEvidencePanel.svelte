@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { FileText, Printer } from '@lucide/svelte';
   import Button from './ui/Button.svelte';
   import { completeRefund, getRefundEvidence } from '../api/endpoints';
@@ -8,9 +9,10 @@
   import { formatBaht } from '../utils/format';
   import { buildRefundEvidence, refundRequestError } from '../utils/refundEvidence';
   import { openPrintWindow } from '../utils/print';
+  import type { RefundReportEntry } from '../utils/refundReport';
 
-  let { row }: { row: Reservation } = $props();
-  let expanded = $state(false);
+  let { row, initiallyExpanded = false, onchange }: { row: Reservation; initiallyExpanded?: boolean; onchange?: (entry: RefundReportEntry | null) => void } = $props();
+  let expanded = $state(untrack(() => initiallyExpanded));
   let loading = $state(false);
   let saving = $state(false);
   let revision = $state(0);
@@ -26,8 +28,19 @@
   const validation = $derived(evidence ? refundRequestError(request, evidence.booking.total) : '');
 
   $effect(() => {
+    const entry: RefundReportEntry | null = evidence ? {
+      evidence, request,
+      ready: !loading && !saving && !error && !validation && imageReady && !imageFailed && (!!evidence.refund || !!evidence.canCompleteRefund),
+      error: error || validation || (!evidence.refund && !evidence.canCompleteRefund ? 'ต้องมีหลักฐานสถานะชำระเงินและสลิปก่อนจัดทำรายงาน' : ''),
+    } : null;
+    untrack(() => onchange?.(entry));
+  });
+
+  $effect(() => {
     if (!expanded) return;
     const ref = row.ref;
+    void row.status;
+    void row.version;
     void revision;
     let cancelled = false;
     loading = true;
@@ -89,9 +102,9 @@
       </div>
       {#if evidence.refund}<p class="mb-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200" role="status">คืนเงินแล้ว {formatBaht(evidence.refund.amount)} · {evidence.refund.timestamp} · ผู้บันทึก: {evidence.refund.actor}</p>{/if}
       <form onsubmit={(event) => { event.preventDefault(); printEvidence(); }} class="grid gap-4">
-        <div><label for="refund-amount" class="mb-1 block text-sm font-medium">จำนวนเงินที่ขอคืน (บาท)</label><input id="refund-amount" type="number" min="0.01" max={Number(evidence.booking.total)} step="0.01" bind:value={amount} disabled={!!evidence.refund || saving} required class="management-input w-full" /><p class="mt-1 text-xs text-slate-500">ยอดตามข้อมูลการจอง {formatBaht(evidence.booking.total)}</p></div>
-        <div><label for="refund-reason" class="mb-1 block text-sm font-medium">เหตุผลขอคืนเงิน</label><textarea id="refund-reason" bind:value={reason} disabled={!!evidence.refund || saving} maxlength="250" required rows="2" class="management-input w-full"></textarea></div>
-        <div class="grid gap-4 sm:grid-cols-2"><div><label for="refund-recipient" class="mb-1 block text-sm font-medium">ชื่อผู้รับเงินคืน</label><input id="refund-recipient" bind:value={recipient} disabled={!!evidence.refund || saving} maxlength="200" class="management-input w-full" /></div><div><label for="refund-account" class="mb-1 block text-sm font-medium">ธนาคาร / เลขบัญชี (กรอกภายหลังได้)</label><input id="refund-account" bind:value={account} disabled={!!evidence.refund || saving} maxlength="150" class="management-input w-full" /></div></div>
+        <div><label for={`refund-amount-${row.ref}`} class="mb-1 block text-sm font-medium">จำนวนเงินที่ขอคืน (บาท)</label><input id={`refund-amount-${row.ref}`} type="number" min="0.01" max={Number(evidence.booking.total)} step="0.01" bind:value={amount} disabled={!!evidence.refund || saving} required class="management-input w-full" /><p class="mt-1 text-xs text-slate-500">ยอดตามข้อมูลการจอง {formatBaht(evidence.booking.total)}</p></div>
+        <div><label for={`refund-reason-${row.ref}`} class="mb-1 block text-sm font-medium">เหตุผลขอคืนเงิน</label><textarea id={`refund-reason-${row.ref}`} bind:value={reason} disabled={!!evidence.refund || saving} maxlength="250" required rows="2" class="management-input w-full"></textarea></div>
+        <div class="grid gap-4 sm:grid-cols-2"><div><label for={`refund-recipient-${row.ref}`} class="mb-1 block text-sm font-medium">ชื่อผู้รับเงินคืน</label><input id={`refund-recipient-${row.ref}`} bind:value={recipient} disabled={!!evidence.refund || saving} maxlength="200" class="management-input w-full" /></div><div><label for={`refund-account-${row.ref}`} class="mb-1 block text-sm font-medium">ธนาคาร / เลขบัญชี (กรอกภายหลังได้)</label><input id={`refund-account-${row.ref}`} bind:value={account} disabled={!!evidence.refund || saving} maxlength="150" class="management-input w-full" /></div></div>
         {#if evidence.slipImage}
           <img src={evidence.slipImage} alt={`สลิปแนบเอกสารคืนเงิน ${evidence.booking.ref}`} class="mx-auto max-h-48 max-w-full rounded-lg object-contain" onload={() => { imageReady = true; imageFailed = false; }} onerror={() => { imageReady = false; imageFailed = true; }} />
           {#if imageFailed}<p class="text-sm text-red-600" role="alert">โหลดภาพสลิปไม่สำเร็จ ไม่สามารถพิมพ์เอกสารหลักฐานที่ครบถ้วนได้</p>{/if}
