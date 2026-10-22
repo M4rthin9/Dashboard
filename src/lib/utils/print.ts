@@ -587,22 +587,12 @@ export function buildFinancialReport(
         <td style="text-align:center;">${fmt(d.visitors)}</td>
         <td style="text-align:center;">${fmt(d.prisoners)}</td>
         <td style="text-align:center; font-weight:700;">${fmt(d.people)}</td>
-        <td style="text-align:right;">${fmt(d.paid)}</td>
-        <td style="text-align:right;">${fmt(d.pending)}</td>
+        <td style="text-align:right;">${fmt(d.netRevenue)}</td>
+        <td style="text-align:right;">${fmt(d.welfareDeduction)}</td>
         <td style="text-align:right;">${fmt(d.total)}</td>
       </tr>`
     )
     .join('');
-
-  const dailyWelfareRows = daily
-    .filter((d) => d.bookings > 0 || d.attended > 0)
-    .map((d) => `
-    <tr>
-      <td>${escapeHtml(thaiDateLabel(d.date))}</td>
-      <td style="text-align:right;">${fmt(d.paid)}</td>
-      <td style="text-align:right;">${fmt(d.welfareDeduction)}</td>
-      <td style="text-align:right;">${fmt(d.netRevenue)}</td>
-    </tr>`).join('');
 
   const monthlyRows = monthly
     .map(
@@ -617,20 +607,12 @@ export function buildFinancialReport(
         <td style="text-align:center;">${fmt(m.visitors)}</td>
         <td style="text-align:center;">${fmt(m.prisoners)}</td>
         <td style="text-align:center; font-weight:700;">${fmt(m.people)}</td>
-        <td style="text-align:right;">${fmt(m.paid)}</td>
-        <td style="text-align:right;">${fmt(m.pending)}</td>
+        <td style="text-align:right;">${fmt(m.netRevenue)}</td>
+        <td style="text-align:right;">${fmt(m.welfareDeduction)}</td>
         <td style="text-align:right;">${fmt(m.total)}</td>
       </tr>`
     )
     .join('');
-
-  const welfareRows = monthly.map((m) => `
-    <tr>
-      <td>${escapeHtml(monthLabel(m.month))}</td>
-      <td style="text-align:right;">${fmt(m.paid)}</td>
-      <td style="text-align:right;">${fmt(m.welfareDeduction)}</td>
-      <td style="text-align:right;">${fmt(m.netRevenue)}</td>
-    </tr>`).join('');
 
   const now = new Date();
   const issuedLabel = now.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -650,20 +632,18 @@ export function buildFinancialReport(
 
     <p style="font-size:12px; line-height:1.7; margin-bottom:14px; text-align:justify;">
       รายงานฉบับนี้จัดทำขึ้นเพื่อสรุปผลการดำเนินงานด้านการเงินของร้าน Chance &amp; Change Cafe
-      ในช่วงเวลา ${escapeHtml(periodLabel)} ประกอบด้วยข้อมูลจำนวนการจอง ยอดชำระเงิน ยอดค้างชำระ
+      ในช่วงเวลา ${escapeHtml(periodLabel)} ประกอบด้วยข้อมูลจำนวนการจอง ยอด 80% ยอด 20% และยอดรวมที่ลูกค้าชำระแล้ว
       และจำนวนผู้เข้าร่วมกิจกรรม โดยมีรายละเอียดดังต่อไปนี้
     </p>
 
+    <p style="font-size:11px; color:#555;">ยอดรวมคิดจากสถานะ ชำระแล้ว / เสร็จสิ้น เท่านั้น แบ่งเป็นยอด 80% และยอดสวัสดิการร้านสงเคราะห์ 20%</p>
+
     <h3 style="font-size:12.5px; font-weight:700; margin:0 0 8px;">1. สรุปข้อมูลทางการเงินและผู้เข้าร่วม</h3>
     <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
-      ${statBox('ยอดชำระแล้ว', fmt(summary.paid) + ' บาท')}
-      ${statBox('ยอดค้างชำระ', fmt(summary.pending) + ' บาท')}
-      ${statBox('ยอดรวมทั้งสิ้น', fmt(summary.total) + ' บาท')}
+      ${statBox('ยอด 80%', fmt(summary.netRevenue) + ' บาท')}
+      ${statBox('ยอด 20%', fmt(summary.welfareDeduction) + ' บาท')}
+      ${statBox('ยอดรวม', fmt(summary.total) + ' บาท')}
       ${statBox('จำนวนการจอง', fmt(summary.bookings) + ' โต๊ะ')}
-    </div>
-    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
-      ${statBox('หักสวัสดิการร้านสงเคราะห์ 20%', fmt(summary.welfareDeduction) + ' บาท')}
-      ${statBox('รายรับสุทธิ 80%', fmt(summary.netRevenue) + ' บาท')}
     </div>
     <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px;">
       ${statBox('รวมผู้เข้าร่วมทั้งหมด', fmt(summary.people) + ' คน')}
@@ -685,19 +665,12 @@ export function buildFinancialReport(
           <th style="width:55px; text-align:center;">ผู้เข้าร่วม</th>
           <th style="width:55px; text-align:center;">ผู้ต้องขัง</th>
           <th style="width:55px; text-align:center;">รวมคน</th>
-          <th style="width:90px; text-align:right;">ชำระแล้ว</th>
-          <th style="width:90px; text-align:right;">ค้างชำระ</th>
+          <th style="width:90px; text-align:right;">ยอด 80%</th>
+          <th style="width:90px; text-align:right;">ยอด 20%</th>
           <th style="width:90px; text-align:right;">ยอดรวม</th>
         </tr>
       </thead>
-      <tbody>${dailyRows || '<tr><td colspan="11" style="text-align:center;color:#888;">ไม่มีข้อมูล</td></tr>'}</tbody>
-    </table>
-
-    <h4 style="font-size:12px; font-weight:700; margin:12px 0 6px;">หักสวัสดิการร้านสงเคราะห์รายวัน</h4>
-    <p style="font-size:11px; color:#555;">คำนวณ 20% จากยอดชำระแล้วของแต่ละวัน คงเหลือรายรับสุทธิ 80% ไม่รวมยอดค้างชำระ ยกเลิก ไม่อนุมัติ และคืนเงิน</p>
-    <table>
-      <thead><tr><th>วันที่</th><th>ยอดชำระแล้ว</th><th>หักสวัสดิการร้านสงเคราะห์ 20%</th><th>รายรับสุทธิ 80%</th></tr></thead>
-      <tbody>${dailyWelfareRows || '<tr><td colspan="4" style="text-align:center;">ไม่มีข้อมูล</td></tr>'}</tbody>
+      <tbody>${dailyRows || '<tr><td colspan="12" style="text-align:center;color:#888;">ไม่มีข้อมูล</td></tr>'}</tbody>
     </table>
 
     <h3 style="font-size:12.5px; font-weight:700; margin:16px 0 6px; page-break-before:avoid;">3. รายละเอียดสรุปรายเดือน</h3>
@@ -713,19 +686,12 @@ export function buildFinancialReport(
           <th style="width:55px; text-align:center;">ผู้เข้าร่วม</th>
           <th style="width:55px; text-align:center;">ผู้ต้องขัง</th>
           <th style="width:55px; text-align:center;">รวมคน</th>
-          <th style="width:90px; text-align:right;">ชำระแล้ว</th>
-          <th style="width:90px; text-align:right;">ค้างชำระ</th>
+          <th style="width:90px; text-align:right;">ยอด 80%</th>
+          <th style="width:90px; text-align:right;">ยอด 20%</th>
           <th style="width:90px; text-align:right;">ยอดรวม</th>
         </tr>
       </thead>
-      <tbody>${monthlyRows || '<tr><td colspan="11" style="text-align:center;color:#888;">ไม่มีข้อมูล</td></tr>'}</tbody>
-    </table>
-
-    <h3 style="font-size:12.5px; font-weight:700; margin:16px 0 6px;">4. หักสวัสดิการร้านสงเคราะห์รายเดือน</h3>
-    <p style="font-size:11px; color:#555;">คำนวณ 20% จากยอดสถานะ ชำระแล้ว / เสร็จสิ้น ไม่รวมยอดค้างชำระ ยกเลิก ไม่อนุมัติ และคืนเงิน</p>
-    <table>
-      <thead><tr><th>เดือน</th><th>ยอดชำระแล้ว</th><th>หักสวัสดิการร้านสงเคราะห์ 20%</th><th>รายรับสุทธิ 80%</th></tr></thead>
-      <tbody>${welfareRows || '<tr><td colspan="4" style="text-align:center;">ไม่มีข้อมูล</td></tr>'}</tbody>
+      <tbody>${monthlyRows || '<tr><td colspan="12" style="text-align:center;color:#888;">ไม่มีข้อมูล</td></tr>'}</tbody>
     </table>
 
     <p style="font-size:11px; color:#555; margin-top:16px; text-align:justify;">

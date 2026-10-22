@@ -160,7 +160,6 @@ function aggregateFinancial(rows: Reservation[]): FinancialAgg {
     if (isFinancialExcluded(r)) continue;
     const amt = amount(r);
     agg.bookings++;
-    agg.total += amt;
     if (isFinancialAttended(r)) {
       agg.attended++;
       agg.prisoners += bookingPool(r) === 'table' ? 0 : prisonersOf(r).length;
@@ -178,6 +177,8 @@ function aggregateFinancial(rows: Reservation[]): FinancialAgg {
   // Allocate received revenue only; round to satang before taking the 20% share.
   const paidSatang = Math.round(agg.paid * 100);
   const welfareSatang = Math.round(paidSatang / 5);
+  agg.paid = paidSatang / 100;
+  agg.total = agg.paid;
   agg.welfareDeduction = welfareSatang / 100;
   agg.netRevenue = (paidSatang - welfareSatang) / 100;
   return agg;

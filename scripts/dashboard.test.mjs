@@ -159,11 +159,13 @@ test('monthly welfare takes 20% of paid VIS/TBL revenue, including archives, and
   ];
   const summary = financial.computeFinancialSummary(rows);
   assert.equal(summary.paid, 1500.25);
+  assert.equal(summary.total, 1500.25, 'total excludes every unpaid status');
   assert.equal(summary.welfareDeduction, 300.05);
   assert.equal(summary.netRevenue, 1200.2);
   const monthly = financial.buildMonthlyFinancialReport(rows, '2026-02', '2026-03');
   assert.equal(monthly[0].welfareDeduction, summary.welfareDeduction);
   assert.equal(monthly[0].netRevenue, summary.netRevenue);
+  assert.equal(monthly[0].total, summary.total);
   assert.equal(monthly[1].welfareDeduction, 0);
   assert.equal(monthly[1].netRevenue, 0);
   for (const row of rows.slice(0, 2)) {
@@ -175,13 +177,14 @@ test('monthly welfare takes 20% of paid VIS/TBL revenue, including archives, and
   assert.equal(fractional.netRevenue, 0.02);
   for (const type of ['all', 'vis', 'tbl']) {
     const html = print.buildFinancialReport(summary, [], monthly, 'Test period', type);
-    assert.match(html, /หักสวัสดิการร้านสงเคราะห์ 20%/);
-    assert.match(html, /รายรับสุทธิ 80%/);
+    assert.match(html, /ยอด 80%/);
+    assert.match(html, /ยอด 20%/);
+    assert.doesNotMatch(html, /ค้างชำระ|>9,000</);
     assert.match(html, /300\.05/);
     assert.match(html, /1,200\.2/);
   }
 });
-test('daily welfare separates paid revenue by visit day and prints the 20% share and net 80%', () => {
+test('financial reports show 80%, 20% and received total in order for each pool and period', () => {
   const print = load('src/lib/utils/print.ts');
   const rows = [
     booking({ total: 1000, visitDateISO: '2026-02-26' }),
@@ -189,6 +192,7 @@ test('daily welfare separates paid revenue by visit day and prints the 20% share
     ...['รอชำระเงิน', 'รอตรวจสอบผู้เข้าร่วม', 'ยกเลิก', 'ไม่อนุมัติ', 'คืนเงินแล้ว'].map((status, i) => booking({ ref: `VIS-excluded-${i}`, status, total: 9000, visitDateISO: '2026-02-26' })),
   ];
   const daily = financial.buildDailyFinancialReport(rows, '2026-02-26', '2026-02-28');
+  assert.deepEqual(plain(daily.map(d => d.total)), [1000, 500.25, 0]);
   assert.deepEqual(plain(daily.map(d => ({ date: d.date, paid: d.paid, welfare: d.welfareDeduction, net: d.netRevenue }))), [
     { date: '2026-02-26', paid: 1000, welfare: 200, net: 800 },
     { date: '2026-02-27', paid: 500.25, welfare: 100.05, net: 400.2 },
@@ -197,15 +201,26 @@ test('daily welfare separates paid revenue by visit day and prints the 20% share
   for (const type of ['all', 'vis', 'tbl']) {
     const selected = type === 'all' ? rows : rows.filter(r => m.bookingPool(r) === (type === 'vis' ? 'prisoner' : 'table'));
     const days = financial.buildDailyFinancialReport(selected, '2026-02-26', '2026-02-28');
-    const html = print.buildFinancialReport(financial.computeFinancialSummary(selected), days, [], 'Test days', type);
-    const table = html.split('หักสวัสดิการร้านสงเคราะห์รายวัน</h4>')[1]?.split('</table>')[0];
-    assert.ok(table);
-    assert.match(table, /หักสวัสดิการร้านสงเคราะห์ 20%/);
-    assert.match(table, /รายรับสุทธิ 80%/);
-    if (type !== 'tbl') { assert.match(table, />200</); assert.match(table, />800</); }
-    if (type !== 'vis') { assert.match(table, />100\.05</); assert.match(table, />400\.2</); }
-    assert.doesNotMatch(table, />9,000</);
+    const months = financial.buildMonthlyFinancialReport(selected, '2026-02', '2026-03');
+    const html = print.buildFinancialReport(financial.computeFinancialSummary(selected), days, months, 'Test days', type);
+    const tables = [...html.matchAll(/<table>([\s\S]*?)<\/table>/g)].map(match => match[1]);
+    assert.equal(tables.length, 2, 'daily and monthly tables contain the complete split without duplicates');
+    for (const [index, table] of tables.entries()) {
+      const headers = [...table.matchAll(/<th\b[^>]*>(.*?)<\/th>/g)].map(match => match[1]);
+      assert.deepEqual(headers.slice(-3), ['ยอด 80%', 'ยอด 20%', 'ยอดรวม']);
+      const values = [...table.matchAll(/<tr>([\s\S]*?)<\/tr>/g)]
+        .filter(match => match[1].includes('<td'))
+        .map(match => [...match[1].matchAll(/<td\b[^>]*>(.*?)<\/td>/g)].map(cell => cell[1]).slice(-3));
+      const aggregates = index === 0 ? days.filter(day => day.bookings > 0 || day.attended > 0) : months;
+      assert.deepEqual(values, plain(aggregates.map(agg => [agg.netRevenue, agg.welfareDeduction, agg.total].map(format.formatNumber))));
+    }
+    assert.doesNotMatch(html, /ค้างชำระ|>9,000</);
   }
+  const unpaid = rows.slice(2);
+  const unpaidSummary = financial.computeFinancialSummary(unpaid);
+  assert.equal(unpaidSummary.total, 0);
+  assert.equal(unpaidSummary.welfareDeduction, 0);
+  assert.equal(unpaidSummary.netRevenue, 0);
 });
 
 test('live queues obey role permissions, exclude archives and expired holds, and sort visits earliest first', () => {
