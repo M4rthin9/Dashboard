@@ -267,6 +267,18 @@
       </Card>
     </div>
 
+    <div class="grid gap-4 sm:grid-cols-2">
+      <Card>
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400">หักสวัสดิการร้านสงเคราะห์ 20%</p>
+        <p class="mt-2 text-2xl font-bold text-amber-600 dark:text-amber-400">{formatBaht(summary.welfareDeduction)}</p>
+        <p class="mt-1 text-xs text-slate-400">คำนวณจากยอดชำระแล้ว</p>
+      </Card>
+      <Card>
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400">รายรับสุทธิหลังหัก 20% (คงเหลือ 80%)</p>
+        <p class="mt-2 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{formatBaht(summary.netRevenue)}</p>
+      </Card>
+    </div>
+
     <Card title="สรุปรายวัน" subtitle={`${periodLabel} · นับเฉพาะสถานะ ชำระแล้ว / เสร็จสิ้น เป็นผู้เข้าร่วม`}>
       <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
         <table class="w-full min-w-[720px] text-left text-sm">
@@ -318,6 +330,8 @@
               <th class="px-3 py-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">ชำระแล้ว</th>
               <th class="px-3 py-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">ค้างชำระ</th>
               <th class="px-3 py-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">ยอดรวม</th>
+              <th class="px-3 py-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">หักสวัสดิการร้านสงเคราะห์ 20%</th>
+              <th class="px-3 py-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">รายรับสุทธิ 80%</th>
             </tr>
           </thead>
           <tbody>
@@ -331,11 +345,13 @@
                 <td class="px-3 py-2 text-right font-medium text-emerald-600 dark:text-emerald-400">{formatBaht(m.paid)}</td>
                 <td class="px-3 py-2 text-right text-amber-600 dark:text-amber-400">{formatBaht(m.pending)}</td>
                 <td class="px-3 py-2 text-right text-slate-700 dark:text-slate-200">{formatBaht(m.total)}</td>
+                <td class="px-3 py-2 text-right text-amber-600 dark:text-amber-400">{formatBaht(m.welfareDeduction)}</td>
+                <td class="px-3 py-2 text-right font-medium text-emerald-600 dark:text-emerald-400">{formatBaht(m.netRevenue)}</td>
               </tr>
             {/each}
             {#if monthly.length === 0}
               <tr>
-                <td colspan="8" class="px-3 py-8 text-center text-sm text-slate-400">ไม่มีข้อมูลในช่วงเดือนที่เลือก</td>
+                <td colspan="10" class="px-3 py-8 text-center text-sm text-slate-400">ไม่มีข้อมูลในช่วงเดือนที่เลือก</td>
               </tr>
             {/if}
           </tbody>
@@ -343,6 +359,7 @@
       </div>
       <p class="mt-3 text-xs text-slate-400 dark:text-slate-500">
         ยอดชำระแล้วคิดจากสถานะ ชำระแล้ว / เสร็จสิ้น · ค้างชำระคิดจากสถานะ รอชำระเงิน · ยกเลิกและไม่อนุมัติไม่นำมาคิด
+        · หักสวัสดิการร้านสงเคราะห์ 20% จากยอดชำระแล้ว คงเหลือรายรับสุทธิ 80%
       </p>
     </Card>
   {/if}

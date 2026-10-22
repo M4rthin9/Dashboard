@@ -120,6 +120,8 @@ export interface FinancialAgg {
   paid: number;
   pending: number;
   total: number;
+  welfareDeduction: number;
+  netRevenue: number;
 }
 
 export interface FinancialSummary extends FinancialAgg {
@@ -152,6 +154,7 @@ function aggregateFinancial(rows: Reservation[]): FinancialAgg {
   const agg: FinancialAgg = {
     bookings: 0, attended: 0, adults: 0, visitors: 0, prisoners: 0,
     kidsUnder5: 0, kids5_8: 0, people: 0, paid: 0, pending: 0, total: 0,
+    welfareDeduction: 0, netRevenue: 0,
   };
   for (const r of rows) {
     if (isFinancialExcluded(r)) continue;
@@ -172,6 +175,11 @@ function aggregateFinancial(rows: Reservation[]): FinancialAgg {
     }
   }
   agg.people = agg.visitors + agg.prisoners;
+  // Allocate received revenue only; round to satang before taking the 20% share.
+  const paidSatang = Math.round(agg.paid * 100);
+  const welfareSatang = Math.round(paidSatang / 5);
+  agg.welfareDeduction = welfareSatang / 100;
+  agg.netRevenue = (paidSatang - welfareSatang) / 100;
   return agg;
 }
 

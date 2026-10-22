@@ -19,6 +19,7 @@
   let closedMessage = $state('');
   let closedDates = $state<Record<string, string>>({});
   let openDates = $state<string[]>([]);
+  let scheduledInputs = $state<Record<string, string>>({});
 
   const now = new Date();
   let calYear = $state(now.getFullYear());
@@ -66,6 +67,12 @@
       const cd = bw.closedDates;
       closedDates = cd && typeof cd === 'object' && !Array.isArray(cd) ? { ...(cd as Record<string, string>) } : {};
       openDates = Array.isArray(bw.openDates) ? bw.openDates.map(String) : [];
+      const scheduled = res.settings?.scheduledOpenings;
+      scheduledInputs = scheduled && typeof scheduled === 'object' && !Array.isArray(scheduled)
+        ? Object.fromEntries(Object.entries(scheduled).map(([date, at]) => {
+          const timestamp = Date.parse(String(at));
+          return [date, Number.isFinite(timestamp) ? new Date(timestamp + 7 * 60 * 60 * 1000).toISOString().slice(0, 16) : ''];
+        })) : {};
     } catch (err) {
       ui.showAlert({ title: 'ไม่สามารถโหลดการตั้งค่าการจองได้', message: errMsg(err), type: 'error' });
     } finally {
@@ -88,17 +95,24 @@
     const current = stateOf(date);
     if (current === 'default') {
       closedDates = { ...closedDates, [date]: '' };
+      clearSchedule(date);
     } else if (current === 'closed') {
       closedDates = withoutClosed(date);
       openDates = [...openDates, date];
     } else {
       openDates = openDates.filter((d) => d !== date);
+      clearSchedule(date);
     }
   }
 
   function clearDate(date: string): void {
     closedDates = withoutClosed(date);
     openDates = openDates.filter((d) => d !== date);
+    clearSchedule(date);
+  }
+
+  function clearSchedule(date: string): void {
+    scheduledInputs = Object.fromEntries(Object.entries(scheduledInputs).filter(([d]) => d !== date));
   }
 
   /** Read-merge-write so sibling keys in admin_settings survive. Past dates are pruned. */
@@ -111,9 +125,19 @@
           .map(([d, note]) => [d, String(note ?? '').trim().slice(0, 60)])
       );
       const keptOpen = openDates.filter((d) => d >= todayIso);
+      const scheduledOpenings: Record<string, string> = {};
+      for (const [date, input] of Object.entries(scheduledInputs)) {
+        if (!input || date < todayIso || date in keptClosed) continue;
+        const at = Date.parse(`${input}:00+07:00`);
+        if (!Number.isFinite(at) || at >= Date.parse(`${date}T00:00:00+07:00`)) {
+          throw new Error(`เวลาเปิดรับจองต้องอยู่ก่อนวันเข้าใช้บริการ ${thaiDate(date)}`);
+        }
+        scheduledOpenings[date] = new Date(at).toISOString();
+      }
       const current = await getSettings();
       const res = await saveSettings({
         ...(current.settings ?? {}),
+        scheduledOpenings,
         bookingWindow: {
           open: nextOpen,
           closedMessage: closedMessage.trim().slice(0, 500),
@@ -121,7 +145,7 @@
           openDates: keptOpen,
         },
       });
-      if (res.status !== 'ok') return;
+      if (res.status !== 'ok') throw new Error(String(res.message ?? 'บันทึกไม่สำเร็จ'));
       onSaved?.();
       open = nextOpen;
       closedDates = keptClosed;
@@ -244,11 +268,21 @@
             </div>
           {/each}
           {#each openList as date (date)}
-            <div class="flex items-center gap-2 rounded-xl border border-green-200 p-2 dark:border-green-900">
-              <span class="flex-1 text-xs font-semibold text-green-700 dark:text-green-300">เปิด · {thaiDate(date)}</span>
+            <div class="flex flex-wrap items-center gap-3 rounded-xl border border-green-200 p-3 dark:border-green-900">
+              <span class="flex-1 text-xs font-semibold text-green-700 dark:text-green-300">เปิดรอบพิเศษ · {thaiDate(date)}</span>
               <button type="button" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" onclick={() => clearDate(date)} aria-label="ล้างวันที่ {thaiDate(date)}">
                 <Trash2 class="h-4 w-4" />
               </button>
+              <div class="flex w-full flex-col gap-1.5">
+                <label for={`special-opening-${date}`} class="text-xs font-medium text-slate-600 dark:text-slate-300">เริ่มเปิดรับจอง / สิ้นสุดนับถอยหลัง (เวลาประเทศไทย)</label>
+                <input id={`special-opening-${date}`} type="datetime-local" bind:value={scheduledInputs[date]}
+                  max={`${date}T00:00`} disabled={saving}
+                  class="min-w-0 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" />
+                <p class="text-xs text-slate-500 dark:text-slate-400">เว้นว่างเพื่อเปิดทันที · เมื่อตั้งเวลา หน้าเว็บจะแสดงนับถอยหลังและเปิดรับจองอัตโนมัติ โดยยังใช้ช่วงจองล่วงหน้าตามปกติ</p>
+                {#if scheduledInputs[date]}
+                  <button type="button" class="self-start text-xs text-amber-700 underline dark:text-amber-400" onclick={() => clearSchedule(date)} disabled={saving}>ยกเลิกนับถอยหลัง / เปิดทันที</button>
+                {/if}
+              </div>
             </div>
           {/each}
         </div>
@@ -261,7 +295,7 @@
           onclick={() => void persist(open)}
           disabled={saving}
         >
-          <span class="flex items-center gap-1.5"><Save class="h-4 w-4" /> {saving ? 'กำลังบันทึก...' : 'บันทึกวันที่และข้อความ'}</span>
+          <span class="flex items-center gap-1.5"><Save class="h-4 w-4" /> {saving ? 'กำลังบันทึก...' : 'บันทึกวันที่ เวลา และข้อความ'}</span>
         </button>
       </div>
     </div>

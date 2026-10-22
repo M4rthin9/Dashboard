@@ -149,6 +149,38 @@ test('financial and kitchen counts use stored age buckets and actual prisoners; 
   assert.equal(summary.paid, 200);
   assert.deepEqual(plain(format.computeDeptReportData(rows[0])), { adults: 1, kids5_8: 1, kidsUnder5: 1 });
 });
+
+test('monthly welfare takes 20% of paid VIS/TBL revenue, including archives, and prints the remaining 80%', () => {
+  const print = load('src/lib/utils/print.ts');
+  const rows = [
+    booking({ total: 1000 }),
+    booking({ ref: 'TBL-paid', bookingType: 'table', status: 'เสร็จสิ้น', total: 500.25, _archived: true }),
+    ...['รอชำระเงิน', 'รอตรวจสอบผู้เข้าร่วม', 'ยกเลิก', 'ไม่อนุมัติ', 'คืนเงินแล้ว'].map((status, i) => booking({ ref: `VIS-${i}`, status, total: 9000 })),
+  ];
+  const summary = financial.computeFinancialSummary(rows);
+  assert.equal(summary.paid, 1500.25);
+  assert.equal(summary.welfareDeduction, 300.05);
+  assert.equal(summary.netRevenue, 1200.2);
+  const monthly = financial.buildMonthlyFinancialReport(rows, '2026-02', '2026-03');
+  assert.equal(monthly[0].welfareDeduction, summary.welfareDeduction);
+  assert.equal(monthly[0].netRevenue, summary.netRevenue);
+  assert.equal(monthly[1].welfareDeduction, 0);
+  assert.equal(monthly[1].netRevenue, 0);
+  for (const row of rows.slice(0, 2)) {
+    const separate = financial.computeFinancialSummary([row]);
+    assert.equal(separate.welfareDeduction, Math.round(row.total * 20) / 100);
+  }
+  const fractional = financial.computeFinancialSummary([booking({ total: 0.03 })]);
+  assert.equal(fractional.welfareDeduction, 0.01);
+  assert.equal(fractional.netRevenue, 0.02);
+  for (const type of ['all', 'vis', 'tbl']) {
+    const html = print.buildFinancialReport(summary, [], monthly, 'Test period', type);
+    assert.match(html, /หักสวัสดิการร้านสงเคราะห์ 20%/);
+    assert.match(html, /รายรับสุทธิ 80%/);
+    assert.match(html, /300\.05/);
+    assert.match(html, /1,200\.2/);
+  }
+});
 test('live queues obey role permissions, exclude archives and expired holds, and sort visits earliest first', () => {
   const now = new Date('2026-02-28T04:00:00Z');
   const rows = [booking({ ref: 'VIS-later', status: 'รอตรวจสอบผู้เข้าร่วม', visitDateISO: '2026-03-02' }), booking({ ref: 'VIS-earlier', status: 'รอตรวจสอบผู้เข้าร่วม' }), booking({ ref: 'VIS-archive', status: 'รอตรวจสอบผู้เข้าร่วม', _archived: true }), booking({ ref: 'TBL-expired', status: 'รอชำระเงิน', holdExpiresAt: '2026-02-28T03:00:00Z' }), booking({ ref: 'VIS-discipline', status: 'รอตรวจสอบวินัย' })];

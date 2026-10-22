@@ -614,6 +614,14 @@ export function buildFinancialReport(
     )
     .join('');
 
+  const welfareRows = monthly.map((m) => `
+    <tr>
+      <td>${escapeHtml(monthLabel(m.month))}</td>
+      <td style="text-align:right;">${fmt(m.paid)}</td>
+      <td style="text-align:right;">${fmt(m.welfareDeduction)}</td>
+      <td style="text-align:right;">${fmt(m.netRevenue)}</td>
+    </tr>`).join('');
+
   const now = new Date();
   const issuedLabel = now.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -642,6 +650,10 @@ export function buildFinancialReport(
       ${statBox('ยอดค้างชำระ', fmt(summary.pending) + ' บาท')}
       ${statBox('ยอดรวมทั้งสิ้น', fmt(summary.total) + ' บาท')}
       ${statBox('จำนวนการจอง', fmt(summary.bookings) + ' โต๊ะ')}
+    </div>
+    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
+      ${statBox('หักสวัสดิการร้านสงเคราะห์ 20%', fmt(summary.welfareDeduction) + ' บาท')}
+      ${statBox('รายรับสุทธิ 80%', fmt(summary.netRevenue) + ' บาท')}
     </div>
     <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px;">
       ${statBox('รวมผู้เข้าร่วมทั้งหมด', fmt(summary.people) + ' คน')}
@@ -690,6 +702,13 @@ export function buildFinancialReport(
         </tr>
       </thead>
       <tbody>${monthlyRows || '<tr><td colspan="11" style="text-align:center;color:#888;">ไม่มีข้อมูล</td></tr>'}</tbody>
+    </table>
+
+    <h3 style="font-size:12.5px; font-weight:700; margin:16px 0 6px;">4. หักสวัสดิการร้านสงเคราะห์รายเดือน</h3>
+    <p style="font-size:11px; color:#555;">คำนวณ 20% จากยอดสถานะ ชำระแล้ว / เสร็จสิ้น ไม่รวมยอดค้างชำระ ยกเลิก ไม่อนุมัติ และคืนเงิน</p>
+    <table>
+      <thead><tr><th>เดือน</th><th>ยอดชำระแล้ว</th><th>หักสวัสดิการร้านสงเคราะห์ 20%</th><th>รายรับสุทธิ 80%</th></tr></thead>
+      <tbody>${welfareRows || '<tr><td colspan="4" style="text-align:center;">ไม่มีข้อมูล</td></tr>'}</tbody>
     </table>
 
     <p style="font-size:11px; color:#555; margin-top:16px; text-align:justify;">
