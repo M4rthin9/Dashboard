@@ -594,6 +594,16 @@ export function buildFinancialReport(
     )
     .join('');
 
+  const dailyWelfareRows = daily
+    .filter((d) => d.bookings > 0 || d.attended > 0)
+    .map((d) => `
+    <tr>
+      <td>${escapeHtml(thaiDateLabel(d.date))}</td>
+      <td style="text-align:right;">${fmt(d.paid)}</td>
+      <td style="text-align:right;">${fmt(d.welfareDeduction)}</td>
+      <td style="text-align:right;">${fmt(d.netRevenue)}</td>
+    </tr>`).join('');
+
   const monthlyRows = monthly
     .map(
       (m, i) => `
@@ -681,6 +691,13 @@ export function buildFinancialReport(
         </tr>
       </thead>
       <tbody>${dailyRows || '<tr><td colspan="11" style="text-align:center;color:#888;">ไม่มีข้อมูล</td></tr>'}</tbody>
+    </table>
+
+    <h4 style="font-size:12px; font-weight:700; margin:12px 0 6px;">หักสวัสดิการร้านสงเคราะห์รายวัน</h4>
+    <p style="font-size:11px; color:#555;">คำนวณ 20% จากยอดชำระแล้วของแต่ละวัน คงเหลือรายรับสุทธิ 80% ไม่รวมยอดค้างชำระ ยกเลิก ไม่อนุมัติ และคืนเงิน</p>
+    <table>
+      <thead><tr><th>วันที่</th><th>ยอดชำระแล้ว</th><th>หักสวัสดิการร้านสงเคราะห์ 20%</th><th>รายรับสุทธิ 80%</th></tr></thead>
+      <tbody>${dailyWelfareRows || '<tr><td colspan="4" style="text-align:center;">ไม่มีข้อมูล</td></tr>'}</tbody>
     </table>
 
     <h3 style="font-size:12.5px; font-weight:700; margin:16px 0 6px; page-break-before:avoid;">3. รายละเอียดสรุปรายเดือน</h3>

@@ -181,6 +181,33 @@ test('monthly welfare takes 20% of paid VIS/TBL revenue, including archives, and
     assert.match(html, /1,200\.2/);
   }
 });
+test('daily welfare separates paid revenue by visit day and prints the 20% share and net 80%', () => {
+  const print = load('src/lib/utils/print.ts');
+  const rows = [
+    booking({ total: 1000, visitDateISO: '2026-02-26' }),
+    booking({ ref: 'TBL-daily', bookingType: 'table', status: 'เสร็จสิ้น', total: 500.25, visitDateISO: '2026-02-27', _archived: true }),
+    ...['รอชำระเงิน', 'รอตรวจสอบผู้เข้าร่วม', 'ยกเลิก', 'ไม่อนุมัติ', 'คืนเงินแล้ว'].map((status, i) => booking({ ref: `VIS-excluded-${i}`, status, total: 9000, visitDateISO: '2026-02-26' })),
+  ];
+  const daily = financial.buildDailyFinancialReport(rows, '2026-02-26', '2026-02-28');
+  assert.deepEqual(plain(daily.map(d => ({ date: d.date, paid: d.paid, welfare: d.welfareDeduction, net: d.netRevenue }))), [
+    { date: '2026-02-26', paid: 1000, welfare: 200, net: 800 },
+    { date: '2026-02-27', paid: 500.25, welfare: 100.05, net: 400.2 },
+    { date: '2026-02-28', paid: 0, welfare: 0, net: 0 },
+  ]);
+  for (const type of ['all', 'vis', 'tbl']) {
+    const selected = type === 'all' ? rows : rows.filter(r => m.bookingPool(r) === (type === 'vis' ? 'prisoner' : 'table'));
+    const days = financial.buildDailyFinancialReport(selected, '2026-02-26', '2026-02-28');
+    const html = print.buildFinancialReport(financial.computeFinancialSummary(selected), days, [], 'Test days', type);
+    const table = html.split('หักสวัสดิการร้านสงเคราะห์รายวัน</h4>')[1]?.split('</table>')[0];
+    assert.ok(table);
+    assert.match(table, /หักสวัสดิการร้านสงเคราะห์ 20%/);
+    assert.match(table, /รายรับสุทธิ 80%/);
+    if (type !== 'tbl') { assert.match(table, />200</); assert.match(table, />800</); }
+    if (type !== 'vis') { assert.match(table, />100\.05</); assert.match(table, />400\.2</); }
+    assert.doesNotMatch(table, />9,000</);
+  }
+});
+
 test('live queues obey role permissions, exclude archives and expired holds, and sort visits earliest first', () => {
   const now = new Date('2026-02-28T04:00:00Z');
   const rows = [booking({ ref: 'VIS-later', status: 'รอตรวจสอบผู้เข้าร่วม', visitDateISO: '2026-03-02' }), booking({ ref: 'VIS-earlier', status: 'รอตรวจสอบผู้เข้าร่วม' }), booking({ ref: 'VIS-archive', status: 'รอตรวจสอบผู้เข้าร่วม', _archived: true }), booking({ ref: 'TBL-expired', status: 'รอชำระเงิน', holdExpiresAt: '2026-02-28T03:00:00Z' }), booking({ ref: 'VIS-discipline', status: 'รอตรวจสอบวินัย' })];
