@@ -26,6 +26,8 @@ export const routes: RouteDef[] = [
   { path: '/reservations/archive', key: 'reservations_archive', title: 'การจองเยี่ยมย้อนหลัง (VIS)', component: Reservations },
   { path: '/reservations/tables', key: 'reservations_tables', title: 'การจองโต๊ะ (TBL)', component: Reservations },
   { path: '/reservations/tables/archive', key: 'reservations_tables_archive', title: 'การจองโต๊ะย้อนหลัง (TBL)', component: Reservations },
+  { path: '/attendance', key: 'attendance', title: 'ตรวจสอบเข้างาน', loader: () => import('../routes/Attendance.svelte'), roles: ['Superadmin', 'Admin', 'Finance', 'Tadtel'] },
+  { path: '/registration', key: 'attendance', title: 'ลงทะเบียนเข้างานสำหรับเจ้าหน้าที่', loader: () => import('../routes/Registration.svelte') },
   { path: '/reports', key: 'reports', title: 'รายงาน', loader: () => import('../routes/Reports.svelte') },
   { path: '/reports/overall', key: 'reports_overall', title: 'รายงานการเงิน', loader: () => import('../routes/OverallReport.svelte') },
   { path: '/reports/tables', key: 'reports_tables', title: 'รายงานโต๊ะ (TBL)', loader: () => import('../routes/TableReport.svelte') },
@@ -65,6 +67,9 @@ export function resolveRoute(): RouteDef {
   const allowed = visibleMenu(auth.user?.role ?? 'User');
   const fallback = routes.find((r) => r.path !== '/login' && allowed.includes(r.key) && (!r.roles || r.roles.includes(auth.user?.role ?? 'User'))) ?? routes[0];
   const candidate = routes.find((r) => r.path === path) ?? fallback;
+
+  // This separate officer page owns its login and permission gate.
+  if (candidate.path === '/registration') return candidate;
 
   if (candidate.path === '/login') {
     return auth.isAuthenticated ? fallback : candidate;

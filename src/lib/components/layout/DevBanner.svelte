@@ -4,20 +4,21 @@
    * approvals and payment confirmations look identical in both. Renders nothing
    * on production, and sets `noindex` on the dev deployment.
    */
-  import { isDevDeployment } from '../../env';
+  import { isDevDeployment, isLocal } from '../../env';
   import { API_BASE } from '../../api/client';
+  const localPreview = isLocal && import.meta.env.VITE_REGISTRATION_PREVIEW === 'true';
 </script>
 
 <svelte:head>
-  {#if isDevDeployment}
+  {#if isDevDeployment || localPreview}
     <meta name="robots" content="noindex, nofollow" />
   {/if}
 </svelte:head>
 
-{#if isDevDeployment}
+{#if isDevDeployment || localPreview}
   <div class="dev-banner" role="status">
-    <strong>DEVELOPMENT</strong>
-    <span>ข้อมูลทดสอบ — ไม่ใช่ระบบจริง</span>
+    <strong>{localPreview ? 'LOCAL PREVIEW' : 'DEVELOPMENT'}</strong>
+    <span>{localPreview ? 'ข้อมูลจำลองในเครื่อง · ไม่เชื่อมต่อระบบจริง' : 'ข้อมูลทดสอบ — ไม่ใช่ระบบจริง'}</span>
     <code>{API_BASE.replace('https://', '')}</code>
   </div>
 {/if}

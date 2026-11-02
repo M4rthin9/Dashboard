@@ -22,7 +22,7 @@
   // few seconds instead of on their next manual reload.
   $effect(() => {
     reservations.setSession(auth.isAuthenticated && auth.user ? `${API_BASE}:${auth.user.username}:${auth.user.role}` : '');
-    if (!auth.accessToken) {
+    if (!auth.accessToken || route.path === '/registration') {
       liveSync.stop();
       return;
     }
@@ -42,7 +42,7 @@
   <ToastContainer />
   <AlertBox />
 
-  {#if route.path === '/login'}
+  {#if route.path === '/login' || route.path === '/registration'}
     <LazyRoute {route} />
   {:else}
     <AppLayout>

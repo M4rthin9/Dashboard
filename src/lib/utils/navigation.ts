@@ -3,6 +3,7 @@ import { LayoutDashboard, CalendarDays, Archive, BarChart3, Wallet, ClipboardLis
 import { visibleMenu } from './permissions';
 export interface NavItem { key: string; path: string; label: string; description: string; icon: Component }
 export const navigation: NavItem[] = [
+  { key: 'attendance', path: '/attendance', label: 'ตรวจสอบเข้างาน', description: 'สแกน QR ตรวจสอบการชำระเงินและลงทะเบียนเข้างาน', icon: QrCode },
   { key: 'home', path: '/dashboard', label: 'ภาพรวม', description: 'การจองวันนี้และงานที่ต้องดำเนินการ', icon: LayoutDashboard },
   { key: 'reservations', path: '/reservations', label: 'การจองเยี่ยม (VIS)', description: 'ตรวจสอบ อนุมัติ และติดตามการจองเยี่ยมผู้ต้องขัง', icon: CalendarDays },
   { key: 'reservations_archive', path: '/reservations/archive', label: 'ย้อนหลัง (VIS)', description: 'ค้นหาและตรวจสอบการจองเยี่ยมที่เก็บถาวร', icon: Archive },
@@ -26,7 +27,7 @@ export const navigation: NavItem[] = [
 ];
 export const navGroups = [
   { label: 'ภาพรวม', keys: ['home'] },
-  { label: 'การจองและผู้ต้องขัง', keys: ['reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'prisoners', 'booking_settings'] },
+  { label: 'การจองและผู้ต้องขัง', keys: ['reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'attendance', 'prisoners', 'booking_settings'] },
   { label: 'รายงาน', keys: ['reports', 'reports_overall', 'reports_tables'] },
   { label: 'การชำระเงิน', keys: ['refunds', 'promptpay', 'payment_settings'] },
   { label: 'เว็บไซต์และการสื่อสาร', keys: ['frontend_editor', 'notifications'] },

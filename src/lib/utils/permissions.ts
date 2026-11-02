@@ -20,11 +20,11 @@ export const PERMISSIONS: Record<Role, string[]> = {
 };
 
 export const SIDEBAR_MENU: Record<Role, string[]> = {
-  Superadmin: ['refunds', 'home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables', 'notifications', 'eventlog', 'users', 'prisoners', 'connection', 'promptpay', 'settings', 'frontend_editor', 'booking_settings', 'payment_settings', 'privacy_settings'],
-  Admin: ['refunds', 'home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables', 'eventlog', 'prisoners', 'connection'],
-  Finance: ['reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables', 'refunds'],
+  Superadmin: ['attendance', 'refunds', 'home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables', 'notifications', 'eventlog', 'users', 'prisoners', 'connection', 'promptpay', 'settings', 'frontend_editor', 'booking_settings', 'payment_settings', 'privacy_settings'],
+  Admin: ['attendance', 'refunds', 'home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables', 'eventlog', 'prisoners', 'connection'],
+  Finance: ['attendance', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables', 'refunds'],
   Vinai: ['home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables', 'prisoners'],
-  Tadtel: ['home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables'],
+  Tadtel: ['attendance', 'home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables'],
   User: ['home'],
 };
 
@@ -36,6 +36,10 @@ export function hasPermission(role: string | undefined, permission: string): boo
 export function visibleMenu(role: string | undefined): string[] {
   if (!role) return [];
   return SIDEBAR_MENU[role as Role] ?? [];
+}
+
+export function canUseRegistrationDesk(role: string | undefined): boolean {
+  return hasPermission(role, 'visitor_approval') || hasPermission(role, 'confirm_payment');
 }
 
 export function roleLabel(role: string): string {

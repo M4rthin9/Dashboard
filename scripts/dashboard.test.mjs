@@ -361,4 +361,132 @@ test('route fallback respects menus and drilldown query preserves Thai status, d
   assert.equal(router.currentQuery().get('search'), 'VIS-123');
   auth.isAuthenticated = false;
   assert.equal(router.resolveRoute().path, '/login');
+  hashState.value = '#/registration';
+  assert.equal(router.resolveRoute().path, '/registration', 'officers can open the dedicated login page while signed out');
+  auth.isAuthenticated = true;
+  auth.user.role = 'Tadtel';
+  assert.equal(router.resolveRoute().path, '/registration', 'the officer stays on the scanner page after login');
+  hashState.value = '#/attendance';
+  assert.equal(router.resolveRoute().path, '/attendance', 'existing dashboard attendance access is preserved');
+  hashState.value = '#/dashboard';
+  assert.equal(router.resolveRoute().path, '/dashboard', 'ordinary staff login keeps its existing destination');
+});
+
+test('dedicated registration page permits reception and payment staff while denying other roles', () => {
+  const { canUseRegistrationDesk } = load('src/lib/utils/permissions.ts');
+  for (const role of ['Tadtel', 'Superadmin', 'Admin', 'Finance']) assert.equal(canUseRegistrationDesk(role), true);
+  for (const role of ['User', 'Vinai', 'unknown', undefined]) assert.equal(canUseRegistrationDesk(role), false);
+});
+
+// Exercise the component's async handlers directly; DOM rendering and CSS stay outside this harness.
+function attendanceController(api, { mediaDevices, reducedMotion = false } = {}) {
+  const component = fs.readFileSync('src/routes/Attendance.svelte', 'utf8');
+  const script = component.match(/<script[^>]*>([\s\S]*?)<\/script>/)[1];
+  const testExports = `\nexport const controller = {
+    load, checkIn, verify, startCamera, stopCamera,
+    setDate(value: string) { date = value; },
+    setEntry(value: EntryCheck) { entry = value; verifiedQr = 'test-qr'; },
+    setQr(value: string) { qr = value; },
+    setPanel(value: HTMLDivElement) { resultPanel = value; },
+    state() { return { rows, tables, lastUpdated, loading, busy, savingGuestKey, openingCamera, scanning, entry, error, notice }; }
+  };`;
+  const output = ts.transpileModule(script + testExports, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  const module = { exports: {} };
+  const require = spec => {
+    if (spec === 'svelte') return { onMount() {}, tick: () => Promise.resolve() };
+    if (spec.endsWith('/api/attendance')) return api;
+    if (spec.endsWith('/utils/management')) return { businessDate: () => '2026-11-02', bookingPool: () => 'table' };
+    return {};
+  };
+  vm.runInNewContext(output, {
+    module, exports: module.exports, require, Date, Intl, Error,
+    $state: value => value, $derived: value => value,
+    document: { hidden: false }, navigator: { mediaDevices },
+    window: { innerHeight: 800, matchMedia: () => ({ matches: reducedMotion }) },
+    setInterval, clearInterval, setTimeout, clearTimeout,
+  }, { filename: 'Attendance.handlers.ts' });
+  return module.exports.controller;
+}
+const deferred = () => {
+  let resolve, reject;
+  const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+};
+const attendanceSnapshot = label => ({ rows: [{ ref: label }], tables: [{ ref: label }], asOf: label });
+
+test('attendance refresh retains visible data and discards responses for an older selected day', async () => {
+  const requests = [];
+  const controller = attendanceController({ getAttendance: () => { const request = deferred(); requests.push(request); return request.promise; } });
+  const initial = controller.load();
+  const first = attendanceSnapshot('first'); requests[0].resolve(first); await initial;
+  const refresh = controller.load();
+  assert.equal(controller.state().tables, first.tables, 'same-day refresh does not flash an empty overview');
+  assert.equal(controller.state().lastUpdated, first.asOf);
+  requests[1].resolve(attendanceSnapshot('updated')); await refresh;
+  controller.setDate('2026-11-03'); const earlier = controller.load();
+  assert.equal(controller.state().tables.length, 0, 'another date never shows the previous date as current');
+  controller.setDate('2026-11-04'); const latest = controller.load();
+  requests[3].resolve(attendanceSnapshot('latest')); await latest;
+  requests[2].resolve(attendanceSnapshot('outdated')); await earlier;
+  assert.equal(controller.state().lastUpdated, 'latest');
+  assert.equal(controller.state().loading, false);
+});
+
+test('saved check-in releases the next guest while overview refreshes and never grants entry optimistically', async () => {
+  const reads = [], writes = [];
+  const controller = attendanceController({
+    getAttendance: () => { const request = deferred(); reads.push(request); return request.promise; },
+    checkInVisitor: () => { const request = deferred(); writes.push(request); return request.promise; },
+  });
+  const initial = controller.load(); const first = attendanceSnapshot('initial'); reads[0].resolve(first); await initial;
+  const original = { allowed: true, guests: [{ guestKey: 'first', attendance: null }] };
+  controller.setEntry(original);
+  const save = controller.checkIn('first');
+  assert.equal(controller.state().entry, original, 'arrival is not recorded before the server confirms');
+  assert.equal(controller.state().savingGuestKey, 'first');
+  await controller.checkIn('second'); assert.equal(writes.length, 1, 'double clicks cannot overlap saves');
+  const saved = { allowed: true, guests: [{ guestKey: 'first', attendance: { checkedInBy: 'officer' } }] };
+  writes[0].resolve({ entry: saved, alreadyCheckedIn: false }); await save;
+  assert.equal(controller.state().entry, saved);
+  assert.equal(controller.state().busy, false, 'a slow overview request does not block the next guest');
+  assert.equal(controller.state().savingGuestKey, '');
+  assert.equal(controller.state().tables, first.tables);
+  assert.ok(controller.state().notice);
+  const next = controller.checkIn('second');
+  writes[1].resolve({ entry: saved, alreadyCheckedIn: false }); await next;
+  reads[2].resolve(attendanceSnapshot('newest')); await new Promise(resolve => setImmediate(resolve));
+  reads[1].resolve(attendanceSnapshot('older')); await new Promise(resolve => setImmediate(resolve));
+  assert.equal(controller.state().lastUpdated, 'newest');
+  const rejected = controller.checkIn('third'); writes[2].reject(new Error('Payment status changed')); await rejected;
+  assert.equal(controller.state().entry, null);
+  assert.equal(controller.state().busy, false);
+  assert.equal(controller.state().savingGuestKey, '');
+  assert.ok(controller.state().error);
+});
+
+test('camera startup ignores repeated taps and closes a stream opened after cancellation', async () => {
+  const permission = deferred(); let attempts = 0, stopped = 0;
+  const controller = attendanceController({}, { mediaDevices: { getUserMedia: () => { attempts++; return permission.promise; } } });
+  const start = controller.startCamera();
+  assert.equal(controller.state().openingCamera, true);
+  await controller.startCamera(); assert.equal(attempts, 1);
+  controller.stopCamera();
+  permission.resolve({ getTracks: () => [{ stop() { stopped++; } }] }); await start;
+  assert.equal(stopped, 1);
+  assert.equal(controller.state().openingCamera, false);
+  assert.equal(controller.state().scanning, false);
+});
+
+test('scan result moves into view only when needed and honors reduced-motion preference', async () => {
+  for (const reducedMotion of [false, true]) {
+    const scrolls = [], focus = [];
+    const controller = attendanceController({ checkVisitorEntry: async () => ({ entry: { allowed: true } }) }, { reducedMotion });
+    controller.setPanel({ getBoundingClientRect: () => ({ top: 900, height: 300 }), scrollIntoView: options => scrolls.push(options), focus: options => focus.push(options) });
+    controller.setQr('test-qr'); await controller.verify();
+    assert.equal(scrolls[0].behavior, reducedMotion ? 'auto' : 'smooth');
+    assert.equal(focus[0].preventScroll, true);
+    controller.setPanel({ getBoundingClientRect: () => ({ top: 100, height: 300 }), scrollIntoView() { throw new Error('unnecessary scrolling'); }, focus() {} });
+    controller.setQr('test-qr'); await controller.verify();
+    assert.equal(controller.state().error, '');
+  }
 });

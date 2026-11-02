@@ -1,9 +1,12 @@
 <script lang="ts">
-  import { AlertCircle, ArrowRight, ArrowUpRight, Eye, EyeOff, LockKeyhole, ShieldCheck, UserRound } from '@lucide/svelte';
+  import { AlertCircle, ArrowRight, ArrowUpRight, Eye, EyeOff, LockKeyhole, ShieldCheck, UserRound, ScanLine, QrCode } from '@lucide/svelte';
   import Button from '../lib/components/ui/Button.svelte';
   import { auth } from '../lib/store/auth.svelte';
   import { ui } from '../lib/store/ui.svelte';
   import { navigate } from '../lib/router';
+  import { canUseRegistrationDesk } from '../lib/utils/permissions';
+
+  let { registration = false }: { registration?: boolean } = $props();
 
   let username = $state('');
   let password = $state('');
@@ -22,12 +25,16 @@
     loading = true;
     try {
       await auth.login(username.trim(), password);
+      if (registration && !canUseRegistrationDesk(auth.user?.role)) {
+        auth.logout();
+        throw new Error('บัญชีนี้ไม่มีสิทธิ์ลงทะเบียนเข้างาน กรุณาใช้บัญชีเจ้าหน้าที่ฝ่ายต้อนรับ');
+      }
       ui.showToast(`ยินดีต้อนรับ, ${auth.displayName}`, 'success');
       if (auth.mustChangePassword) {
-        navigate('/dashboard');
+        navigate(registration ? '/registration' : '/dashboard');
         ui.showToast('กรุณาเปลี่ยนรหัสผ่านครั้งแรก', 'warning');
       } else {
-        navigate('/dashboard');
+        navigate(registration ? '/registration' : '/dashboard');
       }
     } catch (err) {
       error = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
@@ -37,43 +44,46 @@
   }
 </script>
 
-<svelte:head><title>เข้าสู่ระบบ · CC Cafe Dashboard</title></svelte:head>
+<svelte:head><title>{registration ? 'เข้าสู่ระบบลงทะเบียนเข้างาน' : 'เข้าสู่ระบบ'} · CC Cafe</title></svelte:head>
 
-<main class="login-page">
+<main class="login-page" class:registration-login={registration}>
   <div class="login-shell">
     <section class="brand-panel" aria-label="Chance & Change Café">
-      <img class="cafe-photo" src="/login-cafe.webp" alt="" aria-hidden="true" fetchpriority="high" />
+      {#if !registration}<img class="cafe-photo" src="/login-cafe.webp" alt="" aria-hidden="true" fetchpriority="high" />{/if}
       <div class="photo-shade" aria-hidden="true"></div>
 
       <div class="brand-lockup">
-        <img src="/login-mark.webp" alt="ตรากรมราชทัณฑ์" width="128" height="128" class="brand-mark" />
+        <img src="/login-mark.webp" alt={registration ? 'ตราทัณฑสถานบำบัดพิเศษกลาง' : 'ตรากรมราชทัณฑ์'} width="128" height="128" class="brand-mark" />
         <div>
-          <p class="brand-name">CC Cafe<span class="brand-dot">.</span></p>
-          <p class="brand-caption">CHANCE & CHANGE CAFÉ</p>
+          {#if registration}<p class="brand-name">ทัณฑสถานบำบัดพิเศษกลาง</p><p class="brand-caption">กรมราชทัณฑ์ · กระทรวงยุติธรรม</p>
+          {:else}<p class="brand-name">CC Cafe<span class="brand-dot">.</span></p><p class="brand-caption">CHANCE & CHANGE CAFÉ</p>{/if}
         </div>
       </div>
 
       <div class="brand-story">
         <span class="story-line" aria-hidden="true"></span>
-        <p class="story-eyebrow">A LITTLE CARE. A BIG CHANGE.</p>
-        <h2>ทุกการต้อนรับ<br />เริ่มต้นที่<span>ความใส่ใจ</span></h2>
-        <p class="story-description">พื้นที่จัดการงานของทีม CC Cafe<br />เพื่อทุกมื้ออาหารและทุกการพบกันที่มีความหมาย</p>
+        {#if registration}
+          <p class="story-eyebrow">SMART CHECK-IN · VISITOR REGISTRATION</p>
+          <h2>การต้อนรับที่ทันสมัย<br />เริ่มต้นด้วย<span>ความใส่ใจ</span></h2>
+          <p class="story-description">ตรวจสอบการจอง ยืนยันสิทธิ์ และลงทะเบียน<br />เพื่อการต้อนรับอย่างเป็นระบบในทุกวัน</p>
+          <div class="registration-login-visual" aria-hidden="true"><span></span><QrCode size={66} strokeWidth={1.2} /><i></i></div>
+        {:else}<p class="story-eyebrow">A LITTLE CARE. A BIG CHANGE.</p><h2>ทุกการต้อนรับ<br />เริ่มต้นที่<span>ความใส่ใจ</span></h2><p class="story-description">พื้นที่จัดการงานของทีม CC Cafe<br />เพื่อทุกมื้ออาหารและทุกการพบกันที่มีความหมาย</p>{/if}
       </div>
 
       <div class="brand-footer">
-        <span>การจองเยี่ยม</span><span class="footer-dot" aria-hidden="true"></span>
-        <span>การจองโต๊ะ</span><span class="footer-dot" aria-hidden="true"></span>
-        <span>การชำระเงิน</span>
+        {#if registration}<ScanLine size={16} /><span>สแกน QR</span><span class="footer-dot" aria-hidden="true"></span><span>ตรวจสอบสิทธิ์</span><span class="footer-dot" aria-hidden="true"></span><span>ลงทะเบียนเข้าร่วม</span>
+        {:else}<span>การจองเยี่ยม</span><span class="footer-dot" aria-hidden="true"></span><span>การจองโต๊ะ</span><span class="footer-dot" aria-hidden="true"></span><span>การชำระเงิน</span>{/if}
       </div>
     </section>
 
     <section class="form-panel" aria-labelledby="login-title">
       <div class="login-content">
-        <div class="staff-label"><ShieldCheck class="h-4 w-4" aria-hidden="true" />สำหรับเจ้าหน้าที่</div>
+        <div class="staff-label"><ShieldCheck class="h-4 w-4" aria-hidden="true" />{registration ? 'สำหรับเจ้าหน้าที่ลงทะเบียน' : 'สำหรับเจ้าหน้าที่'}</div>
         <header class="login-heading">
-          <p class="login-eyebrow">WELCOME BACK</p>
-          <h1 id="login-title">ยินดีต้อนรับกลับ</h1>
-          <p>เข้าสู่ระบบเพื่อจัดการการจอง<br class="desktop-break" />และดูแลการให้บริการของ CC Cafe</p>
+          <p class="login-eyebrow">{registration ? 'REGISTRATION OFFICER' : 'WELCOME BACK'}</p>
+          <h1 id="login-title">{registration ? 'เข้าสู่จุดลงทะเบียน' : 'ยินดีต้อนรับกลับ'}</h1>
+          {#if registration}<p>เข้าสู่ระบบด้วยบัญชีเจ้าหน้าที่ฝ่ายต้อนรับ<br class="desktop-break" />เพื่อสแกน QR และตรวจสอบการเข้างานประจำวัน</p>
+          {:else}<p>เข้าสู่ระบบเพื่อจัดการการจอง<br class="desktop-break" />และดูแลการให้บริการของ CC Cafe</p>{/if}
         </header>
 
         <form onsubmit={handleSubmit} aria-busy={loading} class="login-form">
@@ -146,10 +156,11 @@
         </form>
 
         <p class="login-help">หากไม่สามารถเข้าสู่ระบบได้<br />กรุณาติดต่อผู้ดูแลระบบเพื่อขอความช่วยเหลือ</p>
+        {#if !registration}<p class="mt-4 text-center text-sm"><a class="font-medium text-blue-700 underline underline-offset-4 dark:text-blue-300" href="#/registration">เข้าสู่หน้าลงทะเบียนเข้างานสำหรับเจ้าหน้าที่</a></p>{/if}
       </div>
 
       <footer class="form-footer">
-        <span>CC Cafe Dashboard</span>
+        <span>{registration ? 'SMART CHECK-IN · จุดลงทะเบียนเข้างาน' : 'CC Cafe Dashboard'}</span>
         <a href="https://cida.dpdns.org/" target="_blank" rel="noopener noreferrer">เว็บไซต์ลูกค้า<ArrowUpRight class="h-3.5 w-3.5" aria-hidden="true" /></a>
       </footer>
     </section>
