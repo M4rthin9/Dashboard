@@ -8,8 +8,8 @@
     <title>CCC Dashboard</title>
     <script>
       const savedTheme = localStorage.getItem('ccc_dark_mode');
-      const workspaceRoute = location.hash.length > 0 && !/^#\/(login|registration)(?:[/?]|$)/.test(location.hash);
-      if (savedTheme === '1' || (savedTheme === null && workspaceRoute)) {
+      const darkDefaultRoute = !/^#\/registration(?:[/?]|$)/.test(location.hash);
+      if (savedTheme === '1' || (savedTheme === null && darkDefaultRoute)) {
         document.documentElement.classList.add('dark');
       }
     </script>

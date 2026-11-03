@@ -24,7 +24,7 @@ function loader(mocks = {}, globals = {}) {
 }
 const load = loader();
 
-test('workspace defaults to dark, preserves saved preferences and keeps standalone pages opt-in', () => {
+test('theme defaults follow the caller and preserve saved preferences', () => {
   const storage = new Map();
   const applied = [];
   const store = loader({}, {
@@ -36,7 +36,7 @@ test('workspace defaults to dark, preserves saved preferences and keeps standalo
   assert.equal(store.darkMode, true);
   assert.equal(storage.size, 0, 'default theme does not overwrite a saved preference');
   store.initDarkMode();
-  assert.equal(store.darkMode, false, 'standalone login and registration retain their default');
+  assert.equal(store.darkMode, false, 'callers may retain a light default');
   storage.set('ccc_dark_mode', '0');
   store.initDarkMode(true);
   assert.equal(store.darkMode, false);
@@ -45,6 +45,16 @@ test('workspace defaults to dark, preserves saved preferences and keeps standalo
   store.initDarkMode(false);
   assert.equal(store.darkMode, true);
   assert.deepEqual(applied.at(-1), ['dark', true]);
+});
+
+test('login and workspace apply the matching default theme before paint without overriding saved choices', () => {
+  const html = fs.readFileSync('index.html', 'utf8');
+  const boot = html.match(/<script>([\s\S]*?)<\/script>/)[1];
+  for (const [hash, saved, expected] of [['', null, true], ['#/login', null, true], ['#/dashboard', null, true], ['#/registration', null, false], ['#/registration?desk=1', null, false], ['#/login', '0', false], ['#/login', '1', true]]) {
+    let applied = false;
+    vm.runInNewContext(boot, { location: { hash }, localStorage: { getItem: () => saved }, document: { documentElement: { classList: { add: name => { applied = name === 'dark'; } } } } });
+    assert.equal(applied, expected, `hash=${hash}, preference=${saved}`);
+  }
 });
 
 test('both workspace themes keep text, selected controls and form boundaries distinguishable', () => {

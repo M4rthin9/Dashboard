@@ -14,8 +14,8 @@
   const route = $derived(resolveRoute());
 
   $effect(() => {
-    const isWorkspace = route.path !== '/login' && route.path !== '/registration';
-    untrack(() => ui.initDarkMode(isWorkspace));
+    const darkDefault = route.path !== '/registration';
+    untrack(() => ui.initDarkMode(darkDefault));
   });
 
   // Poll the backend change counters while signed in and refetch only the slice
@@ -37,6 +37,8 @@
     };
   });
 </script>
+
+<svelte:head><title>{route.title} · ทัณฑสถานบำบัดพิเศษกลาง</title></svelte:head>
 
 <svelte:boundary {onerror}>
   <DevBanner />
