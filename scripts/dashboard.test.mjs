@@ -103,6 +103,12 @@ test('every dashboard function belongs to one category and frontend editing is r
   const grouped = nav.navGroups.flatMap(group => group.keys);
   assert.equal(new Set(grouped).size, grouped.length, 'no function occurs in multiple categories');
   assert.deepEqual([...grouped].sort(), plain(nav.navigation.map(item => item.key).sort()));
+  const permissions = load('src/lib/utils/permissions.ts');
+  for (const role of Object.keys(permissions.SIDEBAR_MENU)) {
+    assert.deepEqual(plain(nav.menuFor(role).map(item => item.key).sort()), plain([...permissions.SIDEBAR_MENU[role]].sort()), `${role} retains every permitted destination after regrouping`);
+  }
+  assert.equal(nav.navGroups.length, 7, 'Overview and six categories');
+  assert.equal(nav.navGroups.find(group => group.label === 'การจองโต๊ะ').keys.includes('reservations_tables_archive'), true);
   assert.equal(nav.menuFor('Superadmin').some(item => item.key === 'frontend_editor'), true);
   for (const role of ['Superadmin', 'Admin', 'Finance']) assert.equal(nav.menuFor(role).some(item => item.key === 'refunds'), true);
   for (const role of ['Vinai', 'Tadtel', 'User', undefined]) assert.equal(nav.menuFor(role).some(item => item.key === 'refunds'), false);

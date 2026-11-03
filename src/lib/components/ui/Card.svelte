@@ -19,7 +19,7 @@
 </script>
 
 <div
-  class="rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-700/60 dark:bg-slate-900 {interactive
+  class="workspace-card rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-700/60 dark:bg-slate-900 {interactive
     ? 'transition-shadow duration-200 ease-out hover:shadow-md'
     : ''}"
 >
@@ -27,10 +27,10 @@
     <div class="flex items-center justify-between gap-3 border-b border-slate-200/80 px-6 py-4 dark:border-slate-700/60">
       <div>
         {#if title}
-          <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+          <h2 class="text-sm font-medium text-slate-900 dark:text-slate-100">{title}</h2>
         {/if}
         {#if subtitle}
-          <p class="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>
+          <p class="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{subtitle}</p>
         {/if}
       </div>
       {#if actions}

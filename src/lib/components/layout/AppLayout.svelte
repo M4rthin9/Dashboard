@@ -19,8 +19,9 @@
   <div class="flex min-w-0 flex-1 flex-col">
     <Topbar />
     <main class="flex-1">
-      <div class="mx-auto w-full max-w-[1600px] px-4 py-6 pb-28 lg:px-8 lg:py-8 lg:pb-12">
+      <div class="workspace-content mx-auto w-full max-w-[1480px] px-4 py-6 pb-28 lg:px-8 lg:py-7 lg:pb-12">
         {@render children()}
+        <footer class="mt-8 flex flex-wrap justify-between gap-2 border-t border-slate-200 pt-4 text-[10px] text-slate-500 dark:border-slate-800"><span>ทัณฑสถานบำบัดพิเศษกลาง · กรมราชทัณฑ์</span><span>ระบบบริหารการจองและการเข้าเยี่ยม</span></footer>
       </div>
     </main>
   </div>

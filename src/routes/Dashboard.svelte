@@ -52,13 +52,13 @@
   const oldestVisit = $derived(selectedQueue?.rows[0]?.visitDateISO);
 
   const metrics = $derived([
-    { key: 'bookings', label: 'การจองที่ยังมีผล', value: summary.bookings, previous: baseline.bookings, money: false, note: `${formatNumber(summary.visitors)} ผู้เยี่ยมที่ลงทะเบียน`, icon: CalendarDays, tone: 'crimson' },
+    { key: 'bookings', label: 'การจองที่ยังมีผล', value: summary.bookings, previous: baseline.bookings, money: false, note: `${formatNumber(summary.visitors)} ผู้เยี่ยมที่ลงทะเบียน`, icon: CalendarDays, tone: 'navy' },
     { key: 'paid', label: 'มูลค่าการจองที่ชำระแล้ว', value: summary.paid, previous: baseline.paid, money: true, note: 'สถานะ ชำระแล้ว / เสร็จสิ้น', icon: Coins, tone: 'emerald' },
     { key: 'pending', label: 'มูลค่าการจองรอชำระ', value: summary.pending, previous: baseline.pending, money: true, note: 'เฉพาะสถานะ รอชำระเงิน', icon: Wallet, tone: 'gold' },
     { key: 'completed', label: 'ดำเนินการเสร็จสิ้น', value: summary.completed, previous: baseline.completed, money: false, note: 'ยืนยันเสร็จสิ้นในระบบ', icon: CheckCircle2, tone: 'slate' },
   ]);
   const textColor = $derived(ui.darkMode ? '#cbd5e1' : '#64748b');
-  const gridColor = $derived(ui.darkMode ? '#293446' : '#ece9e4');
+  const gridColor = $derived(ui.darkMode ? '#293446' : '#dce2e8');
   const barBase = $derived<EChartsOption>({
     animationDuration: 250,
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
@@ -68,7 +68,7 @@
     yAxis: { type: 'value', minInterval: 1, axisLabel: { color: textColor, fontSize: 10 }, splitLine: { lineStyle: { color: gridColor, type: 'dashed' } } },
   });
   const bookingOption = $derived<EChartsOption>({ ...barBase, series: [
-    { name: 'เยี่ยมผู้ต้องขัง', type: 'bar', stack: 'bookings', barMaxWidth: 22, data: daily.map(point => point.prisoner), itemStyle: { color: ui.darkMode ? '#df8984' : '#a92928' } },
+    { name: 'เยี่ยมผู้ต้องขัง', type: 'bar', stack: 'bookings', barMaxWidth: 22, data: daily.map(point => point.prisoner), itemStyle: { color: ui.darkMode ? '#8bafce' : '#0b1f33' } },
     { name: 'จองโต๊ะ (TBL)', type: 'bar', stack: 'bookings', barMaxWidth: 22, data: daily.map(point => point.table), itemStyle: { color: '#d3ac60', borderRadius: [3, 3, 0, 0] } },
   ] });
   const moneyOption = $derived<EChartsOption>({ ...barBase, tooltip: { trigger: 'axis', valueFormatter: value => formatBaht(value) }, series: [
@@ -80,13 +80,13 @@
   const visitorTypes = $derived(computeVisitorTypes(current));
   const ageRows = $derived([{ label: 'ผู้ใหญ่', value: visitorTypes.adult }, { label: 'เด็ก 5–8 ปี', value: visitorTypes.child5to8 }, { label: 'เด็กต่ำกว่า 5 ปี', value: visitorTypes.childUnder5 }]);
   const monthly = $derived(computeMonthlyRevenue(scope.filter(row => pool === 'all' || bookingPool(row) === pool), 6));
-  function horizontal(labels: string[], values: number[], colors: string[] = ['#a92928']): EChartsOption {
+  function horizontal(labels: string[], values: number[], colors: string[] = ['#0b1f33']): EChartsOption {
     return { tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } }, grid: { left: 8, right: 30, top: 10, bottom: 10, containLabel: true }, xAxis: { type: 'value', minInterval: 1, axisLabel: { color: textColor }, splitLine: { lineStyle: { color: gridColor, type: 'dashed' } } }, yAxis: { type: 'category', inverse: true, data: labels, axisTick: { show: false }, axisLine: { show: false }, axisLabel: { color: textColor, fontSize: 11, width: 140, overflow: 'truncate' } }, series: [{ type: 'bar', barMaxWidth: 18, label: { show: true, position: 'right', color: textColor }, data: values.map((value, i) => ({ value, itemStyle: { color: colors[i % colors.length], borderRadius: [0, 4, 4, 0] } })) }] };
   }
   const statusOption = $derived(horizontal(states.map(([label]) => label), states.map(([, value]) => value), states.map(([label]) => STATUS_COLORS[label] ?? '#94a3b8')));
-  const wingOption = $derived(horizontal(wings.map(point => point.wing), wings.map(point => point.count), ['#b97872']));
+  const wingOption = $derived(horizontal(wings.map(point => point.wing), wings.map(point => point.count), [ui.darkMode ? '#8bafce' : '#365773']));
   const ageOption = $derived(horizontal(ageRows.map(point => point.label), ageRows.map(point => point.value), ['#238a75', '#d3ac60', '#8094a9']));
-  const monthlyOption = $derived<EChartsOption>({ ...barBase, legend: { show: false }, xAxis: { type: 'category', data: monthly.map(point => point.label), axisTick: { show: false }, axisLine: { show: false }, axisLabel: { color: textColor } }, tooltip: { trigger: 'axis', valueFormatter: value => formatBaht(value) }, series: [{ name: 'มูลค่าการจอง', type: 'bar', barMaxWidth: 30, data: monthly.map(point => point.revenue), itemStyle: { color: '#b97872', borderRadius: [4, 4, 0, 0] } }] });
+  const monthlyOption = $derived<EChartsOption>({ ...barBase, legend: { show: false }, xAxis: { type: 'category', data: monthly.map(point => point.label), axisTick: { show: false }, axisLine: { show: false }, axisLabel: { color: textColor } }, tooltip: { trigger: 'axis', valueFormatter: value => formatBaht(value) }, series: [{ name: 'มูลค่าการจอง', type: 'bar', barMaxWidth: 30, data: monthly.map(point => point.revenue), itemStyle: { color: ui.darkMode ? '#8bafce' : '#365773', borderRadius: [4, 4, 0, 0] } }] });
 
   onMount(() => {
     void reservations.load().catch(() => {});
@@ -121,21 +121,20 @@
 
 <div class="management-dashboard flex flex-col gap-6">
   <div class="flex flex-wrap items-start justify-between gap-4">
-    <div><p class="mb-2 text-[10px] font-semibold tracking-[0.18em] text-blue-700 dark:text-blue-300">C&C CAFÉ / MANAGEMENT</p><h2 class="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl dark:text-white">ภาพรวมการดำเนินงาน</h2><p class="mt-2 text-sm text-slate-500">ข้อมูลเพื่อวางแผน และงานที่พร้อมให้คุณดำเนินการ</p></div>
+    <div><p class="mb-2 text-[11px] text-slate-500">ภาพรวม · {visitDateLabel(today)}</p><h2 class="text-2xl font-medium tracking-tight text-slate-900 sm:text-[28px] dark:text-white">ภาพรวมการดำเนินงาน</h2><p class="mt-2 text-xs text-slate-500">ติดตามการจอง งานที่ต้องดำเนินการ และสถิติการให้บริการ · {roleLabel(role)}</p></div>
     <button class="quick-link" disabled={reservations.loading} onclick={() => void refresh()}><RefreshCw class="h-4 w-4 {reservations.loading ? 'animate-spin' : ''}" />อัปเดตข้อมูล</button>
   </div>
 
-  <div class="dashboard-hero relative overflow-hidden rounded-2xl p-5 text-white sm:p-6">
-    <div class="relative z-10 flex flex-wrap items-center justify-between gap-6">
-      <div><p class="text-xs text-white/65">{visitDateLabel(today)} · {roleLabel(role)}</p><h3 class="mt-2 text-xl font-medium">สวัสดี, {auth.displayName}</h3><p class="mt-1 text-xs text-white/65">{role === 'Superadmin' || role === 'Admin' || role === 'User' ? 'ภาพรวมข้อมูลที่โหลดจากระบบ' : 'เฉพาะข้อมูลตามขอบเขตบทบาทของคุณ'}</p></div>
-      <div class="flex flex-wrap gap-6 sm:gap-10"><div><p class="text-[11px] text-white/65">การจองที่ยังมีผลวันนี้</p><p class="mt-1 text-3xl font-semibold tabular-nums">{reservations.loadedAt == null && !scope.length ? '—' : formatNumber(todaysVisits.length)}</p></div><div><p class="text-[11px] text-white/65">งานในคิวของคุณ</p><p class="mt-1 text-3xl font-semibold tabular-nums text-amber-200">{reservations.loadedAt == null && !scope.length ? '—' : formatNumber(outstanding)}</p></div><div><p class="text-[11px] text-white/65">การจองใน 7 วันข้างหน้า</p><p class="mt-1 text-3xl font-semibold tabular-nums">{reservations.loadedAt == null && !scope.length ? '—' : formatNumber(upcoming.length)}</p></div></div>
-    </div>
-  </div>
+  <section class="daily-summary" aria-label="สรุปงานปัจจุบัน">
+    <div><p>การจองที่ยังมีผลวันนี้</p><strong>{reservations.loadedAt == null && !scope.length ? '—' : formatNumber(todaysVisits.length)}</strong><span>รายการ</span></div>
+    <div><p>งานในคิวของคุณ</p><strong>{reservations.loadedAt == null && !scope.length ? '—' : formatNumber(outstanding)}</strong><span>รายการ</span></div>
+    <div><p>การจองใน 7 วันข้างหน้า</p><strong>{reservations.loadedAt == null && !scope.length ? '—' : formatNumber(upcoming.length)}</strong><span>รายการ</span></div>
+  </section>
 
   <div class="flex flex-wrap items-center justify-between gap-3">
-    <nav class="dashboard-tabs flex max-w-full gap-1 overflow-x-auto rounded-xl p-1" aria-label="มุมมองแดชบอร์ด">
+    <nav class="dashboard-tabs flex max-w-full gap-4 overflow-x-auto" aria-label="มุมมองแดชบอร์ด">
       {#each [{ key: 'overview' as const, label: 'ภาพรวมและคิวงาน' }, { key: 'analytics' as const, label: 'วิเคราะห์ข้อมูล' }, ...(canViewDetail ? [{ key: 'schedule' as const, label: 'การจองรายวัน' }] : [])] as tab (tab.key)}
-        <button class="whitespace-nowrap rounded-lg px-4 py-2 text-xs font-medium {view === tab.key ? 'bg-white text-blue-800 shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 dark:text-slate-400'}" aria-pressed={view === tab.key} onclick={() => view = tab.key}>{tab.label}</button>
+        <button class="dashboard-tab whitespace-nowrap px-1 py-3 text-xs {view === tab.key ? 'active font-medium text-blue-800 dark:text-blue-200' : 'text-slate-500 dark:text-slate-400'}" aria-pressed={view === tab.key} onclick={() => view = tab.key}>{tab.label}</button>
       {/each}
     </nav>
     <p class="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400" aria-live="polite"><span class="h-1.5 w-1.5 rounded-full {reservations.error || !liveSync.connected ? 'bg-amber-500' : reservations.loadedAt ? 'bg-emerald-500' : 'bg-slate-400'}"></span>{reservations.loading ? 'กำลังอัปเดต...' : !liveSync.connected ? 'กำลังเชื่อมต่อใหม่ · ข้อมูลอาจยังไม่อัปเดต' : reservations.loadedAt ? `ข้อมูลล่าสุด ${new Date(reservations.loadedAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'รอโหลดข้อมูล'}</p>
@@ -148,9 +147,9 @@
       <FloorPlan rows={scope} ondetail={row => detailRow = row} />
     {:else}
       {#if view === 'overview'}
-        <div class="flex flex-wrap items-end justify-between gap-3"><div><p class="text-[10px] font-semibold tracking-widest text-blue-700 dark:text-blue-300">DAILY OPERATIONS</p><h3 class="mt-1 text-lg font-semibold text-slate-900 dark:text-white">คิวงานของคุณ</h3><p class="mt-1 text-xs text-slate-500">ข้อมูลปัจจุบันตามสิทธิ์ของคุณ · เรียงวันใช้บริการใกล้สุดก่อน · ไม่ใช้ตัวกรองสถิติด้านล่าง</p></div><div class="flex flex-wrap gap-3">{#if allowedMenus.includes('reservations')}<a href="#/reservations" class="quick-link">จัดการ VIS <ArrowUpRight class="h-3.5 w-3.5" /></a>{/if}{#if allowedMenus.includes('reservations_tables')}<a href="#/reservations/tables" class="quick-link">จัดการ TBL <ArrowUpRight class="h-3.5 w-3.5" /></a>{/if}</div></div>
+        <div class="flex flex-wrap items-end justify-between gap-3"><div><h3 class="text-lg font-medium text-slate-900 dark:text-white">งานประจำวัน</h3><p class="mt-1 text-xs text-slate-500">ข้อมูลปัจจุบันตามสิทธิ์ของคุณ · เรียงวันใช้บริการใกล้สุดก่อน · ไม่ใช้ตัวกรองสถิติด้านล่าง</p></div><div class="flex flex-wrap gap-3">{#if allowedMenus.includes('reservations')}<a href="#/reservations" class="quick-link">จัดการ VIS <ArrowUpRight class="h-3.5 w-3.5" /></a>{/if}{#if allowedMenus.includes('reservations_tables')}<a href="#/reservations/tables" class="quick-link">จัดการ TBL <ArrowUpRight class="h-3.5 w-3.5" /></a>{/if}</div></div>
         {#if queues.length}
-          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{#each queues as queue (queue.status)}<button class="work-queue-card {selectedQueue?.status === queue.status ? 'active' : ''}" aria-pressed={selectedQueue?.status === queue.status} onclick={() => queueStatus = queue.status}><span class="flex items-center justify-between gap-2 text-xs"><span>{queue.label}</span><ArrowRight class="h-3.5 w-3.5" /></span><span class="mt-3 block text-2xl font-semibold tabular-nums">{formatNumber(queue.rows.length)}</span><span class="mt-1 block text-[11px] opacity-65">{queue.action}</span></button>{/each}</div>
+          <div class="work-queue-controls" aria-label="ประเภทคิวงาน">{#each queues as queue (queue.status)}<button class="work-queue-card {selectedQueue?.status === queue.status ? 'active' : ''}" aria-pressed={selectedQueue?.status === queue.status} title={queue.action} onclick={() => queueStatus = queue.status}><span>{queue.label}</span><span class="queue-count tabular-nums">{formatNumber(queue.rows.length)}</span></button>{/each}</div>
         {/if}
         <div class="grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
           <Card title={selectedQueue?.label ?? 'ข้อมูลสำหรับบทบาทของคุณ'} subtitle={selectedQueue ? `${formatNumber(selectedQueue.rows.length)} รายการ · ${oldestVisit ? `วันใช้บริการแรก ${visitDateLabel(oldestVisit)}` : 'ไม่มีรายการค้างในคิวนี้'}` : 'บทบาทนี้ไม่มีงานอนุมัติในแดชบอร์ด'} padding={false}>
@@ -166,7 +165,8 @@
         </div>
       {/if}
 
-      <section class="rounded-2xl border border-slate-200/80 bg-white p-4 dark:border-slate-700 dark:bg-slate-900" aria-label="ตัวกรองสถิติ">
+      <div class="statistics-heading border-t border-slate-200 pt-6 dark:border-slate-700"><h3 class="text-lg font-medium text-slate-900 dark:text-white">สถิติและแนวโน้ม</h3><p class="mt-1 text-xs text-slate-500">ภาพรวมตามวันเข้าเยี่ยม / ใช้บริการในช่วงที่เลือก</p></div>
+      <section class="dashboard-filters rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900" aria-label="ตัวกรองสถิติ">
         <div class="flex flex-wrap items-end gap-3"><div><label for="dashboard-from" class="mb-1.5 block text-[11px] text-slate-500">วันเข้าเยี่ยม / ใช้บริการ ตั้งแต่</label><input id="dashboard-from" type="date" bind:value={from} class="management-input" /></div><div><label for="dashboard-to" class="mb-1.5 block text-[11px] text-slate-500">ถึงวันที่</label><input id="dashboard-to" type="date" bind:value={to} class="management-input" /></div><div><label for="dashboard-pool" class="mb-1.5 block text-[11px] text-slate-500">ประเภทการจอง</label><select id="dashboard-pool" bind:value={pool} class="management-input"><option value="all">ทุกประเภท</option><option value="prisoner">เยี่ยมผู้ต้องขัง (VIS)</option><option value="table">จองโต๊ะ (TBL)</option></select></div><div class="ml-auto flex gap-1">{#each [7, 14, 30, 90] as length (length)}<button class="rounded-lg border px-2.5 py-2 text-xs {days === length && to === today ? 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300' : 'border-slate-200 text-slate-500 dark:border-slate-700'}" onclick={() => preset(length)}>{length} วัน</button>{/each}</div></div>
         <p class="mt-3 text-[11px] leading-relaxed text-slate-400">สถิติอิงวันที่เข้าเยี่ยม / ใช้บริการ ไม่ใช่วันที่โอนเงิน · {reservations.includeArchive ? 'รวมข้อมูลย้อนหลังที่เก็บถาวร' : 'กำลังดูเฉพาะข้อมูลปัจจุบัน'}{#if !reservations.includeArchive}<button class="ml-2 text-blue-700 underline dark:text-blue-300" onclick={() => { void reservations.toggleArchive().catch(() => {}); }}>รวมข้อมูลย้อนหลัง</button>{/if}</p>
       </section>

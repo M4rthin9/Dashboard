@@ -37,14 +37,14 @@
   }}
 />
 
-<header class="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-white/85 dark:border-slate-700/60 dark:bg-slate-900/95 dark:supports-[backdrop-filter]:bg-slate-900/85 lg:h-16 lg:px-6">
+<header class="workspace-topbar sticky top-0 z-30 flex h-[68px] shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 dark:border-slate-700 dark:bg-slate-900 lg:h-[72px] lg:px-8">
   <div class="flex min-w-0 items-center gap-3">
-    <img src="/cida-logo.png" alt="CCC" class="h-8 w-8 shrink-0 rounded-lg object-contain lg:hidden" />
-    <h1 class="truncate text-base font-semibold text-slate-900 dark:text-slate-100">{route?.title ?? ''}</h1>
+    <img src="/login-mark.webp" alt="ตราทัณฑสถานบำบัดพิเศษกลาง" class="h-9 w-9 shrink-0 object-contain lg:hidden" />
+    <div class="min-w-0"><h1 class="truncate text-xs font-medium text-slate-900 sm:text-sm dark:text-slate-100"><span class="hidden sm:inline">ระบบบริหารการจองและการเข้าเยี่ยม</span><span class="sm:hidden">ระบบบริหารการจอง</span></h1><p class="mt-1 truncate text-[10px] text-slate-500"><span class="hidden lg:inline">{route?.title ?? ''} · </span>ทัณฑสถานบำบัดพิเศษกลาง</p></div>
   </div>
 
   <div class="flex items-center gap-1.5">
-    <div class="relative mr-2 hidden sm:block">
+    <div class="relative mr-2 hidden xl:block">
       <div class="relative z-20 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 dark:border-slate-700 dark:bg-slate-800">
         <Search class="h-4 w-4 shrink-0 text-slate-400" />
         <input aria-label="ค้นหาเมนู" placeholder="ค้นหาเมนู..." class="w-28 bg-transparent py-2 text-xs text-slate-700 outline-none focus:w-36 lg:w-44 dark:text-slate-200" bind:value={search} onfocus={() => searchOpen = true} onkeydown={(e) => { if (e.key === 'Enter' && results[0]) { navigate(results[0].path); searchOpen = false; search = ''; } }} />
@@ -61,7 +61,7 @@
         </div>
       {/if}
     </div>
-    <div class="hidden items-center gap-3 sm:flex">
+    <div class="hidden items-center gap-3 md:flex">
       <span
         class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium {online
           ? 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300'

@@ -19,19 +19,20 @@ export const navigation: NavItem[] = [
   { key: 'users', path: '/users', label: 'ผู้ใช้งาน', description: 'บัญชีและสิทธิ์การใช้งาน', icon: Users },
   { key: 'eventlog', path: '/eventlog', label: 'บันทึกเหตุการณ์', description: 'ติดตามกิจกรรมในระบบ', icon: ClipboardList },
   { key: 'connection', path: '/connection', label: 'การเชื่อมต่อ', description: 'ตรวจสอบบริการที่เชื่อมต่อ', icon: Link2 },
-  { key: 'frontend_editor', path: '/frontend-editor', label: 'Frontend Editor', description: 'ข้อความทุกหน้า โปรโมชั่น รูปภาพ และประกาศ', icon: PanelsTopLeft },
+  { key: 'frontend_editor', path: '/frontend-editor', label: 'เนื้อหาเว็บไซต์', description: 'ข้อความทุกหน้า โปรโมชั่น รูปภาพ และประกาศ', icon: PanelsTopLeft },
   { key: 'booking_settings', path: '/booking-settings', label: 'การเปิดรับจองและปฏิทิน', description: 'เปิด/ปิดการจอง นับถอยหลัง และกำหนดวันที่', icon: CalendarClock },
   { key: 'payment_settings', path: '/payment-settings', label: 'การรับชำระเงิน', description: 'เปิด/ปิดการรับเงินและข้อความแจ้งผู้จอง', icon: CreditCard },
   { key: 'privacy_settings', path: '/privacy-settings', label: 'คุกกี้และ PDPA', description: 'นโยบายความเป็นส่วนตัวและข้อมูลความยินยอม', icon: ShieldCheck },
   { key: 'settings', path: '/settings', label: 'ตั้งค่าระบบ', description: 'ธีม การดูแลคลังข้อมูล และการตั้งค่าขั้นสูง', icon: Settings },
 ];
 export const navGroups = [
-  { label: 'ภาพรวม', keys: ['home'] },
-  { label: 'การจองและผู้ต้องขัง', keys: ['reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'attendance', 'prisoners', 'booking_settings'] },
-  { label: 'รายงาน', keys: ['reports', 'reports_overall', 'reports_tables'] },
-  { label: 'การชำระเงิน', keys: ['refunds', 'promptpay', 'payment_settings'] },
-  { label: 'เว็บไซต์และการสื่อสาร', keys: ['frontend_editor', 'notifications'] },
-  { label: 'ดูแลระบบ', keys: ['users', 'eventlog', 'connection', 'privacy_settings', 'settings'] },
+  { label: 'ภาพรวม', icon: LayoutDashboard, keys: ['home'] },
+  { label: 'งานเยี่ยมและลงทะเบียน', icon: ClipboardList, keys: ['reservations', 'reservations_archive', 'attendance', 'prisoners'] },
+  { label: 'การจองโต๊ะ', icon: Utensils, keys: ['reservations_tables', 'reservations_tables_archive'] },
+  { label: 'การเงิน', icon: Wallet, keys: ['refunds', 'promptpay', 'payment_settings'] },
+  { label: 'รายงาน', icon: BarChart3, keys: ['reports', 'reports_overall', 'reports_tables'] },
+  { label: 'เว็บไซต์และการสื่อสาร', icon: PanelsTopLeft, keys: ['frontend_editor', 'notifications'] },
+  { label: 'การบริหารระบบ', icon: Settings, keys: ['users', 'eventlog', 'connection', 'booking_settings', 'privacy_settings', 'settings'] },
 ];
 export function menuFor(role: string | undefined): NavItem[] {
   const allowed = visibleMenu(role);
