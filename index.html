@@ -7,7 +7,9 @@
     <meta name="description" content="CCC Dashboard - ระบบจัดการการจองเยี่ยม" />
     <title>CCC Dashboard</title>
     <script>
-      if (localStorage.getItem('ccc_dark_mode') === '1') {
+      const savedTheme = localStorage.getItem('ccc_dark_mode');
+      const workspaceRoute = location.hash.length > 0 && !/^#\/(login|registration)(?:[/?]|$)/.test(location.hash);
+      if (savedTheme === '1' || (savedTheme === null && workspaceRoute)) {
         document.documentElement.classList.add('dark');
       }
     </script>

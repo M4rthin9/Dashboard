@@ -23,7 +23,7 @@
   });
 
   $effect(() => {
-    chart?.setOption({ ...option, aria: { enabled: true } }, { notMerge: true, lazyUpdate: true });
+    chart?.setOption({ ...option, backgroundColor: 'transparent', aria: { enabled: true } }, { notMerge: true, lazyUpdate: true });
   });
 </script>
 

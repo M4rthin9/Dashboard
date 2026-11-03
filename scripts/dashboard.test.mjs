@@ -23,6 +23,46 @@ function loader(mocks = {}, globals = {}) {
   return load;
 }
 const load = loader();
+
+test('workspace defaults to dark, preserves saved preferences and keeps standalone pages opt-in', () => {
+  const storage = new Map();
+  const applied = [];
+  const store = loader({}, {
+    $state: value => value,
+    localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) },
+    document: { documentElement: { classList: { toggle: (name, enabled) => applied.push([name, enabled]) } } },
+  })('src/lib/store/ui.svelte.ts').ui;
+  store.initDarkMode(true);
+  assert.equal(store.darkMode, true);
+  assert.equal(storage.size, 0, 'default theme does not overwrite a saved preference');
+  store.initDarkMode();
+  assert.equal(store.darkMode, false, 'standalone login and registration retain their default');
+  storage.set('ccc_dark_mode', '0');
+  store.initDarkMode(true);
+  assert.equal(store.darkMode, false);
+  store.toggleDarkMode();
+  assert.equal(storage.get('ccc_dark_mode'), '1');
+  store.initDarkMode(false);
+  assert.equal(store.darkMode, true);
+  assert.deepEqual(applied.at(-1), ['dark', true]);
+});
+
+test('both workspace themes keep text, selected controls and form boundaries distinguishable', () => {
+  const css = fs.readFileSync('src/app.css', 'utf8');
+  const variables = block => Object.fromEntries([...block.matchAll(/--workspace-([a-z-]+):\s*(#[0-9a-f]{6})/gi)].map(([, key, value]) => [key, value]));
+  const light = variables(css.match(/\n\.workspace-shell\s*\{([^}]+)\}/)[1]);
+  const dark = { ...light, ...variables(css.match(/\n\.dark \.workspace-shell\s*\{([^}]+)\}/)[1]) };
+  const luminance = hex => hex.slice(1).match(/../g).map(channel => parseInt(channel, 16) / 255).map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4).reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0);
+  const ratio = (first, second) => (Math.max(luminance(first), luminance(second)) + 0.05) / (Math.min(luminance(first), luminance(second)) + 0.05);
+  for (const [mode, colors] of Object.entries({ light, dark })) {
+    for (const [foreground, background, minimum] of [['ink', 'panel', 7], ['muted', 'panel', 4.5], ['accent', 'panel', 4.5], ['action-text', 'action', 4.5], ['selected-text', 'selected', 4.5], ['input-border', 'panel', 3]]) {
+      const measured = ratio(colors[foreground], colors[background]);
+      assert.ok(measured >= minimum, `${mode}: ${foreground}/${background} is ${measured.toFixed(2)}:1; expected ${minimum}:1`);
+    }
+    assert.ok(ratio(colors.selected, '#131b29') >= 3, `${mode}: selected menu separates from the charcoal sidebar`);
+  }
+});
+
 const refunds = load('src/lib/utils/refundEvidence.ts');
 const refundReports = load('src/lib/utils/refundReport.ts');
 test('refund report uses only selected evidence, preserves partial amounts and separates requested from completed', () => {

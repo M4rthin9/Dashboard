@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { untrack } from 'svelte';
   import AppLayout from './lib/components/layout/AppLayout.svelte';
   import DevBanner from './lib/components/layout/DevBanner.svelte';
   import LazyRoute from './lib/components/LazyRoute.svelte';
@@ -13,8 +13,9 @@
 
   const route = $derived(resolveRoute());
 
-  onMount(() => {
-    ui.initDarkMode();
+  $effect(() => {
+    const isWorkspace = route.path !== '/login' && route.path !== '/registration';
+    untrack(() => ui.initDarkMode(isWorkspace));
   });
 
   // Poll the backend change counters while signed in and refetch only the slice

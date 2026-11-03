@@ -80,7 +80,9 @@
     <button
       class="rounded-xl p-2 text-slate-500 transition-colors duration-150 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
       onclick={() => ui.toggleDarkMode()}
-      aria-label="สลับโหมดมืด"
+      aria-label={ui.darkMode ? 'ใช้ธีมสว่าง' : 'ใช้ธีมมืด'}
+      aria-pressed={ui.darkMode}
+      title={ui.darkMode ? 'ใช้ธีมสว่าง' : 'ใช้ธีมมืด'}
     >
       {#if ui.darkMode}
         <Sun class="h-5 w-5" />

@@ -19,7 +19,7 @@
 
 <svelte:window onkeydown={(event) => { if (event.key === 'Escape') moreOpen = false; }} />
 
-<div class="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white lg:hidden dark:border-slate-700 dark:bg-slate-900" style="padding-bottom: env(safe-area-inset-bottom)">
+<div class="workspace-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white lg:hidden dark:border-slate-700 dark:bg-slate-900" style="padding-bottom: env(safe-area-inset-bottom)">
   <nav class="mx-auto flex h-16 max-w-lg items-stretch" aria-label="เมนูหลักบนมือถือ">
     {#each primary as item (item.path)}
       {@const Icon = item.icon}
@@ -27,7 +27,7 @@
       <a href="#{item.path}" class="relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 {isActive ? 'text-blue-800 dark:text-blue-200' : 'text-slate-500 dark:text-slate-400'}" aria-label={item.label} aria-current={isActive ? 'page' : undefined}>
         <Icon class="h-5 w-5" />
         <span class="max-w-full truncate text-[10px]">{item.label}</span>
-        {#if isActive}<span class="absolute top-0 h-0.5 w-8 bg-[#c6a66b]"></span>{/if}
+        {#if isActive}<span class="mobile-active-indicator absolute top-0 h-0.5 w-8"></span>{/if}
       </a>
     {/each}
     {#if hasMore}

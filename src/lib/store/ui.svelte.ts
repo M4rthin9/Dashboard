@@ -20,9 +20,9 @@ class UIStore {
   alert = $state<AlertBox | null>(null);
   private toastSeq = 0;
 
-  initDarkMode(): void {
+  initDarkMode(defaultDark = false): void {
     const saved = localStorage.getItem('ccc_dark_mode');
-    this.darkMode = saved === '1';
+    this.darkMode = saved === null ? defaultDark : saved === '1';
     this.applyDarkClass();
   }
 

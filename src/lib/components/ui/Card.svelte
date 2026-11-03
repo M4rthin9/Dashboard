@@ -27,7 +27,7 @@
     <div class="flex items-center justify-between gap-3 border-b border-slate-200/80 px-6 py-4 dark:border-slate-700/60">
       <div>
         {#if title}
-          <h2 class="text-sm font-medium text-slate-900 dark:text-slate-100">{title}</h2>
+          <h2 class="text-base font-medium text-slate-900 dark:text-slate-100">{title}</h2>
         {/if}
         {#if subtitle}
           <p class="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{subtitle}</p>
