@@ -335,6 +335,25 @@ test('approval writes wait for the server status and count each pending team sep
   assert.equal(store.daySummary(row.visitDateISO).pendingParticipant, 1);
   assert.equal(store.daySummary(row.visitDateISO).pendingDiscipline, 0);
 });
+
+test('the last individual visitor decision applies the server participant and payment status', async () => {
+  let finish;
+  const store = loader({
+    [path.resolve('src/lib/store/auth.svelte.ts')]: { auth: {}, API_BASE: 'test-api' },
+    [path.resolve('src/lib/store/liveSync.svelte.ts')]: { liveSync: { poke() {} } },
+    [path.resolve('src/lib/api/endpoints.ts')]: { updateVisitorApproval() { return new Promise(resolve => finish = resolve); } },
+  }, { $state: value => value, localStorage: { removeItem() {} } })('src/lib/store/reservations.svelte.ts').reservations;
+  const row = booking({ ref: 'VIS-returning', status: 'รอตรวจสอบผู้เข้าร่วม', visitorApproved: 'yes', extraVisitorApproved: '', participantApproved: '', disciplineApproved: 'yes' });
+  store.rows = [row];
+  const save = store.updateVisitorApproval(row.ref, undefined, 'yes');
+  assert.equal(row.status, 'รอตรวจสอบผู้เข้าร่วม');
+  finish({ status: 'ok', newStatus: 'รอชำระเงิน', participantApproved: 'yes', disciplineApproved: 'yes', total: 3000, visitorCount: 2 });
+  await save;
+  assert.equal(row.status, 'รอชำระเงิน');
+  assert.equal(row.participantApproved, 'yes');
+  assert.equal(row.total, 3000);
+  assert.equal(store.daySummary(row.visitDateISO).pendingParticipant, 0);
+});
 test('account changes clear rows and discard a previous account response; cached loads release inFlight', async () => {
   const auth = { isAuthenticated: true, user: { username: 'first', role: 'Admin' } };
   let resolveFirst;

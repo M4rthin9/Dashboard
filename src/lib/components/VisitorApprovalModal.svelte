@@ -295,7 +295,7 @@
 
       <div class="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
         <Info class="mt-0.5 h-4 w-4 shrink-0" />
-        <span>การปฏิเสธผู้เยี่ยมหลักจะทำให้การจองถูกปฏิเสธโดยอัตโนมัติ</span>
+        <span>คนเดิมที่เคยได้รับอนุมัติให้เยี่ยมผู้ต้องขังคนเดิมจะผ่านอัตโนมัติ ส่วนคนใหม่ต้องรอตรวจสอบ เมื่อพิจารณาครบทุกคนแล้วระบบจะผ่านขั้นตอนผู้เข้าร่วมให้<br />การปฏิเสธผู้เยี่ยมหลักจะทำให้การจองถูกปฏิเสธโดยอัตโนมัติ</span>
       </div>
 
     </div>

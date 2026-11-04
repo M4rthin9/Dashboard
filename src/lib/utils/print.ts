@@ -1,4 +1,4 @@
-import { formatNumber, visitDateLabel, parseExtraVisitors, computeDeptReportData, prisonersOf, normalizeStatus, STATUS_COLORS } from './format';
+import { formatNumber, visitDateLabel, parseExtraVisitors, prisonersOf, normalizeStatus, STATUS_COLORS } from './format';
 import { monthLabel } from './dashboard';
 import { bookingPool } from './management';
 import type { Reservation } from '../api/types';
@@ -420,60 +420,6 @@ export function buildSeatingReport(rows: Reservation[], filterLabel?: string): s
 
   html += `<div class="page-footer">พิมพ์จากระบบ CC Cafe Reservation · ทัณฑสถานบำบัดพิเศษกลาง</div>`;
   return html;
-}
-
-const KITCHEN_TICKET_CSS = `
-  .kt-ticket { border:3px solid #1e1b4b; border-radius:10px; padding:16px 18px; margin-bottom:10px; }
-  .kt-head { text-align:center; border-bottom:2px solid #1e1b4b; padding-bottom:10px; margin-bottom:14px; }
-  .kt-head-title { font-size:20px; font-weight:800; color:#1e1b4b; display:block; }
-  .kt-head-date { font-size:15px; font-weight:600; color:#333; display:block; margin-top:2px; }
-  .kt-summary { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:0; }
-  .kt-box { border:2px solid #1e1b4b; border-radius:8px; text-align:center; padding:12px 4px; }
-  .kt-box .kt-num { font-size:36px; font-weight:900; color:#1e1b4b; line-height:1.1; }
-  .kt-box .kt-label { font-size:13px; font-weight:600; color:#444; margin-top:4px; }
-  .kt-box.kt-highlight { background:#fff8e7; border-color:#d97706; }
-  .kt-box.kt-highlight .kt-num { color:#b45309; font-size:44px; }
-  .kt-box.kt-highlight .kt-label { font-size:14px; }
-  .kt-cut { text-align:center; margin:14px 0; border-top:3px dashed #c62828; padding-top:8px; color:#c62828; font-weight:800; font-size:14px; }
-`;
-
-export function buildKitchenReport(rows: Reservation[], date: string): string {
-  let totalAdults = 0;
-  let totalKids5_8 = 0;
-  let totalKidsUnder5 = 0;
-  rows.forEach((r) => {
-    const d = computeDeptReportData(r);
-    totalAdults += d.adults;
-    totalKids5_8 += d.kids5_8;
-    totalKidsUnder5 += d.kidsUnder5;
-  });
-  // Every prisoner at the table eats as an adult (the main one plus any extras).
-  const prisonerMeals = rows.reduce((n, r) => n + Math.max(1, prisonersOf(r).length), 0);
-  const combinedAdults = totalAdults + prisonerMeals;
-  const totalPeople = combinedAdults + totalKids5_8 + totalKidsUnder5;
-
-  const reportBody = `
-    <div class="tear-off kt-ticket">
-      <div class="kt-head">
-        <span class="kt-head-title">🍽️ ใบสั่งอาหาร — ครัว</span>
-        <span class="kt-head-date">📅 ${escapeHtml(thaiDateLabel(date))}</span>
-      </div>
-      <div class="kt-summary">
-        <div class="kt-box"><div class="kt-num">${combinedAdults}</div><div class="kt-label">ผู้ใหญ่</div></div>
-        <div class="kt-box"><div class="kt-num">${totalKids5_8}</div><div class="kt-label">เด็ก 5-8 ปี</div></div>
-        <div class="kt-box"><div class="kt-num">${totalKidsUnder5}</div><div class="kt-label">เด็กต่ำกว่า 5 ปี</div></div>
-        <div class="kt-box kt-highlight"><div class="kt-num">${totalPeople}</div><div class="kt-label">รวมทั้งหมด</div></div>
-      </div>
-    </div>
-  `;
-
-  return `
-    <style>@page { size: landscape; margin: 10mm; }</style>
-    <style>${KITCHEN_TICKET_CSS}</style>
-    ${reportBody}
-    <div class="tear-off kt-cut">✂️ ตัดตรงนี้ — ส่งเบเกอรี่</div>
-    ${reportBody}
-  `;
 }
 
 /**

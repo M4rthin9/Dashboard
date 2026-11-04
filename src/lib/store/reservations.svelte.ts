@@ -212,6 +212,9 @@ class ReservationsStore {
       if (res.status !== 'ok') throw new ApiError(String(res.message ?? 'เกิดข้อผิดพลาด'));
       if (row && res.visitorCount !== undefined) row.visitorCount = res.visitorCount;
       if (row && res.total !== undefined) row.total = res.total;
+      if (row && res.newStatus !== undefined) row.status = String(res.newStatus);
+      if (row && res.participantApproved !== undefined) row.participantApproved = String(res.participantApproved);
+      if (row && res.disciplineApproved !== undefined) row.disciplineApproved = String(res.disciplineApproved);
       if (visitorApproved?.toLowerCase() === 'no') {
         if (row) row.status = 'ไม่อนุมัติ';
         await this.refresh();
