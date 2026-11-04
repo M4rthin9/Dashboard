@@ -64,6 +64,8 @@ export interface Reservation {
   child5to8Count?: number;
   childUnder5Count?: number;
   status?: string;
+  participantApproved?: string;
+  disciplineApproved?: string;
   slipImage?: string;
   slip_verify_status?: string;
   slip_verify_json?: string;

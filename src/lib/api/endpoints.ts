@@ -120,8 +120,8 @@ export function getBackendUrl(): Promise<ApiResult & { url?: string }> {
   return callAction('getBackendUrl');
 }
 
-export function updateStatus(ref: string, status: string, reason?: string): Promise<ApiResult> {
-  return callAction('updateStatus', { ref, status, ...(reason ? { reason } : {}) }, { auth: true });
+export function updateStatus(ref: string, status: string, reason?: string, approvalStage?: 'participant' | 'discipline'): Promise<ApiResult> {
+  return callAction('updateStatus', { ref, status, ...(reason ? { reason } : {}), ...(approvalStage ? { approvalStage } : {}) }, { auth: true });
 }
 
 export function cancelBooking(ref: string, reason?: string): Promise<ApiResult> {

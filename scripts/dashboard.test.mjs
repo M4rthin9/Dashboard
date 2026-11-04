@@ -291,6 +291,50 @@ test('live queues obey role permissions, exclude archives and expired holds, and
   assert.equal(m.workQueues(rows, 'Superadmin', now).length, 4);
   assert.equal(m.expiredHold(booking({ ref: 'TBL-paid', holdExpiresAt: '2020-01-01' }), now), false);
 });
+
+test('both teams see new bookings immediately and their queues finish independently', () => {
+  const now = new Date('2026-02-28T04:00:00Z');
+  const row = booking({ ref: 'VIS-parallel', status: 'รอตรวจสอบผู้เข้าร่วม', participantApproved: '', disciplineApproved: '' });
+  const queue = role => m.workQueues([row], role, now)[0].rows;
+  assert.equal(queue('Tadtel').length, 1);
+  assert.equal(queue('Vinai').length, 1);
+  row.disciplineApproved = 'yes';
+  assert.equal(queue('Vinai').length, 0);
+  assert.equal(queue('Tadtel').length, 1);
+  row.disciplineApproved = '';
+  row.participantApproved = 'yes';
+  row.status = 'รอตรวจสอบวินัย';
+  assert.equal(queue('Tadtel').length, 0);
+  assert.equal(queue('Vinai').length, 1);
+  row.disciplineApproved = 'yes';
+  row.status = 'รอชำระเงิน';
+  assert.equal(queue('Tadtel').length + queue('Vinai').length, 0);
+  row.status = 'ยกเลิก';
+  assert.equal(m.pendingApproval(row, 'discipline'), false);
+  assert.equal(m.pendingApproval(booking({ bookingType: 'table', status: 'รอตรวจสอบผู้เข้าร่วม' }), 'participant'), false);
+});
+
+test('approval writes wait for the server status and count each pending team separately', async () => {
+  let finish;
+  let sent;
+  const store = loader({
+    [path.resolve('src/lib/store/auth.svelte.ts')]: { auth: {}, API_BASE: 'test-api' },
+    [path.resolve('src/lib/store/liveSync.svelte.ts')]: { liveSync: { poke() {} } },
+    [path.resolve('src/lib/api/endpoints.ts')]: { updateStatus(...args) { sent = args; return new Promise(resolve => finish = resolve); } },
+  }, { $state: value => value, localStorage: { removeItem() {} } })('src/lib/store/reservations.svelte.ts').reservations;
+  const row = booking({ ref: 'VIS-store', status: 'รอตรวจสอบผู้เข้าร่วม', participantApproved: '', disciplineApproved: '' });
+  store.rows = [row];
+  assert.equal(store.daySummary(row.visitDateISO).pendingParticipant, 1);
+  assert.equal(store.daySummary(row.visitDateISO).pendingDiscipline, 1);
+  const write = store.updateStatus(row.ref, 'รอชำระเงิน', undefined, 'discipline');
+  assert.equal(row.status, 'รอตรวจสอบผู้เข้าร่วม', 'one click never opens payment optimistically');
+  assert.deepEqual(sent, [row.ref, 'รอชำระเงิน', undefined, 'discipline']);
+  finish({ status: 'ok', newStatus: 'รอตรวจสอบผู้เข้าร่วม', participantApproved: '', disciplineApproved: 'yes' });
+  assert.equal(await write, 'รอตรวจสอบผู้เข้าร่วม');
+  assert.equal(row.disciplineApproved, 'yes');
+  assert.equal(store.daySummary(row.visitDateISO).pendingParticipant, 1);
+  assert.equal(store.daySummary(row.visitDateISO).pendingDiscipline, 0);
+});
 test('account changes clear rows and discard a previous account response; cached loads release inFlight', async () => {
   const auth = { isAuthenticated: true, user: { username: 'first', role: 'Admin' } };
   let resolveFirst;

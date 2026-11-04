@@ -4,7 +4,10 @@
   import Button from './ui/Button.svelte';
   import Badge from './ui/Badge.svelte';
   import { reservations } from '../store/reservations.svelte';
+  import { auth } from '../store/auth.svelte';
   import { ui } from '../store/ui.svelte';
+  import { hasPermission } from '../utils/permissions';
+  import { pendingApproval } from '../utils/management';
   import { formatBaht, parseExtraVisitors } from '../utils/format';
   import type { Reservation } from '../api/types';
 
@@ -15,6 +18,7 @@
   } = $props();
 
   let busy = $state(false);
+  const needsStageApproval = $derived(!!row && pendingApproval(row, 'participant') && hasPermission(auth.user?.role, 'approve_participant'));
 
   const CHILD_RELATIONS = ['บุตร / ธิดา', 'Child', '子女', 'Son/Daughter'];
   const PRISONER_FEE = 1000;
@@ -120,7 +124,7 @@
       } else {
         ui.showToast(`${row.visitorName} ได้รับอนุมัติแล้ว`, 'success');
         // Check only after the save succeeds; optimistic updates can still fail.
-        if (pendingCount === 0) onclose();
+        if (pendingCount === 0 && !needsStageApproval) onclose();
       }
     } catch (err) {
       ui.showAlert({ title: 'ไม่สามารถอัปเดตการอนุมัติได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
@@ -140,9 +144,23 @@
       // reviewed yet.
       await reservations.updateVisitorApproval(row.ref, undefined, current.join(';;'));
       ui.showToast('บันทึกการอนุมัติผู้เข้าร่วมเรียบร้อย', 'success');
-      if (pendingCount === 0) onclose();
+      if (pendingCount === 0 && !needsStageApproval) onclose();
     } catch (err) {
       ui.showAlert({ title: 'ไม่สามารถอัปเดตการอนุมัติได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function approveParticipants(): Promise<void> {
+    if (!row || busy || !needsStageApproval || pendingCount > 0 || mainApproved !== 'yes') return;
+    busy = true;
+    try {
+      const status = await reservations.updateStatus(row.ref, 'รอตรวจสอบวินัย', undefined, 'participant');
+      ui.showToast(`อนุมัติผู้เข้าร่วมแล้ว · ${status}`, 'success');
+      onclose();
+    } catch (err) {
+      ui.showAlert({ title: 'ไม่สามารถอนุมัติได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
     } finally {
       busy = false;
     }
@@ -283,6 +301,9 @@
     </div>
   {/if}
   {#snippet footer()}
+    {#if needsStageApproval}
+      <Button onclick={approveParticipants} disabled={busy || pendingCount > 0 || mainApproved !== 'yes'}>อนุมัติขั้นตอนผู้เข้าร่วม</Button>
+    {/if}
     <Button variant="outline" onclick={requestClose} disabled={busy}>ปิด</Button>
   {/snippet}
 </Modal>

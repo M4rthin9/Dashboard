@@ -2,6 +2,7 @@ import { getReservationsWithArchive, updateStatus as apiUpdateStatus, cancelBook
 import { ApiError } from '../api/errors';
 import type { Reservation } from '../api/types';
 import { normalizeStatus, STATUS_LABELS } from '../utils/format';
+import { pendingApproval } from '../utils/management';
 import { liveSync } from './liveSync.svelte';
 import { auth, API_BASE } from './auth.svelte';
 
@@ -144,14 +145,21 @@ class ReservationsStore {
     }
   }
 
-  async updateStatus(ref: string, status: string, reason?: string): Promise<void> {
+  async updateStatus(ref: string, status: string, reason?: string, approvalStage?: 'participant' | 'discipline'): Promise<string> {
     const row = this.rows.find((r) => r.ref === ref);
     const old = row ? row.status : undefined;
-    if (row) row.status = status;
+    if (row && !approvalStage) row.status = status;
     try {
-      const res = await apiUpdateStatus(ref, status, reason);
+      const res = await apiUpdateStatus(ref, status, reason, approvalStage);
       if (res.status !== 'ok') throw new ApiError(String(res.message ?? 'เกิดข้อผิดพลาด'));
+      const actualStatus = String(res.newStatus ?? status);
+      if (row) {
+        row.status = actualStatus;
+        if (res.participantApproved !== undefined) row.participantApproved = String(res.participantApproved);
+        if (res.disciplineApproved !== undefined) row.disciplineApproved = String(res.disciplineApproved);
+      }
       this.markDirty();
+      return actualStatus;
     } catch (err) {
       if (row) row.status = old;
       throw err;
@@ -254,8 +262,8 @@ class ReservationsStore {
       const s = normalizeStatus(r.status);
       counts[s] = (counts[s] ?? 0) + 1;
       totalAmount += Number(r.total) || 0;
-      if (s === 'รอตรวจสอบวินัย') pendingDiscipline++;
-      if (s === 'รอตรวจสอบผู้เข้าร่วม') pendingParticipant++;
+      if (pendingApproval(r, 'discipline')) pendingDiscipline++;
+      if (pendingApproval(r, 'participant')) pendingParticipant++;
     }
     return { counts, totalAmount, pendingDiscipline, pendingParticipant };
   }

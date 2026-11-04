@@ -56,12 +56,21 @@ export function visitorCount(row: Reservation): number {
 export function peopleCount(row: Reservation): number {
   return visitorCount(row) + (bookingPool(row) === 'table' ? 0 : prisonersOf(row).length);
 }
+export function approvalComplete(row: Reservation, stage: 'participant' | 'discipline'): boolean {
+  const flag = stage === 'participant' ? row.participantApproved : row.disciplineApproved;
+  if (flag !== undefined) return flag === 'yes';
+  // Compatibility with cached rows from before independent approvals.
+  return ['รอชำระเงิน', 'ชำระแล้ว', 'เสร็จสิ้น', ...(stage === 'participant' ? ['รอตรวจสอบวินัย'] : [])].includes(normalizeStatus(row.status));
+}
+export function pendingApproval(row: Reservation, stage: 'participant' | 'discipline'): boolean {
+  return bookingPool(row) === 'prisoner' && ['รอตรวจสอบผู้เข้าร่วม', 'รอตรวจสอบวินัย'].includes(normalizeStatus(row.status)) && !approvalComplete(row, stage);
+}
 export function scopedReservations(rows: Reservation[], role: string, today: string): Reservation[] {
   return rows.filter(row => {
     if (!String(row.ref ?? '').trim()) return false;
     const s = normalizeStatus(row.status);
     if (role === 'Finance') return ['รอชำระเงิน', 'ชำระแล้ว', 'เสร็จสิ้น', 'ยกเลิก', 'คืนเงินแล้ว'].includes(s);
-    if (role === 'Tadtel') return s === 'รอตรวจสอบผู้เข้าร่วม';
+    if (role === 'Tadtel') return pendingApproval(row, 'participant');
     if (role === 'Vinai' && validDate(String(row.visitDateISO ?? '').trim())) return String(row.visitDateISO).trim() >= today;
     return true;
   });
@@ -125,5 +134,6 @@ export function workQueues(rows: Reservation[], role: string, now = new Date()):
     { status: 'ชำระแล้ว', label: 'รอยืนยันเสร็จสิ้น', action: 'ยืนยันเสร็จสิ้น', permission: 'confirm_payment' },
   ];
   const scoped = scopedReservations(rows, role, businessDate(now));
-  return defs.filter(def => hasPermission(role, def.permission)).map(def => ({ ...def, rows: scoped.filter(row => !row._archived && normalizeStatus(row.status) === def.status && !expiredHold(row, now)).sort(visitOrder) }));
+  return defs.filter(def => hasPermission(role, def.permission)).map(def => ({ ...def, rows: scoped.filter(row => !row._archived &&
+    (def.permission === 'approve_participant' ? pendingApproval(row, 'participant') : def.permission === 'approve_discipline' ? pendingApproval(row, 'discipline') : normalizeStatus(row.status) === def.status) && !expiredHold(row, now)).sort(visitOrder) }));
 }

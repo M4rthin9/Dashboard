@@ -15,7 +15,7 @@
   import { ui } from '../lib/store/ui.svelte';
   import { hasPermission } from '../lib/utils/permissions';
   import { currentQuery, currentPath } from '../lib/router';
-  import { bookingPool, reservationPageScope, reservationHref, reservationViewRows } from '../lib/utils/management';
+  import { bookingPool, pendingApproval, reservationPageScope, reservationHref, reservationViewRows } from '../lib/utils/management';
   import { formatBaht, formatNumber, normalizeStatus, STATUS_COLORS, todayISO, visitDateLabel } from '../lib/utils/format';
   import { exportReservationsCSV } from '../lib/utils/csv';
   import { openPrintWindow, buildSeatingReport, buildPromptPayQrCard } from '../lib/utils/print';
@@ -104,6 +104,7 @@
     return viewRows.filter((r) => {
       if (!r.ref || String(r.ref).trim() === '') return false;
       if (!archiveView && role === 'Vinai' && isExpired(r)) return false;
+      if (!archiveView && role === 'Tadtel' && !pendingApproval(r, 'participant')) return false;
       if (allowed) {
         const s = normalizeStatus(r.status);
         if (!allowed.includes(s)) return false;
@@ -222,12 +223,13 @@
     } catch { /* The store exposes the loading error. */ }
   }
 
-  async function doUpdateStatus(row: Reservation, newStatus: string): Promise<void> {
+  async function doUpdateStatus(row: Reservation, newStatus: string, approvalStage?: 'participant' | 'discipline'): Promise<void> {
     const name = String(row.visitorName ?? row.ref ?? '');
-    if (!window.confirm(`ยืนยันเปลี่ยนสถานะของ "${name}" เป็น "${newStatus}" ?`)) return;
+    const action = approvalStage === 'participant' ? 'อนุมัติผู้เข้าร่วม' : approvalStage === 'discipline' ? 'อนุมัติวินัย' : `เปลี่ยนสถานะเป็น ${newStatus}`;
+    if (!window.confirm(`ยืนยัน${action}ของ "${name}" ?`)) return;
     try {
-      await reservations.updateStatus(row.ref, newStatus);
-      ui.showAlert({ title: 'เปลี่ยนสถานะการจองสำเร็จ', message: `${name} · ${row.ref} → ${newStatus}`, type: 'success' });
+      const actualStatus = await reservations.updateStatus(row.ref, newStatus, undefined, approvalStage);
+      ui.showAlert({ title: `${action}สำเร็จ`, message: `${name} · ${row.ref} → ${actualStatus}`, type: 'success' });
     } catch (err) {
       ui.showAlert({ title: 'ไม่สามารถเปลี่ยนสถานะได้', message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด', type: 'error' });
     }
@@ -376,7 +378,8 @@
   async function runBatch(nextStatus: string): Promise<void> {
     if (!dateFilter || tableView) return;
     const target = normalizeStatus(nextStatus);
-    const batch = filtered.filter((r) => !r._archived && normalizeStatus(r.status) === (target === 'รอตรวจสอบวินัย' ? 'รอตรวจสอบผู้เข้าร่วม' : 'รอตรวจสอบวินัย'));
+    const stage = target === 'รอตรวจสอบวินัย' ? 'participant' : 'discipline';
+    const batch = filtered.filter((r) => !r._archived && pendingApproval(r, stage));
     if (batch.length === 0) return;
     const label = target === 'รอตรวจสอบวินัย' ? 'อนุมัติผู้เข้าร่วม' : 'อนุมัติวินัย';
     if (!window.confirm(`${label}ทั้งหมด ${batch.length} รายการสำหรับวันนี้?`)) return;
@@ -384,7 +387,7 @@
     let success = 0;
     for (const row of batch) {
       try {
-        await reservations.updateStatus(row.ref, target);
+        await reservations.updateStatus(row.ref, target, undefined, stage);
         success++;
       } catch {
         // continue
@@ -536,8 +539,8 @@
 </script>
 
 {#snippet rowActions(row: Reservation, s: string, terminal: boolean, expired: boolean)}
-  {#if !tableView && s === 'รอตรวจสอบผู้เข้าร่วม' && canApproveParticipant}
-    <button class="shrink-0 rounded-xl border border-green-200 bg-white p-1.5 text-green-600 hover:bg-green-50 dark:border-green-900 dark:bg-slate-800 dark:hover:bg-green-950/30" title="อนุมัติผู้เข้าร่วม" onclick={() => doUpdateStatus(row, 'รอตรวจสอบวินัย')}>
+  {#if !tableView && pendingApproval(row, 'participant') && canApproveParticipant}
+    <button class="shrink-0 rounded-xl border border-green-200 bg-white p-1.5 text-green-600 hover:bg-green-50 dark:border-green-900 dark:bg-slate-800 dark:hover:bg-green-950/30" title="อนุมัติผู้เข้าร่วม" onclick={() => doUpdateStatus(row, 'รอตรวจสอบวินัย', 'participant')}>
       <Check class="h-4 w-4" />
     </button>
     {#if canReject && (!expired || isSuper)}
@@ -546,8 +549,8 @@
       </button>
     {/if}
   {/if}
-  {#if !tableView && s === 'รอตรวจสอบวินัย' && canApproveDiscipline}
-    <button class="shrink-0 rounded-xl border border-green-200 bg-white p-1.5 text-green-600 hover:bg-green-50 dark:border-green-900 dark:bg-slate-800 dark:hover:bg-green-950/30" title="อนุมัติวินัย" onclick={() => doUpdateStatus(row, 'รอชำระเงิน')}>
+  {#if !tableView && pendingApproval(row, 'discipline') && canApproveDiscipline}
+    <button class="shrink-0 rounded-xl border border-green-200 bg-white p-1.5 text-green-600 hover:bg-green-50 dark:border-green-900 dark:bg-slate-800 dark:hover:bg-green-950/30" title="อนุมัติวินัย" onclick={() => doUpdateStatus(row, 'รอชำระเงิน', 'discipline')}>
       <Check class="h-4 w-4" />
     </button>
     {#if canReject && (!expired || isSuper)}
@@ -858,7 +861,7 @@
                     </span>
                   </td>
                   <td class="px-3 py-2.5">
-                    <StatusSteps status={row.status} bookingType={pageScope.pool} />
+                    <StatusSteps status={row.status} bookingType={pageScope.pool} participantApproved={row.participantApproved} disciplineApproved={row.disciplineApproved} />
                   </td>
                    <td class="px-3 py-2.5">
                     {#if !archived || isSuper}
@@ -929,7 +932,7 @@
               </div>
 
               <div class="mt-2.5 flex items-center justify-between gap-2 border-t border-slate-100 pt-2.5 dark:border-slate-800">
-                <StatusSteps status={row.status} bookingType={pageScope.pool} />
+                <StatusSteps status={row.status} bookingType={pageScope.pool} participantApproved={row.participantApproved} disciplineApproved={row.disciplineApproved} />
                 {#if !archived || isSuper}
                   <div class="flex flex-wrap items-center justify-end gap-1.5">
                     {@render rowActions(row, s, terminal, expired)}

@@ -1,5 +1,6 @@
 <script lang="ts">
-  let { status, bookingType = 'prisoner' }: { status: string | undefined; bookingType?: 'prisoner' | 'table' } = $props();
+  import { approvalComplete } from '../../utils/management';
+  let { status, bookingType = 'prisoner', participantApproved, disciplineApproved }: { status: string | undefined; bookingType?: 'prisoner' | 'table'; participantApproved?: string; disciplineApproved?: string } = $props();
 
   const labels = ['ตรวจสอบผู้เข้าร่วม', 'ตรวจสอบวินัย', 'ยืนยันการเงิน', 'เสร็จสิ้น'];
   const steps = $derived(bookingType === 'table' ? [3, 4] : [1, 2, 3]);
@@ -8,10 +9,9 @@
     const s = String(status ?? '').trim();
     if (s === 'ไม่อนุมัติ') return step === 1 ? 'rejected' : 'skipped';
     if (s === 'ยกเลิก' || s === 'คืนเงินแล้ว') return 'skipped';
-    if (step === 1) return s === 'รอตรวจสอบผู้เข้าร่วม' ? 'active' : 'done';
-    if (step === 2) {
-      if (s === 'รอตรวจสอบวินัย') return 'active';
-      return ['รอชำระเงิน', 'ชำระแล้ว', 'เสร็จสิ้น'].includes(s) ? 'done' : 'pending';
+    if (step === 1 || step === 2) {
+      if (approvalComplete({ ref: '', status, participantApproved, disciplineApproved }, step === 1 ? 'participant' : 'discipline')) return 'done';
+      return ['รอตรวจสอบผู้เข้าร่วม', 'รอตรวจสอบวินัย'].includes(s) ? 'active' : 'pending';
     }
     if (step === 3) {
       if (s === 'รอชำระเงิน') return 'active';

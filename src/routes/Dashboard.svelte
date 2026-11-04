@@ -106,7 +106,7 @@
   let saving = $state(false);
   function review(row: Reservation): void {
     const s = normalizeStatus(row.status);
-    if (s === 'รอตรวจสอบผู้เข้าร่วม' && hasPermission(role, 'visitor_approval')) { visitorRow = row; return; }
+    if (selectedQueue?.permission === 'approve_participant' && hasPermission(role, 'visitor_approval')) { visitorRow = row; return; }
     if (['รอชำระเงิน', 'ชำระแล้ว'].includes(s) && hasPermission(role, 'confirm_payment')) { paymentMode = s === 'ชำระแล้ว' ? 'เสร็จสิ้น' : 'ชำระแล้ว'; paymentRow = row; return; }
     openList(s, { search: row.ref }, bookingPool(row));
   }
