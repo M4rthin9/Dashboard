@@ -35,6 +35,17 @@ export interface Prisoner {
   note: string;
 }
 
+export interface BookingBlacklistRow {
+  prisonerId: string;
+  prisonerName: string;
+  wing: string;
+  warnings: number;
+  totalWarnings: number;
+  bannedUntil: string;
+  banned: boolean;
+  daysRemaining: number;
+}
+
 export interface Reservation {
   [key: string]: unknown;
   ref: string;

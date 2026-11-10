@@ -20,10 +20,10 @@ export const PERMISSIONS: Record<Role, string[]> = {
 };
 
 export const SIDEBAR_MENU: Record<Role, string[]> = {
-  Superadmin: ['attendance', 'refunds', 'home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables', 'notifications', 'eventlog', 'users', 'prisoners', 'connection', 'promptpay', 'settings', 'frontend_editor', 'booking_settings', 'payment_settings', 'privacy_settings'],
-  Admin: ['attendance', 'refunds', 'home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables', 'eventlog', 'prisoners', 'connection'],
+  Superadmin: ['attendance', 'refunds', 'home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables', 'notifications', 'eventlog', 'users', 'prisoners', 'blacklist', 'connection', 'promptpay', 'settings', 'frontend_editor', 'booking_settings', 'payment_settings', 'privacy_settings'],
+  Admin: ['attendance', 'refunds', 'home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables', 'eventlog', 'prisoners', 'blacklist', 'connection'],
   Finance: ['attendance', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables', 'refunds'],
-  Vinai: ['home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables', 'prisoners'],
+  Vinai: ['home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables', 'prisoners', 'blacklist'],
   Tadtel: ['attendance', 'home', 'reservations', 'reservations_archive', 'reservations_tables', 'reservations_tables_archive', 'reports', 'reports_overall', 'reports_tables'],
   User: ['home'],
 };

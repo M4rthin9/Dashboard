@@ -10,6 +10,7 @@ export const navigation: NavItem[] = [
   { key: 'reservations_tables', path: '/reservations/tables', label: 'การจองโต๊ะ (TBL)', description: 'จัดการการจองโต๊ะสำหรับบุคคลภายนอก', icon: Utensils },
   { key: 'reservations_tables_archive', path: '/reservations/tables/archive', label: 'ย้อนหลัง (TBL)', description: 'ค้นหาและตรวจสอบการจองโต๊ะที่เก็บถาวร', icon: Archive },
   { key: 'prisoners', path: '/prisoners', label: 'ผู้ต้องขัง', description: 'ข้อมูลผู้ต้องขังและวินัย', icon: UserRound },
+  { key: 'blacklist', path: '/blacklist', label: 'บัญชีระงับการจอง', description: 'คำเตือน วันคงเหลือ และระงับการจองด้วยตนเอง', icon: ShieldCheck },
   { key: 'reports', path: '/reports', label: 'สรุปการจอง', description: 'สถิติและรายงานการจอง', icon: BarChart3 },
   { key: 'reports_overall', path: '/reports/overall', label: 'รายงานการเงิน', description: 'รายได้และการชำระเงิน', icon: Wallet },
   { key: 'reports_tables', path: '/reports/tables', label: 'รายงานโต๊ะ (TBL)', description: 'รายงานการใช้โต๊ะ', icon: Utensils },
@@ -27,7 +28,7 @@ export const navigation: NavItem[] = [
 ];
 export const navGroups = [
   { label: 'ภาพรวม', icon: LayoutDashboard, keys: ['home'] },
-  { label: 'งานเยี่ยมและลงทะเบียน', icon: ClipboardList, keys: ['reservations', 'reservations_archive', 'attendance', 'prisoners'] },
+  { label: 'งานเยี่ยมและลงทะเบียน', icon: ClipboardList, keys: ['reservations', 'reservations_archive', 'attendance', 'prisoners', 'blacklist'] },
   { label: 'การจองโต๊ะ', icon: Utensils, keys: ['reservations_tables', 'reservations_tables_archive'] },
   { label: 'การเงิน', icon: Wallet, keys: ['refunds', 'promptpay', 'payment_settings'] },
   { label: 'รายงาน', icon: BarChart3, keys: ['reports', 'reports_overall', 'reports_tables'] },

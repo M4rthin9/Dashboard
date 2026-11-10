@@ -4,6 +4,7 @@ import type {
   EventLog,
   Paginated,
   Prisoner,
+  BookingBlacklistRow,
   PublicUser,
   Reservation,
   RefundEvidence,
@@ -96,6 +97,28 @@ export function getRoles(): Promise<ApiResult & { roles?: RolePermission[] }> {
   return callAction('getRoles', {}, { auth: true });
 }
 
+export function getPrisonersAdmin(): Promise<ApiResult & { prisoners?: Prisoner[] }> {
+  return callAction('getPrisonersAdmin', {}, { auth: true });
+}
+
+export function updatePrisoner(prisoner: Partial<Prisoner> & { prisonerId: string }): Promise<ApiResult> {
+  return callAction('updatePrisoner', prisoner, { auth: true });
+}
+
+export function getBookingBlacklist(): Promise<ApiResult & { rows?: BookingBlacklistRow[]; serverTime?: string }> {
+  return callAction('getBookingBlacklist', {}, { auth: true });
+}
+
+export function updateBookingBan(data: {
+  prisonerId: string;
+  operation: 'ban' | 'unban' | 'update';
+  warnings?: number;
+  bannedUntil?: string;
+  reason?: string;
+}): Promise<ApiResult> {
+  return callAction('updateBookingBan', data, { auth: true });
+}
+
 export function getUsers(): Promise<ApiResult & { users?: PublicUser[] }> {
   return callAction('getUsers', {}, { auth: true });
 }
@@ -181,7 +204,7 @@ export function createRole(roleName: string, permissions: string[]): Promise<Api
 }
 
 export function importPrisoners(prisoners: Record<string, unknown>[]): Promise<ApiResult & { added?: number; updated?: number; removed?: number; wingChanged?: number; errors?: string[] }> {
-  return callAction('importPrisoners', { prisoners }, { auth: true });
+  return callAction('importPrisoners', { prisoners, replaceAll: true }, { auth: true });
 }
 
 export function syncPrisonerWings(): Promise<ApiResult & { updated?: number }> {

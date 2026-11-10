@@ -11,7 +11,7 @@
   import { ui } from '../lib/store/ui.svelte';
   import { hasPermission } from '../lib/utils/permissions';
   import { downloadPrisonerTemplate, exportPrisonersCSV } from '../lib/utils/csv';
-  import { getPrisoners, importPrisoners, syncPrisonerWings } from '../lib/api/endpoints';
+  import { getPrisonersAdmin, importPrisoners, syncPrisonerWings } from '../lib/api/endpoints';
   import type { Prisoner } from '../lib/api/types';
 
   interface ImportRow {
@@ -73,7 +73,8 @@
     loading = true;
     error = '';
     try {
-      const res = await getPrisoners();
+      const res = await getPrisonersAdmin();
+      if (res.status !== 'ok') throw new Error(String(res.message ?? 'ไม่สามารถโหลดข้อมูลได้'));
       rows = (res.prisoners ?? []).sort((a, b) => a.prisonerId.localeCompare(b.prisonerId));
     } catch (err) {
       error = err instanceof Error ? err.message : 'ไม่สามารถโหลดข้อมูลได้';
@@ -138,14 +139,14 @@
     });
     parsed = cleaned.slice(0, 20000);
     importErrors = errs;
-    if (cleaned.length > 20000) importErrors.push('ข้อมูลเกิน 20000 รายการ ระบบจะนำเข้าเพียง 20000 รายการแรก');
+    if (cleaned.length > 20000) importErrors.push('ข้อมูลเกิน 20000 รายการ กรุณาลดจำนวนก่อนนำเข้า');
     if (parsed.length === 0) {
       ui.showAlert({ title: 'ไม่พบข้อมูลที่นำเข้าได้', message: 'ไม่พบข้อมูลที่สามารถนำเข้าได้ (ควรมีคอลัมน์ เลขผู้ต้องขัง และ ชื่อ-นามสกุล)', type: 'warning' });
     }
   }
 
   async function submitImport(): Promise<void> {
-    if (parsed.length === 0) return;
+    if (parsed.length === 0 || importErrors.length > 0) return;
     importing = true;
     try {
       const payload = parsed.map((p) => ({
@@ -423,7 +424,7 @@
 
     <div class="flex justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
       <button class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition-colors duration-150 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" onclick={() => (importOpen = false)}>ปิด</button>
-      <button class="rounded-xl bg-blue-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-blue-800 disabled:opacity-50" onclick={submitImport} disabled={importing || parsed.length === 0}>
+      <button class="rounded-xl bg-blue-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-blue-800 disabled:opacity-50" onclick={submitImport} disabled={importing || parsed.length === 0 || importErrors.length > 0}>
         {importing ? 'กำลังนำเข้า...' : `นำเข้า ${parsed.length} รายการ`}
       </button>
     </div>

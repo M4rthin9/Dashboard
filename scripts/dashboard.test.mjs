@@ -161,6 +161,8 @@ test('every dashboard function belongs to one category and frontend editing is r
   assert.equal(nav.navGroups.find(group => group.label === 'การจองโต๊ะ').keys.includes('reservations_tables_archive'), true);
   assert.equal(nav.menuFor('Superadmin').some(item => item.key === 'frontend_editor'), true);
   for (const role of ['Superadmin', 'Admin', 'Finance']) assert.equal(nav.menuFor(role).some(item => item.key === 'refunds'), true);
+  for (const role of ['Superadmin', 'Admin', 'Vinai']) assert.equal(nav.menuFor(role).some(item => item.key === 'blacklist'), true);
+  for (const role of ['Finance', 'Tadtel', 'User', undefined]) assert.equal(nav.menuFor(role).some(item => item.key === 'blacklist'), false);
   for (const role of ['Vinai', 'Tadtel', 'User', undefined]) assert.equal(nav.menuFor(role).some(item => item.key === 'refunds'), false);
   for (const role of ['Admin', 'Finance', 'Vinai', 'Tadtel', 'User', undefined]) {
     assert.equal(nav.menuFor(role).some(item => ['frontend_editor', 'booking_settings', 'payment_settings', 'privacy_settings'].includes(item.key)), false);
@@ -454,6 +456,15 @@ test('route fallback respects menus and drilldown query preserves Thai status, d
   for (const role of ['Admin', 'Finance', 'Vinai', 'Tadtel', 'User']) {
     auth.user.role = role;
     assert.notEqual(router.resolveRoute().path, '/notifications');
+  }
+  hashState.value = '#/blacklist';
+  for (const role of ['Superadmin', 'Admin', 'Vinai']) {
+    auth.user.role = role;
+    assert.equal(router.resolveRoute().path, '/blacklist');
+  }
+  for (const role of ['Finance', 'Tadtel', 'User']) {
+    auth.user.role = role;
+    assert.notEqual(router.resolveRoute().path, '/blacklist');
   }
   hashState.value = '#/users';
   hashState.value = '#/refunds';

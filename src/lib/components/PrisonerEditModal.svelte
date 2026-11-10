@@ -4,7 +4,7 @@
   import Input from './ui/Input.svelte';
   import Button from './ui/Button.svelte';
   import { ui } from '../store/ui.svelte';
-  import { importPrisoners } from '../api/endpoints';
+  import { updatePrisoner } from '../api/endpoints';
   import type { Prisoner } from '../api/types';
 
   let { prisoner, wings, open, onclose, onsaved }: {
@@ -36,15 +36,12 @@
     }
     saving = true;
     try {
-      const res = await importPrisoners([{ ...form }]);
+      const res = await updatePrisoner({ ...form });
       if (res.status !== 'ok') {
         ui.showAlert({ title: 'บันทึกไม่สำเร็จ', message: String(res.message ?? 'เกิดข้อผิดพลาด'), type: 'error' });
         return;
       }
       ui.showAlert({ title: 'บันทึกสำเร็จ', message: String(res.message ?? 'อัปเดตข้อมูลผู้ต้องขังเรียบร้อย'), type: 'success' });
-      if (res.errors && res.errors.length > 0) {
-        ui.showAlert({ title: 'มีข้อผิดพลาดบางรายการ', message: res.errors.join('\n'), type: 'warning' });
-      }
       onclose();
       await onsaved();
     } catch (err) {
@@ -57,6 +54,7 @@
 
 <Modal open={open} title="แก้ไขข้อมูลผู้ต้องขัง" subtitle={form.prisonerId} onclose={onclose} icon={UserRound} width="max-w-lg">
   <div class="flex flex-col gap-4">
+    <p class="text-sm text-slate-500 dark:text-slate-400">บันทึกเฉพาะผู้ต้องขังรายนี้ รายชื่อผู้ต้องขังรายอื่นจะคงเดิม</p>
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <Input label="เลขผู้ต้องขัง" value={form.prisonerId} oninput={(e) => (form.prisonerId = e.currentTarget.value)} disabled />
       <Input label="ชื่อ-นามสกุล" value={form.prisonerName} oninput={(e) => (form.prisonerName = e.currentTarget.value)} />
