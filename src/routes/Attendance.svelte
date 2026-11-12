@@ -1,5 +1,4 @@
 <script lang="ts">
-  import GuardAdmissionReport from '../lib/components/GuardAdmissionReport.svelte';
   import { onMount, tick } from 'svelte';
   import { QrCode, Camera, Square, RefreshCw, ScanLine, CheckCircle2, CircleAlert, Clock3, Users, Utensils, Search, ChevronRight, CalendarDays, ShieldCheck, UserCheck, ArrowRight, Loader2 } from '@lucide/svelte';
   import { checkVisitorEntry, checkInVisitor, getAttendance, type EntryCheck, type AttendanceRecord, type AttendanceTable } from '../lib/api/attendance';
@@ -198,7 +197,6 @@
 </script>
 
 <div class="attendance-page">
-  <GuardAdmissionReport {date} />
   <section class="att-hero" aria-labelledby="checkin-title">
     <div><p class="att-eyebrow"><ScanLine size={15} /> SMART CHECK-IN · VISITOR REGISTRATION</p><h1 id="checkin-title">ลงทะเบียนเข้าร่วมกิจกรรม</h1><p class="att-hero-description">ตรวจสอบการจอง ยืนยันสิทธิ์ และดูแลการต้อนรับในจุดเดียว<br />ทัณฑสถานบำบัดพิเศษกลาง</p></div>
     <div class="att-clock"><time datetime={clock.toISOString()}>{clockText}</time><p>{visitDateLabel(today)}</p><small>เวลาประเทศไทย · Asia/Bangkok</small></div>

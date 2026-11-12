@@ -1,5 +1,5 @@
 <script lang="ts">
-  import GuardAdmissionReport from '../lib/components/GuardAdmissionReport.svelte';
+  import { buildGuardAdmissionReport } from '../lib/utils/guardAdmissionReport';
   import BakeryReport from '../lib/components/BakeryReport.svelte';
   import { onMount } from 'svelte';
   import type { Component } from 'svelte';
@@ -141,6 +141,15 @@
 
   const printReports: PrintReportDef[] = [
     {
+      id: 'guard',
+      title: 'ทะเบียนผู้เข้าเยี่ยม (ลงชื่อ) — ส่วนรักษาการณ์',
+      desc: 'รายชื่อชุดเดียวกับทะเบียนผู้เข้าเยี่ยม เปลี่ยนส่วนหัวสำหรับส่วนรักษาการณ์',
+      note: 'เรียนหัวหน้าส่วนรักษาการณ์ เพื่อพิจารณาอนุญาตให้ผู้เข้าเยี่ยมเข้าภายในทัณฑสถาน',
+      accent: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400',
+      icon: ShieldCheck,
+      build: buildGuardAdmissionReport,
+    },
+    {
       id: 'discipline',
       title: 'ปกครองกลาง / ส่วนทัณฑ์',
       desc: 'หนังสือขออนุมัติเบิกตัวผู้ต้องขังเข้าร่วมกิจกรรม',
@@ -253,7 +262,6 @@
     </div>
 
     <BakeryReport rows={[...dayRows, ...tableDayRows]} date={reportDate} {printerName} />
-    <GuardAdmissionReport date={reportDate} />
 
     <section aria-label="เลือกเอกสารที่ต้องการพิมพ์" class="grid grid-cols-1 gap-4 xl:grid-cols-3">
       {#each printReports as report (report.id)}

@@ -37,9 +37,9 @@ const PRINT_SHARED_CSS = `
   }
 `;
 
-export function openPrintWindow(content: string, reportName: string, printerName: string, preview?: Window): boolean {
+export function openPrintWindow(content: string, reportName: string, printerName: string): boolean {
   const now = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
-  const win = preview ?? window.open('', '_blank');
+  const win = window.open('', '_blank');
   if (!win) return false;
   win.document.write(`
     <!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>${escapeHtml(reportName)}</title>
@@ -156,7 +156,7 @@ export function buildDisciplinaryReport(rows: Reservation[], date: string): stri
   </article>`;
 }
 
-export function buildGateRegistrationReport(rows: Reservation[], date: string): string {
+export function buildGateRegistrationReport(rows: Reservation[], date: string, forGuards = false): string {
   const sorted = rows.slice().sort((a,b) => a.ref.localeCompare(b.ref));
   const visitors = rows.reduce((n,r) => n + reportVisitorCount(r), 0);
   const prisoners = rows.reduce((n,r) => n + prisonersOf(r).length, 0);
@@ -165,7 +165,7 @@ export function buildGateRegistrationReport(rows: Reservation[], date: string): 
     return `<tr><td class="center">${i+1}</td><td><b class="ref">${escapeHtml(r.ref)}</b></td><td>${reportVisitors(r).map(v => `<div class="person">${escapeHtml(v.name || '—')} <span class="muted">(${escapeHtml(v.relation || '—')})</span>${v.id ? `<span class="identity">${escapeHtml(v.id)}</span>` : ''}</div>`).join('') || '—'}</td><td>${inmates.map(p => `<div class="person"><b>น.ช. ${escapeHtml(p.name || '—')}</b><span class="identity">แดน ${escapeHtml(p.wing || '—')}</span></div>`).join('') || '—'}</td><td class="center">${reportVisitorCount(r)} + ${inmates.length}<br><b>รวม ${reportVisitorCount(r)+inmates.length}</b></td><td class="handwriting"></td><td class="handwriting"></td><td class="handwriting"></td></tr>`;
   }).join('');
   return `<style>${DAILY_REPORT_CSS}@page{size:A4 landscape;margin:10mm}</style><article class="daily-report">
-    ${reportHeading('ทะเบียนผู้เข้าเยี่ยม (ลงชื่อ)', `วันที่ ${thaiDateLabel(date)} · สำหรับเจ้าหน้าที่ลงทะเบียนหน้าประตู`, 'CHANCE & CHANGE CAFE · ทะเบียนประจำวัน')}
+    ${reportHeading(forGuards ? 'ทะเบียนผู้เข้าเยี่ยม (ลงชื่อ) — ส่วนรักษาการณ์' : 'ทะเบียนผู้เข้าเยี่ยม (ลงชื่อ)', `วันที่ ${thaiDateLabel(date)} · ${forGuards ? 'เรียน หัวหน้าส่วนรักษาการณ์ เพื่อโปรดพิจารณาอนุญาตให้ผู้เข้าเยี่ยมเข้าภายในทัณฑสถาน' : 'สำหรับเจ้าหน้าที่ลงทะเบียนหน้าประตู'}`, 'CHANCE & CHANGE CAFE · ทะเบียนประจำวัน')}
     ${reportStats([['การจอง', rows.length, 'โต๊ะ'], ['ผู้เข้าเยี่ยม', visitors, 'คน'], ['ผู้ต้องขัง', prisoners, 'คน'], ['รวมผู้เข้าร่วม', visitors+prisoners, 'คน']])}
     <p class="notice">ตรวจสอบรายชื่อและเอกสารประจำตัวก่อนลงทะเบียน · ช่องจำนวนคนแสดงผู้เยี่ยม + ผู้ต้องขัง · บันทึกเวลาเข้าและลงชื่อในช่องว่าง</p>
     <table class="register"><thead><tr><th style="width:5%" class="center">ลำดับ</th><th style="width:12%">เลขอ้างอิง</th><th style="width:25%">รายชื่อผู้เข้าเยี่ยม / เอกสารประจำตัว</th><th style="width:17%">ผู้ต้องขัง / แดน</th><th style="width:9%" class="center">จำนวนคน</th><th style="width:8%">เวลาเข้า</th><th style="width:12%">ลงชื่อผู้เยี่ยม</th><th style="width:12%">ลงชื่อเจ้าหน้าที่</th></tr></thead><tbody>${body || '<tr><td colspan="8" class="center">ไม่มีข้อมูลผู้เข้าเยี่ยมในวันที่เลือก</td></tr>'}</tbody></table>
