@@ -1,4 +1,4 @@
-import { formatNumber, visitDateLabel, parseExtraVisitors, prisonersOf, normalizeStatus, STATUS_COLORS } from './format';
+import { formatNumber, visitDateLabel, parseExtraVisitors, prisonersOf, normalizeStatus } from './format';
 import { monthLabel } from './dashboard';
 import { bookingPool } from './management';
 import type { Reservation } from '../api/types';
@@ -63,364 +63,205 @@ export function openPrintWindow(content: string, reportName: string, printerName
   return true;
 }
 
-export function buildDisciplinaryReport(rows: Reservation[], date: string): string {
-  const prisoners: Array<{ name: string; id: string; wing: string }> = [];
-  rows.forEach((r) => {
-    for (const p of prisonersOf(r)) {
-      if (p.name && !prisoners.some((x) => x.id === p.id)) prisoners.push(p);
-    }
-  });
-
-  const letterRows = prisoners
-    .map(
-      (p, i) => `
-      <tr>
-        <td style="text-align:center;">${i + 1}</td>
-        <td><strong>น.ช. ${escapeHtml(p.name)}</strong></td>
-        <td>${escapeHtml(p.id)}</td>
-        <td>${escapeHtml(p.wing || '-')}</td>
-      </tr>`
-    )
-    .join('');
-
-  return `
-    <div class="print-title">หนังสือขออนุมัติเบิกตัวผู้ต้องขังเข้าร่วมกิจกรรม</div>
-    <div style="margin-bottom:12px; line-height:1.8; font-size:13px;">
-      <div style="text-align:right;">วันที่ ${escapeHtml(thaiDateLabel(date))}</div>
-      <br>
-      <div><strong>เรื่อง</strong> ขออนุมัติเบิกตัวผู้ต้องขังเข้าร่วมกิจกรรม Chance &amp; Change Cafe</div>
-      <div><strong>เรียน</strong> ผู้อำนวยการส่วนปกครองผู้ต้องขัง</div>
-      <br>
-    </div>
-
-    <table>
-      <thead>
-        <tr>
-          <th style="width:50px; text-align:center;">ลำดับ</th>
-          <th>ชื่อ-นามสกุล</th>
-          <th>เลขประจำตัวผู้ต้องขัง</th>
-          <th>แดน</th>
-        </tr>
-      </thead>
-      <tbody>${letterRows || '<tr><td colspan="4" style="text-align:center;color:#888;">ไม่มีข้อมูลผู้ต้องขัง</td></tr>'}</tbody>
-    </table>
-
-    <table style="width:80%; margin:28px auto 0; border:none;">
-      <tbody>
-        <tr>
-          <td style="border:none; width:50%; text-align:center; height:70px; vertical-align:bottom;">
-            <div>ลงชื่อ.............................................. ผู้จัดทำรายงาน</div>
-            <div style="font-size:10px; color:#555; margin-top:2px;">(..................................................)</div>
-            <div style="font-size:10px; color:#555; margin-top:2px;">วันที่........./........./.........</div>
-          </td>
-          <td style="border:none; width:50%; text-align:center; vertical-align:bottom;">
-            <div>ลงชื่อ.............................................. ผู้อนุมัติรายงาน</div>
-            <div style="font-size:10px; color:#555; margin-top:2px;">(..................................................)</div>
-            <div style="font-size:10px; color:#555; margin-top:2px;">วันที่........./........./.........</div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  `;
-}
-
-/** Render one visitor (main or extra) with their citizen ID when provided. */
-function visitorLine(name: string, id?: string): string {
-  const n = escapeHtml(String(name ?? '').trim() || '—');
-  const i = escapeHtml(String(id ?? '').trim());
-  return i ? `${n} <span style="color:#444;white-space:nowrap;">· เลขบัตร ${i}</span>` : n;
-}
-
-export function buildGateRegistrationReport(rows: Reservation[], date: string): string {
-  const body = rows
-    .map((r, i) => {
-      const extras = parseExtraVisitors(r).filter((e) => e.approved !== 'no');
-      const people = [visitorLine(String(r.visitorName ?? ''), r.visitorId)];
-      for (const e of extras) people.push(visitorLine(e.name, e.id));
-      const visitors = people.join('<br>');
-      const inmates = prisonersOf(r);
-      const count = (Number(r.visitorCount) || 1) + inmates.length;
-      return `
-      <tr>
-        <td style="text-align:center;">${i + 1}</td>
-        <td style="text-align:center;">${escapeHtml(r.ref)}</td>
-        <td></td>
-        <td>${visitors}</td>
-        <td>${inmates.map((p) => `<strong>น.ช. ${escapeHtml(p.name || '—')}</strong>`).join('<br>') || '—'}</td>
-        <td>${inmates.map((p) => escapeHtml(p.wing || '—')).join('<br>') || '—'}</td>
-        <td>${escapeHtml(r.relation ?? '—')}</td>
-        <td style="text-align:center;">${count}</td>
-        <td></td>
-      </tr>`;
-    })
-    .join('');
-
-  const totals = rows.reduce(
-    (acc, r) => {
-      const cnt = Number(r.visitorCount) || 1;
-      acc.visitors += cnt;
-      acc.people += cnt + prisonersOf(r).length;
-      return acc;
-    },
-    { visitors: 0, people: 0 }
-  );
-
-  return `
-    <style>@page { size: landscape; margin: 10mm; }</style>
-    <div class="print-title">ทะเบียนผู้เข้าเยี่ยม — วันที่ ${escapeHtml(thaiDateLabel(date))}</div>
-    <table>
-      <thead>
-        <tr>
-          <th style="width:40px; text-align:center;">ลำดับ</th>
-          <th style="width:90px; text-align:center;">Ref</th>
-          <th style="width:90px; text-align:center;">เวลาเข้า</th>
-          <th>ผู้เยี่ยม</th>
-          <th>ผู้ต้องขัง</th>
-          <th>แดน</th>
-          <th>ความสัมพันธ์</th>
-          <th style="width:55px; text-align:center;">จำนวนคน</th>
-          <th style="width:110px; text-align:center;">ลงชื่อ</th>
-        </tr>
-      </thead>
-      <tbody>${body || '<tr><td colspan="9" style="text-align:center;color:#888;">ไม่มีข้อมูล</td></tr>'}</tbody>
-    </table>
-    <div style="font-weight:600; font-size:12px; margin-top:6px;">
-      รวมผู้เยี่ยม ${formatNumber(totals.visitors)} คน + ผู้ต้องขัง ${rows.length} คน = ${formatNumber(totals.people)} คน จาก ${rows.length} โต๊ะ
-    </div>
-  `;
-}
-
-const SEATING_REPORT_CSS = `
-  .table-block { margin-bottom:16mm; border:2px solid #312e81; border-radius:8px; overflow:hidden; background:#fff; box-shadow:0 2px 4px rgba(0,0,0,0.08); page-break-inside:avoid; }
-  .table-header { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:#312e81; color:#fff; gap:10px; flex-wrap:wrap; }
-  .table-num { font-size:15px; font-weight:700; background:#d97706; color:#1e1b4b; padding:4px 14px; border-radius:4px; }
-  .table-ref { font-size:14px; font-weight:600; margin-left:10px; }
-  .table-date { font-size:12px; opacity:0.9; }
-  .status-pill { font-size:11px; font-weight:700; padding:4px 12px; border-radius:20px; color:#fff; white-space:nowrap; }
-  .content-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:14px; }
-  .info-section { border:1.5px solid #ddd; border-radius:6px; padding:10px 12px; background:#fafafa; }
-  .info-section.prisoner { background:#f0f7f0; border-color:#166534; }
-  .info-section.visitor { background:#f0f4ff; border-color:#312e81; }
-  .section-title { font-weight:700; font-size:13px; margin-bottom:6px; color:#312e81; display:flex; align-items:center; gap:4px; }
-  .info-section.prisoner .section-title { color:#166534; }
-  .info-line { margin:3px 0; font-size:13px; line-height:1.4; }
-  .info-line b { font-weight:600; color:#1e1b4b; }
-  .info-line.contact-line { font-size:15px; font-weight:800; color:#1e1b4b; }
-  .info-line.warn-line { color:#b91c1c; font-weight:700; background:#fef2f2; padding:2px 6px; border-radius:4px; display:inline-block; }
-  .extra-section { grid-column:1 / -1; background:#fff8e7; border:1.5px solid #f5c542; border-radius:6px; padding:10px 12px; }
-  .extra-title { font-weight:700; font-size:13px; color:#92400e; margin-bottom:6px; }
-  .extra-item { font-size:13px; padding:2px 0 2px 12px; position:relative; }
-  .extra-item::before { content:"\\2022"; position:absolute; left:0; color:#d97706; font-weight:bold; }
-  .extra-item .pending-tag { color:#b45309; font-weight:700; font-size:11px; margin-left:4px; }
-  .table-footer { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:#f8f9fa; border-top:1.5px solid #ddd; gap:10px; flex-wrap:wrap; }
-  .visit-date-info { font-size:13px; color:#555; }
-  .visit-date-info b { color:#312e81; font-size:15px; }
-  .footer-boxes { display:flex; gap:8px; }
-  .payment-box { background:#eef2ff; color:#312e81; border:1.5px solid #312e81; padding:6px 14px; border-radius:6px; font-weight:700; font-size:14px; text-align:center; min-width:110px; }
-  .payment-box .label { font-size:11px; font-weight:500; display:block; }
-  .payment-box .number { font-size:16px; font-weight:800; }
-  .people-count { background:#d97706; color:#1e1b4b; padding:6px 16px; border-radius:6px; font-weight:700; font-size:16px; text-align:center; min-width:110px; }
-  .people-count .label { font-size:11px; font-weight:500; display:block; }
-  .people-count .number { font-size:18px; font-weight:800; }
-  .report-meta { font-size:12px; color:#555; margin-top:2px; }
-  .grand-summary { margin-top:36px; page-break-before:always; padding:24px; }
-  .grand-box { border:3px solid #312e81; border-radius:10px; padding:24px 32px; background:linear-gradient(135deg,#f8f9fa 0%,#fff 100%); max-width:500px; margin:0 auto; }
-  .grand-title { font-size:18px; font-weight:800; color:#312e81; text-align:center; margin-bottom:16px; padding-bottom:10px; border-bottom:2px solid #312e81; }
-  .grand-item { display:flex; justify-content:space-between; align-items:center; margin:10px 0; font-size:15px; }
-  .grand-item .g-label { color:#555; font-weight:500; }
-  .grand-item .g-number { font-weight:800; font-size:20px; color:#312e81; }
-  .grand-total { margin-top:16px; padding-top:16px; border-top:3px solid #d97706; display:flex; justify-content:space-between; align-items:center; }
-  .grand-total .g-label { font-size:16px; font-weight:600; color:#1e1b4b; }
-  .grand-total .g-number { font-size:26px; font-weight:900; color:#d97706; }
-  .page-footer { position:fixed; bottom:0; left:0; right:0; height:12mm; border-top:1px solid #ddd; display:flex; align-items:center; justify-content:center; font-size:10px; color:#666; background:#fff; }
-  body { margin-bottom:16mm; }
+const DAILY_REPORT_CSS = `
+  @page { size:A4 portrait; margin:10mm; }
+  .print-header { text-align:center; border:0; margin:0 0 5px; padding:0; }
+  .print-header h1 { display:inline; font-size:11px; font-weight:400; color:#222; }
+  .print-header h2 { display:inline; margin-left:8px; font-size:11px; color:#222; }
+  .print-footer { font-size:9px; margin-top:8px; padding-top:4px; color:#444; }
+  .daily-report { color:#111; line-height:1.3; font-size:12px; }
+  .daily-report * { overflow-wrap:anywhere; }
+  .daily-report .doc-heading { text-align:center; margin-bottom:6px; }
+  .daily-report .doc-kicker { display:none; }
+  .daily-report h2 { font-size:16px; line-height:1.35; margin:2px 0; color:#111; }
+  .daily-report .doc-subtitle, .daily-report .muted { color:#333; font-size:11px; }
+  .daily-report .stats { display:flex; flex-wrap:wrap; gap:4px 18px; margin:6px 0; padding:4px 0; border-top:1px solid #777; border-bottom:1px solid #777; }
+  .daily-report .stat { font-size:11px; }
+  .daily-report .stat span, .daily-report .stat strong, .daily-report .stat small { display:inline; font-size:11px; margin-right:4px; color:#111; }
+  .daily-report h3 { font-size:12px; color:#111; margin:8px 0 3px; }
+  .daily-report table { width:100%; border-collapse:collapse; font-size:12px; margin:4px 0; }
+  .daily-report th { background:#f1f1f1; color:#111; font-size:11px; font-weight:700; text-transform:none; }
+  .daily-report th, .daily-report td { border:1px solid #777; padding:4px 6px; vertical-align:top; }
+  .daily-report tr:nth-child(even) { background:white; }
+  .daily-report thead { display:table-header-group; }
+  .daily-report tr { break-inside:avoid; page-break-inside:avoid; }
+  .daily-report .center { text-align:center; }
+  .daily-report .ref { font-size:11px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .daily-report .signoffs { display:flex; gap:24px; margin-top:8px; break-inside:avoid; }
+  .daily-report .signoff { flex:1; text-align:center; padding-top:0; line-height:1.5; font-size:10px; }
+  .daily-report .sign-line { border-bottom:1px dotted #555; height:22px; max-width:180px; margin:0 auto 3px; }
+  .daily-report .memo-meta { display:grid; grid-template-columns:38px 1fr; gap:3px 6px; padding:4px 0; }
+  .daily-report .memo-copy { margin:6px 0; text-indent:2em; line-height:1.5; }
+  .daily-report .notice { margin:4px 0; font-size:10px; color:#333; }
+  .daily-report .register { font-size:11px; line-height:1.15; table-layout:fixed; }
+  .daily-report .register td { vertical-align:middle; padding:3px 5px; }
+  .daily-report .register .person + .person { margin-top:2px; padding-top:0; }
+  .daily-report .handwriting { height:32px; }
+  .daily-report .person + .person { margin-top:3px; padding-top:2px; border-top:1px dotted #aaa; }
+  .daily-report .identity { display:block; color:#333; font-size:10px; }
+  .daily-report .seating-list { table-layout:fixed; font-size:11px; }
+  .daily-report .seating-list .person .identity { display:inline; margin-left:4px; }
+  .daily-report .warning { font-weight:700; text-decoration:underline; }
   @media print {
-    @page { size:A4; margin:10mm 8mm; }
-    .table-block { margin-bottom:3mm; border-width:1.5px; }
-    .content-grid { gap:8px; padding:8px 10px; }
-    .info-section { padding:6px 8px; }
-    .section-title { font-size:11px; margin-bottom:4px; }
-    .info-line { font-size:11px; }
-    .extra-section { padding:6px 8px; }
-    .extra-title { font-size:11px; margin-bottom:4px; }
-    .extra-item { font-size:11px; }
-    .table-footer { padding:6px 10px; }
-    .visit-date-info { font-size:11px; }
-    .status-pill { font-size:10px; padding:3px 10px; }
-    .payment-box, .people-count { padding:4px 12px; font-size:13px; min-width:90px; }
-    .grand-summary { margin-top:6mm; padding:12px; }
-    .grand-box { padding:16px 20px; }
-    .grand-title { font-size:14px; margin-bottom:10px; padding-bottom:6px; }
-    .grand-item { margin:6px 0; font-size:12px; }
-    .grand-item .g-number { font-size:16px; }
-    .grand-total { margin-top:10px; padding-top:10px; }
-    .grand-total .g-label { font-size:13px; }
-    .grand-total .g-number { font-size:20px; }
+    .daily-report th { background:#f1f1f1 !important; }
+    .daily-report tr:nth-child(even) { background:white !important; }
+    .daily-report h3 { break-after:avoid; }
   }
 `;
 
+function reportHeading(title: string, subtitle: string, kicker: string): string {
+  return `<div class="doc-heading"><p class="doc-kicker">${escapeHtml(kicker)}</p><h2>${escapeHtml(title)}</h2><p class="doc-subtitle">${escapeHtml(subtitle)}</p></div>`;
+}
+
+function reportStats(items: Array<[string, number, string]>): string {
+  return `<div class="stats">${items.map(([label, value, unit]) => `<div class="stat"><span>${escapeHtml(label)}</span><strong>${formatNumber(value)}</strong><small>${escapeHtml(unit)}</small></div>`).join('')}</div>`;
+}
+
+function reportSignoffs(labels: string[]): string {
+  return `<div class="signoffs">${labels.map(label => `<div class="signoff"><div class="sign-line"></div><div>ลงชื่อ ${escapeHtml(label)}</div><div>(..................................................)</div><div>วันที่ .......... / .......... / ..........</div></div>`).join('')}</div>`;
+}
+
+function reportVisitors(r: Reservation): Array<{ name: string; id?: string; relation?: string }> {
+  const main = r.visitorApproved === 'no' ? [] : [{ name: String(r.visitorName ?? ''), id: r.visitorId, relation: r.relation }];
+  return [...main, ...parseExtraVisitors(r).filter(e => e.approved !== 'no')];
+}
+
+function reportVisitorCount(r: Reservation): number {
+  const stored = r.visitorCount;
+  return stored !== null && stored !== undefined && String(stored).trim() !== '' && Number.isInteger(Number(stored)) && Number(stored) >= 0 ? Number(stored) : reportVisitors(r).length;
+}
+
+function visitorLine(name: string, id?: string): string {
+  return `<span>${escapeHtml(String(name).trim() || '—')}</span>${id ? `<span class="identity">เลขบัตร / หนังสือเดินทาง ${escapeHtml(id)}</span>` : ''}`;
+}
+
+export function buildDisciplinaryReport(rows: Reservation[], date: string): string {
+  const unique = new Map<string, ReturnType<typeof prisonersOf>[number]>();
+  for (const row of rows) for (const p of prisonersOf(row)) {
+    if (!p.name && !p.id) continue;
+    const key = p.id.trim() || `${p.name.trim()}|${p.wing.trim()}`;
+    if (!unique.has(key)) unique.set(key, p);
+  }
+  const prisoners = [...unique.values()].sort((a,b) => a.wing.localeCompare(b.wing, 'th') || a.name.localeCompare(b.name, 'th'));
+  const wings = new Set(prisoners.map(p => p.wing).filter(Boolean)).size;
+  return `<style>${DAILY_REPORT_CSS}</style><article class="daily-report">
+    ${reportHeading('หนังสือขออนุมัติเบิกตัวผู้ต้องขังเข้าร่วมกิจกรรม', `วันที่เข้าร่วมกิจกรรม ${thaiDateLabel(date)}`, 'CHANCE & CHANGE CAFE · งานปกครอง')}
+    <div class="memo-meta"><b>เรื่อง</b><span>ขออนุมัติเบิกตัวผู้ต้องขังเข้าร่วมกิจกรรม Chance &amp; Change Cafe</span><b>เรียน</b><span>ผู้อำนวยการส่วนปกครองผู้ต้องขัง</span></div>
+    <p class="memo-copy">ด้วยร้าน Chance &amp; Change Cafe มีกำหนดจัดกิจกรรมในวันที่ ${escapeHtml(thaiDateLabel(date))} จึงขออนุมัติเบิกตัวผู้ต้องขัง จำนวน ${formatNumber(prisoners.length)} คน เพื่อเข้าร่วมกิจกรรม ตามรายชื่อดังต่อไปนี้</p>
+    ${reportStats([['ผู้ต้องขัง (ไม่ซ้ำ)', prisoners.length, 'คน'], ['แดนที่มีผู้เข้าร่วม', wings, 'แดน'], ['การจองที่เกี่ยวข้อง', rows.length, 'โต๊ะ']])}
+    <h3>บัญชีรายชื่อผู้ต้องขัง · เรียงตามแดน</h3>
+    <table><thead><tr><th class="center" style="width:9%">ลำดับ</th><th style="width:41%">ชื่อ–นามสกุล</th><th style="width:32%">เลขประจำตัวผู้ต้องขัง</th><th style="width:18%">แดน</th></tr></thead><tbody>${prisoners.map((p,i) => `<tr><td class="center">${i+1}</td><td><b>น.ช. ${escapeHtml(p.name || '—')}</b></td><td>${escapeHtml(p.id || '—')}</td><td>${escapeHtml(p.wing || '—')}</td></tr>`).join('') || '<tr><td colspan="4" class="center">ไม่มีข้อมูลผู้ต้องขังในวันที่เลือก</td></tr>'}</tbody></table>
+    <p class="memo-copy">จึงเรียนมาเพื่อโปรดพิจารณาอนุมัติ</p>
+    ${reportSignoffs(['ผู้จัดทำรายงาน', 'ผู้ตรวจสอบ', 'ผู้อนุมัติ'])}
+  </article>`;
+}
+
+export function buildGateRegistrationReport(rows: Reservation[], date: string): string {
+  const sorted = rows.slice().sort((a,b) => a.ref.localeCompare(b.ref));
+  const visitors = rows.reduce((n,r) => n + reportVisitorCount(r), 0);
+  const prisoners = rows.reduce((n,r) => n + prisonersOf(r).length, 0);
+  const body = sorted.map((r,i) => {
+    const inmates = prisonersOf(r);
+    return `<tr><td class="center">${i+1}</td><td><b class="ref">${escapeHtml(r.ref)}</b></td><td>${reportVisitors(r).map(v => `<div class="person">${escapeHtml(v.name || '—')} <span class="muted">(${escapeHtml(v.relation || '—')})</span>${v.id ? `<span class="identity">${escapeHtml(v.id)}</span>` : ''}</div>`).join('') || '—'}</td><td>${inmates.map(p => `<div class="person"><b>น.ช. ${escapeHtml(p.name || '—')}</b><span class="identity">แดน ${escapeHtml(p.wing || '—')}</span></div>`).join('') || '—'}</td><td class="center">${reportVisitorCount(r)} + ${inmates.length}<br><b>รวม ${reportVisitorCount(r)+inmates.length}</b></td><td class="handwriting"></td><td class="handwriting"></td><td class="handwriting"></td></tr>`;
+  }).join('');
+  return `<style>${DAILY_REPORT_CSS}@page{size:A4 landscape;margin:10mm}</style><article class="daily-report">
+    ${reportHeading('ทะเบียนผู้เข้าเยี่ยม (ลงชื่อ)', `วันที่ ${thaiDateLabel(date)} · สำหรับเจ้าหน้าที่ลงทะเบียนหน้าประตู`, 'CHANCE & CHANGE CAFE · ทะเบียนประจำวัน')}
+    ${reportStats([['การจอง', rows.length, 'โต๊ะ'], ['ผู้เข้าเยี่ยม', visitors, 'คน'], ['ผู้ต้องขัง', prisoners, 'คน'], ['รวมผู้เข้าร่วม', visitors+prisoners, 'คน']])}
+    <p class="notice">ตรวจสอบรายชื่อและเอกสารประจำตัวก่อนลงทะเบียน · ช่องจำนวนคนแสดงผู้เยี่ยม + ผู้ต้องขัง · บันทึกเวลาเข้าและลงชื่อในช่องว่าง</p>
+    <table class="register"><thead><tr><th style="width:5%" class="center">ลำดับ</th><th style="width:12%">เลขอ้างอิง</th><th style="width:25%">รายชื่อผู้เข้าเยี่ยม / เอกสารประจำตัว</th><th style="width:17%">ผู้ต้องขัง / แดน</th><th style="width:9%" class="center">จำนวนคน</th><th style="width:8%">เวลาเข้า</th><th style="width:12%">ลงชื่อผู้เยี่ยม</th><th style="width:12%">ลงชื่อเจ้าหน้าที่</th></tr></thead><tbody>${body || '<tr><td colspan="8" class="center">ไม่มีข้อมูลผู้เข้าเยี่ยมในวันที่เลือก</td></tr>'}</tbody></table>
+    <p class="muted">สิ้นสุดรายการ · ${formatNumber(rows.length)} โต๊ะ · ผู้เยี่ยม ${formatNumber(visitors)} คน · ผู้ต้องขัง ${formatNumber(prisoners)} คน</p>
+  </article>`;
+}
+
 const PAID_STATUSES = ['ชำระแล้ว', 'เสร็จสิ้น'];
-const HALTED_STATUSES = ['ไม่อนุมัติ', 'ยกเลิก', 'คืนเงินแล้ว'];
+function isTableBooking(r: Reservation): boolean { return bookingPool(r) === 'table'; }
 
-function paymentBoxClass(status: string): string {
-  if (PAID_STATUSES.includes(status)) return 'payment-box paid';
-  if (HALTED_STATUSES.includes(status)) return 'payment-box halted';
-  return 'payment-box';
-}
+const SEATING_REPORT_CSS = `
+  .print-header { display:flex; flex-direction:row-reverse; align-items:baseline; justify-content:space-between; border-bottom:1px solid #c7cfcc; padding-bottom:7px; margin-bottom:10px; }
+  .print-header h1 { font-size:10px; color:#5c6862; }
+  .print-header h2 { font-size:14px; margin:0; font-weight:700; color:#263f34; }
+  .seating-report { color:#202b25; }
+  .seating-report .doc-heading { text-align:left; margin:0 0 6px; }
+  .seating-report h2 { font-size:22px; font-weight:600; color:#263f34; margin-bottom:3px; }
+  .seating-report .doc-subtitle { font-size:11px; color:#59655e; }
+  .seating-report .stats { border-top:0; border-bottom:1px solid #b6c3bb; gap:24px; padding:5px 0 8px; margin:0 0 10px; }
+  .seating-report .stat span { color:#59655e; }
+  .seating-report .stat strong { font-size:16px; color:#263f34; margin:0 4px 0 3px; }
+  .seating-report .section-heading { font-size:11px; color:#526158; margin:10px 0 5px; font-weight:600; }
+  .seating-report .booking { margin:0 0 8px; border:1px solid #cbd3ce; border-radius:5px; break-inside:avoid; page-break-inside:avoid; }
+  .seating-report .booking-head { display:flex; align-items:center; gap:10px; padding:6px 10px; background:#f2f5f2; border-radius:5px 5px 0 0; border-bottom:1px solid #dce2dd; }
+  .seating-report .booking-number { min-width:54px; color:#263f34; border-right:1px solid #c7d1ca; padding-right:10px; white-space:nowrap; font-size:10px; }
+  .seating-report .booking-number b { font-size:19px; line-height:1; font-weight:600; margin-left:3px; font-variant-numeric:tabular-nums; }
+  .seating-report .booking-ref { font-size:11px; font-weight:600; }
+  .seating-report .booking-date { margin-left:auto; font-size:10px; color:#526158; }
+  .seating-report .booking-status { font-size:10px; border:1px solid #bbcbbf; padding:1px 6px; border-radius:3px; color:#263f34; }
+  .seating-report .booking-body { display:grid; grid-template-columns:minmax(0,1.8fr) minmax(0,1fr) minmax(0,.6fr); gap:14px; padding:8px 10px; }
+  .seating-report .booking-label { color:#647168; font-size:10px; margin-bottom:3px; }
+  .seating-report .booking-guest { font-size:12px; line-height:1.4; }
+  .seating-report .booking-guest + .booking-guest { margin-top:3px; }
+  .seating-report .booking-id { color:#67716a; font-size:10px; margin-left:6px; }
+  .seating-report .booking-contact { font-size:11px; color:#526158; margin:2px 0 5px; }
+  .seating-report .booking-inmate + .booking-inmate { margin-top:5px; }
+  .seating-report .booking-inmate { font-size:12px; line-height:1.4; }
+  .seating-report .booking-inmate small { display:block; font-size:11px; color:#526158; }
+  .seating-report .booking-totals { text-align:right; border-left:1px solid #e0e5e1; padding-left:10px; }
+  .seating-report .booking-people { font-size:20px; color:#263f34; font-weight:600; line-height:1.2; }
+  .seating-report .booking-people small { font-size:10px; font-weight:400; margin-left:3px; }
+  .seating-report .booking-breakdown { font-size:10px; color:#59655e; margin-top:3px; }
+  .seating-report .booking-price { font-size:12px; margin-top:8px; font-weight:600; }
+  .seating-report .booking-price small { font-size:9px; font-weight:400; }
+  .seating-report .booking-foot { border-top:1px solid #e0e5e1; padding:4px 10px; display:flex; justify-content:space-between; gap:12px; font-size:10px; color:#59655e; }
+  .seating-report .booking-allergy { color:#804822; font-weight:700; }
+  .seating-report .seating-end { display:flex; justify-content:space-between; gap:20px; margin-top:8px; padding-top:6px; border-top:1px solid #aebdb3; font-size:10px; }
+  .seating-report .seating-end b { color:#263f34; font-size:12px; }
+  .seating-report .notice { margin-top:5px; font-size:9px; color:#67716a; }
+  .seating-report .signoffs { max-width:520px; margin:8px 0 0 auto; }
+  .seating-report .signoff { font-size:9px; }
+  .seating-report .sign-line { height:15px; }
+  @media print {
+    .seating-report .booking-head { print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+  }
+`;
 
-function isTableBooking(r: Reservation): boolean {
-  return bookingPool(r) === 'table';
-}
-
-function renderSeatingBlocks(rows: Reservation[], startIndex: number): string {
-  return rows
-    .map((r, i) => {
-      const idx = startIndex + i;
-      const extras = parseExtraVisitors(r);
-      const visitorCount = Number(r.visitorCount) || 1;
-      const inmates = prisonersOf(r);
-      const totalPeopleThisTable = visitorCount + inmates.length;
-      const shownExtras = extras.filter((e) => e.approved !== 'no');
-      const status = normalizeStatus(r.status);
-      const statusColor = STATUS_COLORS[status] ?? '#64748b';
-      const hasAllergy = r.allergy && String(r.allergy).trim() && String(r.allergy).trim() !== '-' && String(r.allergy).trim() !== 'ไม่มี';
-      const paid = PAID_STATUSES.includes(status);
-
-      return `
-      <div class="table-block">
-        <div class="table-header">
-          <div style="display:flex;align-items:center;">
-            <span class="table-num">โต๊ะ ${idx + 1}</span>
-            <span class="table-ref">${escapeHtml(r.ref ?? '—')}</span>
-          </div>
-          <span class="status-pill" style="background:${statusColor};">${escapeHtml(status || '—')}</span>
-          <span class="table-date">📅 ${escapeHtml(visitDateLabel(r.visitDate, r.visitDateISO))}</span>
+function renderSeatingBookings(rows: Reservation[], startIndex: number): string {
+  return rows.map((r,i) => {
+    const table = isTableBooking(r);
+    const inmates = table ? [] : prisonersOf(r);
+    const status = normalizeStatus(r.status);
+    const guests = parseExtraVisitors(r).filter(e => e.approved !== 'no');
+    const allergy = String(r.allergy || '').trim();
+    const hasAllergy = allergy && !['-', 'ไม่มี'].includes(allergy);
+    return `<section class="booking">
+      <header class="booking-head"><span class="booking-number">โต๊ะ <b>${String(startIndex+i+1).padStart(2,'0')}</b></span><span class="booking-ref">${escapeHtml(r.ref)}</span><span class="booking-date">${escapeHtml(visitDateLabel(r.visitDate,r.visitDateISO))}</span><span class="booking-status">${escapeHtml(status || '—')}</span></header>
+      <div class="booking-body">
+        <div><p class="booking-label">${table ? 'ผู้จอง / ผู้ร่วมโต๊ะ' : 'ผู้เยี่ยม / ผู้ร่วมโต๊ะ'}</p>
+          <p class="booking-guest"><b>${escapeHtml(r.visitorName || '—')}</b><span class="booking-id">${escapeHtml(r.visitorId || '—')}</span>${r.visitorApproved === 'no' ? ' (ไม่อนุมัติ)' : ''}</p>
+          <p class="booking-contact">โทร ${escapeHtml(r.visitorPhone || '—')} · ${escapeHtml(r.relation || '—')}</p>
+          ${guests.map(v => `<p class="booking-guest">${escapeHtml(v.name || '—')}<span class="booking-id">${escapeHtml(v.id || '—')} · ${escapeHtml(v.relation || '—')}${v.approved !== 'yes' ? ' · รออนุมัติ' : ''}</span></p>`).join('')}
         </div>
-        <div class="content-grid">
-          <div class="info-section prisoner">
-            <div class="section-title">🔒 ผู้ต้องขัง</div>
-            ${inmates
-              .map(
-                (p) => `
-            <div class="info-line">ชื่อ: <b>น.ช. ${escapeHtml(p.name || '—')}</b></div>
-            <div class="info-line">เลขประจำตัว: <b>${escapeHtml(p.id || '—')}</b></div>
-            <div class="info-line">แดน: <b>${escapeHtml(p.wing || '—')}</b></div>`
-              )
-              .join('<hr style="border:0;border-top:1px dashed #ccc;margin:3px 0;">')}
-          </div>
-          <div class="info-section visitor">
-            <div class="section-title">👤 ผู้เยี่ยมหลัก</div>
-            <div class="info-line"><b>${escapeHtml(r.visitorName ?? '—')}</b>${r.visitorId ? `<span style="color:#555;"> · เลขบัตร ${escapeHtml(r.visitorId)}</span>` : ''}</div>
-            <div class="info-line contact-line">📞 ${escapeHtml(r.visitorPhone ?? '—')}</div>
-            <div class="info-line">ความสัมพันธ์: ${escapeHtml(r.relation ?? '—')}</div>
-            <div class="info-line">ศาสนา: ${escapeHtml(r.religion ?? '—')}</div>
-            <div class="info-line${hasAllergy ? ' warn-line' : ''}">${hasAllergy ? '⚠️ แพ้อาหาร: ' : 'แพ้อาหาร: '}${escapeHtml(r.allergy || 'ไม่มี')}</div>
-          </div>
-          ${
-            shownExtras.length > 0
-              ? `<div class="extra-section">
-                <div class="extra-title">👥 ผู้เยี่ยมเพิ่มเติม (${shownExtras.length} คน)</div>
-                ${shownExtras
-                  .map(
-                    (e) => `<div class="extra-item">${escapeHtml(e.name ?? '—')}${e.id ? ' · เลขบัตร ' + escapeHtml(e.id) : ''} · ${escapeHtml(e.relation ?? '—')}${e.approved !== 'yes' ? '<span class="pending-tag">(รออนุมัติ)</span>' : ''}</div>`
-                  )
-                  .join('')}
-              </div>`
-              : ''
-          }
-        </div>
-        <div class="table-footer">
-          <div class="visit-date-info">วันที่เยี่ยม: <b>${escapeHtml(visitDateLabel(r.visitDate, r.visitDateISO))}</b></div>
-          <div class="footer-boxes">
-            <div class="${paymentBoxClass(status)}" style="${paid ? 'background:#ecfdf5;color:#166534;border-color:#166534;' : HALTED_STATUSES.includes(status) ? 'background:#fef2f2;color:#b91c1c;border-color:#b91c1c;' : ''}">
-              <span class="label">${paid ? 'ชำระแล้ว' : 'ยอดที่ต้องชำระ'}</span>
-              <span class="number">${formatNumber(Number(r.total) || 0)} บ.</span>
-            </div>
-            <div class="people-count">
-              <span class="label">จำนวนคน</span>
-              <span class="number">${totalPeopleThisTable} คน</span>
-            </div>
-          </div>
-        </div>
-      </div>`;
-    })
-    .join('');
-}
-
-function renderSeatingSummary(rows: Reservation[], isPrisoner: boolean): string {
-  let totalVisitors = 0;
-  let totalPrice = 0;
-  let paidTables = 0;
-  let paidAmount = 0;
-  rows.forEach((r) => {
-    totalVisitors += Number(r.visitorCount) || 1;
-    totalPrice += Number(r.total) || 0;
-    if (PAID_STATUSES.includes(normalizeStatus(r.status))) {
-      paidTables++;
-      paidAmount += Number(r.total) || 0;
-    }
-  });
-  const totalPrisoners = isPrisoner ? rows.reduce((n, r) => n + prisonersOf(r).length, 0) : 0;
-  const totalPeople = totalVisitors + totalPrisoners;
-  const pendingAmount = totalPrice - paidAmount;
-
-  return `
-    <div class="grand-summary">
-      <div class="grand-box">
-        <div class="grand-title">📋 สรุปยอดรวม</div>
-        <div class="grand-item"><span class="g-label">จำนวนโต๊ะ</span><span class="g-number">${rows.length} โต๊ะ</span></div>
-        <div class="grand-item"><span class="g-label">จำนวนผู้เยี่ยม</span><span class="g-number">${formatNumber(totalVisitors)} คน</span></div>
-        ${isPrisoner ? `<div class="grand-item"><span class="g-label">จำนวนผู้ต้องขัง</span><span class="g-number">${formatNumber(totalPrisoners)} คน</span></div>` : ''}
-        <div class="grand-item"><span class="g-label">ชำระแล้ว</span><span class="g-number" style="color:#166534;">${paidTables}/${rows.length} โต๊ะ · ${formatNumber(paidAmount)} บาท</span></div>
-        <div class="grand-item"><span class="g-label">ค้างชำระ</span><span class="g-number" style="color:#b91c1c;">${rows.length - paidTables}/${rows.length} โต๊ะ · ${formatNumber(pendingAmount)} บาท</span></div>
-        <div class="grand-item"><span class="g-label">ยอดเงินรวม</span><span class="g-number">${formatNumber(totalPrice)} บาท</span></div>
-        <div class="grand-total"><span class="g-label">รวมคนทั้งหมด</span><span class="g-number">${formatNumber(totalPeople)} คน</span></div>
+        <div><p class="booking-label">${table ? 'ประเภทการจอง' : 'ผู้ต้องขัง'}</p>${table ? '<p class="booking-inmate">จองโต๊ะ · TBL</p>' : inmates.map(p => `<div class="booking-inmate"><b>น.ช. ${escapeHtml(p.name || '—')}</b><small>${escapeHtml(p.id || '—')} · แดน ${escapeHtml(p.wing || '—')}</small></div>`).join('') || '<p class="booking-inmate">ไม่ระบุผู้ต้องขัง</p>'}</div>
+        <div class="booking-totals"><p class="booking-people">${reportVisitorCount(r)+inmates.length}<small>คน</small></p><p class="booking-breakdown">ผู้ร่วมโต๊ะ ${reportVisitorCount(r)}${table ? '' : ` · ผู้ต้องขัง ${inmates.length}`}</p><p class="booking-price">${formatNumber(Number(r.total)||0)} <small>บาท</small></p><p class="booking-breakdown">${PAID_STATUSES.includes(status) ? 'ชำระแล้ว' : 'ยอดการจอง'}</p></div>
       </div>
-    </div>
-  `;
+      <footer class="booking-foot"><span class="${hasAllergy ? 'booking-allergy' : ''}">แพ้อาหาร: ${escapeHtml(allergy || 'ไม่ระบุ')}</span><span>ศาสนา: ${escapeHtml(r.religion || '—')}</span></footer>
+    </section>`;
+  }).join('');
 }
 
 export function buildSeatingReport(rows: Reservation[], filterLabel?: string): string {
-  const prisoner = rows.filter((r) => !isTableBooking(r));
-  const table = rows.filter(isTableBooking);
-
-  const sectionHead = (title: string, sub: string): string => `
-    <div style="margin:18px 0 10px;padding:12px 16px;background:#312e81;color:#fff;border-radius:8px;">
-      <div style="font-size:16px;font-weight:700;">${title}</div>
-      <div style="font-size:12px;opacity:0.9;margin-top:2px;">${sub}</div>
-    </div>
-  `;
-
-  let html = `
-    <style>${SEATING_REPORT_CSS}</style>
-    <div style="text-align:center; margin-bottom:20px;">
-      <h1 style="font-size:22px; margin:0 0 4px; font-weight:700; color:#312e81;">🪑 รายงานการจัดโต๊ะ</h1>
-      <h2 style="font-size:16px; margin:0 0 2px; font-weight:700; color:#1e1b4b;">ร้าน Chance &amp; Change Cafe · ทัณฑสถานบำบัดพิเศษกลาง</h2>
-      <div style="font-size:12px; color:#555;">เรียงตามเลขที่อ้างอิง · ${prisoner.length && table.length ? 'รายงานแยกการจองเยี่ยม (VIS) และการจองโต๊ะ (TBL)' : table.length ? 'การจองโต๊ะสำหรับบุคคลภายนอก (TBL)' : 'การจองเยี่ยมผู้ต้องขัง (VIS)'}</div>
-      ${filterLabel ? `<div class="report-meta">${escapeHtml(filterLabel)}</div>` : ''}
-    </div>
-  `;
-
-  if (prisoner.length > 0) {
-    html += sectionHead('1) การจองเยี่ยมผู้ต้องขัง', `${prisoner.length} โต๊ะ`);
-    html += renderSeatingBlocks(prisoner, 0);
-    html += renderSeatingSummary(prisoner, true);
-  }
-
-  if (table.length > 0) {
-    if (prisoner.length > 0) html += `<div style="page-break-before:always;"></div>`;
-    html += sectionHead(`${prisoner.length > 0 ? '2' : '1'}) การจองโต๊ะ (TBL)`, `${table.length} โต๊ะ`);
-    html += renderSeatingBlocks(table, prisoner.length);
-    html += renderSeatingSummary(table, false);
-  }
-
-  if (prisoner.length === 0 && table.length === 0) {
-    html += `<div style="text-align:center;color:#888;padding:40px 0;">ไม่มีข้อมูลการจอง</div>`;
-  }
-
-  html += `<div class="page-footer">พิมพ์จากระบบ CC Cafe Reservation · ทัณฑสถานบำบัดพิเศษกลาง</div>`;
+  const sorted = rows.slice().sort((a,b) => a.ref.localeCompare(b.ref));
+  const prisoner = sorted.filter(r => !isTableBooking(r));
+  const table = sorted.filter(isTableBooking);
+  const visitors = rows.reduce((n,r) => n+reportVisitorCount(r),0);
+  const inmates = prisoner.reduce((n,r) => n+prisonersOf(r).length,0);
+  let html = `<style>${DAILY_REPORT_CSS}${SEATING_REPORT_CSS}@page{size:A4 portrait;margin:10mm}</style><article class="daily-report seating-report">${reportHeading('รายงานการจัดโต๊ะ', filterLabel || 'รายการจองเรียงตามเลขอ้างอิง', '')}
+    ${reportStats([['โต๊ะทั้งหมด',rows.length,'โต๊ะ'],['ผู้ร่วมโต๊ะ',visitors,'คน'],['ผู้ต้องขัง',inmates,'คน'],['รวมทั้งหมด',visitors+inmates,'คน']])}`;
+  if (prisoner.length) html += `<h3 class="section-heading">1) การจองเยี่ยมผู้ต้องขัง · ${prisoner.length} โต๊ะ</h3>${renderSeatingBookings(prisoner,0)}`;
+  if (table.length) html += `<h3 class="section-heading">${prisoner.length ? '2' : '1'}) การจองโต๊ะ (TBL) · ${table.length} โต๊ะ</h3>${renderSeatingBookings(table,prisoner.length)}`;
+  if (!rows.length) html += '<p class="notice">ไม่มีข้อมูลการจอง</p>';
+  html += `<div class="seating-end"><span>ยอดเงินรวม <b>${formatNumber(rows.reduce((n,r)=>n+(Number(r.total)||0),0))} บาท</b></span><span>ชำระแล้ว <b>${formatNumber(rows.filter(r=>PAID_STATUSES.includes(normalizeStatus(r.status))).reduce((n,r)=>n+(Number(r.total)||0),0))} บาท</b></span></div><p class="notice">ลำดับโต๊ะใช้สำหรับอ้างอิงในรายงานนี้ · ตรวจสอบเลขอ้างอิงก่อนจัดที่นั่ง</p>${reportSignoffs(['เจ้าหน้าที่จัดโต๊ะ', 'ผู้ตรวจสอบ'])}</article>`;
   return html;
 }
+
 
 /**
  * Door-registration list for no-prisoner table (TBL) bookings. Each table party

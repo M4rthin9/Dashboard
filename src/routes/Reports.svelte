@@ -1,4 +1,5 @@
 <script lang="ts">
+  import BakeryReport from '../lib/components/BakeryReport.svelte';
   import { onMount } from 'svelte';
   import type { Component } from 'svelte';
   import { BarChart3, CalendarDays, ClipboardCheck, Download, Info, Printer, RefreshCw, ShieldCheck, Table2 } from '@lucide/svelte';
@@ -249,6 +250,8 @@
       <div><p>ผู้ต้องขัง</p><strong>{formatNumber(printDaySummary.prisoners)}</strong><span>คน</span></div>
       <div><p>ยอดรวมที่ยืนยันแล้ว</p><strong>{formatNumber(printDaySummary.revenue)}</strong><span>บาท</span></div>
     </div>
+
+    <BakeryReport rows={[...dayRows, ...tableDayRows]} date={reportDate} {printerName} />
 
     <section aria-label="เลือกเอกสารที่ต้องการพิมพ์" class="grid grid-cols-1 gap-4 xl:grid-cols-3">
       {#each printReports as report (report.id)}

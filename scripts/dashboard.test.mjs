@@ -429,6 +429,35 @@ test('separate seating reports show only their pool and do not put a page break 
   assert.ok(!visitHtml.includes('การจองโต๊ะ (TBL)'));
 });
 
+test('daily operational reports preserve guests, actual prisoner totals, zero counts and escaped text', () => {
+  const print = load('src/lib/utils/print.ts');
+  const row = { ref: 'VIS-01', visitorName: 'Main <script>', visitorId: 'ID-1', visitorCount: 2,
+    prisonerName: 'Prisoner One', prisonerId: 'P1', wing: '1',
+    extraPrisoners: 'Prisoner Two|P2|2',
+    extraVisitorNames: 'Allowed|ID-2|Friend|30;;Denied|ID-3|Friend|30', extraVisitorApproved: 'yes;;no' };
+  const gate = print.buildGateRegistrationReport([row], '2026-11-12');
+  assert.ok(gate.includes('Main &lt;script&gt;'));
+  assert.ok(!gate.includes('<script>'));
+  assert.ok(gate.includes('Allowed'));
+  assert.ok(!gate.includes('Denied'));
+  assert.ok(gate.includes('รวม 4'));
+  assert.ok(gate.includes('ลงชื่อเจ้าหน้าที่'));
+  assert.ok(gate.includes('ลงชื่อผู้เยี่ยม'));
+  const zero = print.buildGateRegistrationReport([{ ...row, visitorCount: 0, visitorApproved: 'no', extraVisitorNames: '' }], '2026-11-12');
+  assert.ok(zero.includes('0 + 2'));
+  assert.ok(!zero.includes('Main &lt;script&gt;'));
+  const letter = print.buildDisciplinaryReport([row, row,
+    { ref:'VIS-02', prisonerName:'No ID One', wing:'3' },
+    { ref:'VIS-03', prisonerName:'No ID Two', wing:'3' }], '2026-11-12');
+  for (const name of ['Prisoner One', 'Prisoner Two', 'No ID One', 'No ID Two']) assert.equal(letter.split(name).length - 1, 1);
+  for (const name of ['ผู้จัดทำรายงาน', 'ผู้ตรวจสอบ', 'ผู้อนุมัติ']) assert.ok(letter.includes(name));
+  for (const build of [print.buildDisciplinaryReport, print.buildGateRegistrationReport, print.buildSeatingReport]) {
+    const html = build([], '2026-11-12');
+    assert.ok(html.includes('ไม่มีข้อมูล'));
+    assert.ok(!html.includes('NaN'));
+  }
+});
+
 test('route fallback respects menus and drilldown query preserves Thai status, date and reference', () => {
   const auth = { isAuthenticated: true, user: { role: 'Finance' } };
   const hashState = { value: '#/dashboard' };
