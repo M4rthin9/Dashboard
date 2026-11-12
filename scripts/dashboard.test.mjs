@@ -24,6 +24,32 @@ function loader(mocks = {}, globals = {}) {
 }
 const load = loader();
 
+test('guard admission roster includes only checked-in VIS guests with current admission eligibility', () => {
+  const report = load('src/lib/utils/guardAdmissionReport.ts');
+  const date = '2026-11-12';
+  const guest = { guestKey: 'extra-key', name: 'Current name', id: 'EXTRA-ID', relation: 'Family' };
+  const table = { ref: 'VIS-1', visitDateISO: date, bookingType: 'prisoner', active: true, paymentConfirmed: true, blockedReason: '', prisonerName: 'Inmate', prisonerId: 'P1', wing: '1', extraPrisoners: 'Second|P2|2', guests: [{ guestKey: 'main', name: 'Not arrived', id: 'MAIN-ID' }, guest] };
+  const record = { ref: 'VIS-1', visitDateISO: date, guestKey: 'extra-key', guestName: '<script>Guest</script>', checkedInAt: '2026-11-12T02:00:00Z', checkedInBy: 'desk' };
+  const tables = [table, { ...table, ref: 'TBL-1', bookingType: 'table' }, { ...table, ref: 'VIS-cancelled', active: false }, { ...table, ref: 'VIS-unpaid', paymentConfirmed: false }, { ...table, ref: 'VIS-refunded', blockedReason: 'refunded' }];
+  const rows = [record, record, ...tables.slice(1).map(booking => ({ ...record, ref: booking.ref })), { ...record, visitDateISO: '2026-11-11' }, { ...record, guestKey: 'removed' }];
+  const selected = report.guardAdmissionRows(rows, tables, date);
+  assert.equal(selected.length, 1);
+  assert.equal(selected[0].id, 'EXTRA-ID', 'matches by identity key even when main visitor has not arrived');
+  assert.equal(selected[0].prisoners.length, 2);
+  const html = report.buildGuardAdmissionReport(rows, tables, date, record.checkedInAt);
+  assert.match(html, /เรียน/);
+  assert.match(html, /หัวหน้าส่วนรักษาการณ์/);
+  assert.match(html, /ขออนุญาตให้ผู้เข้าเยี่ยมเข้าภายในทัณฑสถาน/);
+  assert.match(html, /EXTRA-ID/);
+  assert.match(html, /Second/);
+  assert.match(html, /&lt;script&gt;Guest&lt;\/script&gt;/);
+  assert.doesNotMatch(html, /<script>|MAIN-ID|Not arrived|TBL-1|VIS-cancelled|VIS-unpaid|VIS-refunded/);
+  assert.match(html, /09:00/);
+  assert.match(html, /ลงชื่อผู้เข้าเยี่ยม/);
+  assert.match(html, /ผู้พิจารณาอนุญาต/);
+  assert.throws(() => report.buildGuardAdmissionReport(rows, tables, '2026-11-10', record.checkedInAt));
+});
+
 test('theme defaults follow the caller and preserve saved preferences', () => {
   const storage = new Map();
   const applied = [];

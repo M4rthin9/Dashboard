@@ -1,4 +1,5 @@
 <script lang="ts">
+  import GuardAdmissionReport from '../lib/components/GuardAdmissionReport.svelte';
   import BakeryReport from '../lib/components/BakeryReport.svelte';
   import { onMount } from 'svelte';
   import type { Component } from 'svelte';
@@ -252,6 +253,7 @@
     </div>
 
     <BakeryReport rows={[...dayRows, ...tableDayRows]} date={reportDate} {printerName} />
+    <GuardAdmissionReport date={reportDate} />
 
     <section aria-label="เลือกเอกสารที่ต้องการพิมพ์" class="grid grid-cols-1 gap-4 xl:grid-cols-3">
       {#each printReports as report (report.id)}

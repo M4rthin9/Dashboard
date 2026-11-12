@@ -37,9 +37,9 @@ const PRINT_SHARED_CSS = `
   }
 `;
 
-export function openPrintWindow(content: string, reportName: string, printerName: string): boolean {
+export function openPrintWindow(content: string, reportName: string, printerName: string, preview?: Window): boolean {
   const now = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
-  const win = window.open('', '_blank');
+  const win = preview ?? window.open('', '_blank');
   if (!win) return false;
   win.document.write(`
     <!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>${escapeHtml(reportName)}</title>
