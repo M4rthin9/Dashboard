@@ -419,16 +419,16 @@ export function buildFinancialReport(
 
     <p style="font-size:12px; line-height:1.7; margin-bottom:14px; text-align:justify;">
       รายงานฉบับนี้จัดทำขึ้นเพื่อสรุปผลการดำเนินงานด้านการเงินของร้าน Chance &amp; Change Cafe
-      ในช่วงเวลา ${escapeHtml(periodLabel)} ประกอบด้วยข้อมูลจำนวนการจอง ยอด 80% ยอด 20% และยอดรวมที่ลูกค้าชำระแล้ว
+      ในช่วงเวลา ${escapeHtml(periodLabel)} ประกอบด้วยข้อมูลจำนวนการจอง ยอดสุทธิ ยอดสวัสดิการ และยอดรวมที่ลูกค้าชำระแล้ว
       และจำนวนผู้เข้าร่วมกิจกรรม โดยมีรายละเอียดดังต่อไปนี้
     </p>
 
-    <p style="font-size:11px; color:#555;">ยอดรวมคิดจากสถานะ ชำระแล้ว / เสร็จสิ้น เท่านั้น แบ่งเป็นยอด 80% และยอดสวัสดิการร้านสงเคราะห์ 20%</p>
+    <p style="font-size:11px; color:#555;">ยอดรวมคิดจากสถานะ ชำระแล้ว / เสร็จสิ้น แบ่งเป็นยอดสุทธิและยอดสวัสดิการร้านสงเคราะห์ตามวันเข้าเยี่ยม (วันอาทิตย์ 50/50 วันอื่น 80/20)</p>
 
     <h3 style="font-size:12.5px; font-weight:700; margin:0 0 8px;">1. สรุปข้อมูลทางการเงินและผู้เข้าร่วม</h3>
     <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
-      ${statBox('ยอด 80%', fmt(summary.netRevenue) + ' บาท')}
-      ${statBox('ยอด 20%', fmt(summary.welfareDeduction) + ' บาท')}
+      ${statBox('ยอดสุทธิ', fmt(summary.netRevenue) + ' บาท')}
+      ${statBox('ยอดสวัสดิการ', fmt(summary.welfareDeduction) + ' บาท')}
       ${statBox('ยอดรวม', fmt(summary.total) + ' บาท')}
       ${statBox('จำนวนการจอง', fmt(summary.bookings) + ' โต๊ะ')}
     </div>
@@ -452,8 +452,8 @@ export function buildFinancialReport(
           <th style="width:55px; text-align:center;">ผู้เข้าร่วม</th>
           <th style="width:55px; text-align:center;">ผู้ต้องขัง</th>
           <th style="width:55px; text-align:center;">รวมคน</th>
-          <th style="width:90px; text-align:right;">ยอด 80%</th>
-          <th style="width:90px; text-align:right;">ยอด 20%</th>
+          <th style="width:90px; text-align:right;">ยอดสุทธิ</th>
+          <th style="width:90px; text-align:right;">ยอดสวัสดิการ</th>
           <th style="width:90px; text-align:right;">ยอดรวม</th>
         </tr>
       </thead>
@@ -473,8 +473,8 @@ export function buildFinancialReport(
           <th style="width:55px; text-align:center;">ผู้เข้าร่วม</th>
           <th style="width:55px; text-align:center;">ผู้ต้องขัง</th>
           <th style="width:55px; text-align:center;">รวมคน</th>
-          <th style="width:90px; text-align:right;">ยอด 80%</th>
-          <th style="width:90px; text-align:right;">ยอด 20%</th>
+          <th style="width:90px; text-align:right;">ยอดสุทธิ</th>
+          <th style="width:90px; text-align:right;">ยอดสวัสดิการ</th>
           <th style="width:90px; text-align:right;">ยอดรวม</th>
         </tr>
       </thead>

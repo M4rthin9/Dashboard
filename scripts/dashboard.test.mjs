@@ -255,37 +255,46 @@ test('monthly welfare takes 20% of paid VIS/TBL revenue, including archives, and
   assert.equal(fractional.netRevenue, 0.02);
   for (const type of ['all', 'vis', 'tbl']) {
     const html = print.buildFinancialReport(summary, [], monthly, 'Test period', type);
-    assert.match(html, /ยอด 80%/);
-    assert.match(html, /ยอด 20%/);
+    assert.match(html, /ยอดสุทธิ/);
+    assert.match(html, /ยอดสวัสดิการ/);
+    assert.match(html, /วันอาทิตย์ 50\/50/);
     assert.doesNotMatch(html, /ค้างชำระ|>9,000</);
     assert.match(html, /300\.05/);
     assert.match(html, /1,200\.2/);
   }
 });
-test('financial reports show 80%, 20% and received total in order for each pool and period', () => {
+test('financial reports apply the Sunday split and show net, welfare and received totals for each pool and period', () => {
   const print = load('src/lib/utils/print.ts');
   const rows = [
     booking({ total: 1000, visitDateISO: '2026-02-26' }),
     booking({ ref: 'TBL-daily', bookingType: 'table', status: 'เสร็จสิ้น', total: 500.25, visitDateISO: '2026-02-27', _archived: true }),
-    ...['รอชำระเงิน', 'รอตรวจสอบผู้เข้าร่วม', 'ยกเลิก', 'ไม่อนุมัติ', 'คืนเงินแล้ว'].map((status, i) => booking({ ref: `VIS-excluded-${i}`, status, total: 9000, visitDateISO: '2026-02-26' })),
+    booking({ ref: 'VIS-sunday', visitDateISO: '', visitDate: '2026-03-01', total: 100 }),
+    booking({ ref: 'TBL-sunday', bookingType: 'table', status: 'เสร็จสิ้น', visitDateISO: '2026-03-01', total: 200.03, _archived: true }),
+    ...['รอชำระเงิน', 'รอตรวจสอบผู้เข้าร่วม', 'ยกเลิก', 'ไม่อนุมัติ', 'คืนเงินแล้ว'].map((status, i) => booking({ ref: `VIS-excluded-${i}`, status, total: 9000, visitDateISO: '2026-03-01' })),
   ];
-  const daily = financial.buildDailyFinancialReport(rows, '2026-02-26', '2026-02-28');
-  assert.deepEqual(plain(daily.map(d => d.total)), [1000, 500.25, 0]);
+  const daily = financial.buildDailyFinancialReport(rows, '2026-02-26', '2026-03-01');
+  assert.deepEqual(plain(daily.map(d => d.total)), [1000, 500.25, 0, 300.03]);
   assert.deepEqual(plain(daily.map(d => ({ date: d.date, paid: d.paid, welfare: d.welfareDeduction, net: d.netRevenue }))), [
     { date: '2026-02-26', paid: 1000, welfare: 200, net: 800 },
     { date: '2026-02-27', paid: 500.25, welfare: 100.05, net: 400.2 },
     { date: '2026-02-28', paid: 0, welfare: 0, net: 0 },
+    { date: '2026-03-01', paid: 300.03, welfare: 150.02, net: 150.01 },
   ]);
   for (const type of ['all', 'vis', 'tbl']) {
     const selected = type === 'all' ? rows : rows.filter(r => m.bookingPool(r) === (type === 'vis' ? 'prisoner' : 'table'));
-    const days = financial.buildDailyFinancialReport(selected, '2026-02-26', '2026-02-28');
+    const days = financial.buildDailyFinancialReport(selected, '2026-02-26', '2026-03-01');
     const months = financial.buildMonthlyFinancialReport(selected, '2026-02', '2026-03');
-    const html = print.buildFinancialReport(financial.computeFinancialSummary(selected), days, months, 'Test days', type);
+    const summary = financial.computeFinancialSummary(selected);
+    assert.equal(summary.welfareDeduction, { all: 450.07, vis: 250, tbl: 200.07 }[type]);
+    assert.equal(summary.netRevenue, { all: 1350.21, vis: 850, tbl: 500.21 }[type]);
+    assert.equal(months[1].welfareDeduction, { all: 150.02, vis: 50, tbl: 100.02 }[type]);
+    assert.equal(months[1].netRevenue, { all: 150.01, vis: 50, tbl: 100.01 }[type]);
+    const html = print.buildFinancialReport(summary, days, months, 'Test days', type);
     const tables = [...html.matchAll(/<table>([\s\S]*?)<\/table>/g)].map(match => match[1]);
     assert.equal(tables.length, 2, 'daily and monthly tables contain the complete split without duplicates');
     for (const [index, table] of tables.entries()) {
       const headers = [...table.matchAll(/<th\b[^>]*>(.*?)<\/th>/g)].map(match => match[1]);
-      assert.deepEqual(headers.slice(-3), ['ยอด 80%', 'ยอด 20%', 'ยอดรวม']);
+      assert.deepEqual(headers.slice(-3), ['ยอดสุทธิ', 'ยอดสวัสดิการ', 'ยอดรวม']);
       const values = [...table.matchAll(/<tr>([\s\S]*?)<\/tr>/g)]
         .filter(match => match[1].includes('<td'))
         .map(match => [...match[1].matchAll(/<td\b[^>]*>(.*?)<\/td>/g)].map(cell => cell[1]).slice(-3));
@@ -294,7 +303,7 @@ test('financial reports show 80%, 20% and received total in order for each pool 
     }
     assert.doesNotMatch(html, /ค้างชำระ|>9,000</);
   }
-  const unpaid = rows.slice(2);
+  const unpaid = rows.slice(4);
   const unpaidSummary = financial.computeFinancialSummary(unpaid);
   assert.equal(unpaidSummary.total, 0);
   assert.equal(unpaidSummary.welfareDeduction, 0);

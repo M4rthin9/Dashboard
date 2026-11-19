@@ -156,6 +156,7 @@ function aggregateFinancial(rows: Reservation[]): FinancialAgg {
     kidsUnder5: 0, kids5_8: 0, people: 0, paid: 0, pending: 0, total: 0,
     welfareDeduction: 0, netRevenue: 0,
   };
+  let sundayPaid = 0;
   for (const r of rows) {
     if (isFinancialExcluded(r)) continue;
     const amt = amount(r);
@@ -164,6 +165,8 @@ function aggregateFinancial(rows: Reservation[]): FinancialAgg {
       agg.attended++;
       agg.prisoners += bookingPool(r) === 'table' ? 0 : prisonersOf(r).length;
       agg.paid += amt;
+      const visitDate = financialDateOf(r);
+      if (validDate(visitDate) && new Date(visitDate).getUTCDay() === 0) sundayPaid += amt;
       const d = computeDeptReportData(r);
       agg.adults += d.adults;
       agg.kidsUnder5 += d.kidsUnder5;
@@ -174,9 +177,9 @@ function aggregateFinancial(rows: Reservation[]): FinancialAgg {
     }
   }
   agg.people = agg.visitors + agg.prisoners;
-  // Allocate received revenue only; round to satang before taking the 20% share.
   const paidSatang = Math.round(agg.paid * 100);
-  const welfareSatang = Math.round(paidSatang / 5);
+  const sundaySatang = Math.round(sundayPaid * 100);
+  const welfareSatang = Math.round(sundaySatang / 2 + (paidSatang - sundaySatang) / 5);
   agg.paid = paidSatang / 100;
   agg.total = agg.paid;
   agg.welfareDeduction = welfareSatang / 100;

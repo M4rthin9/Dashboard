@@ -238,11 +238,11 @@
         <p class="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">{formatNumber(summary.bookings)}</p>
       </Card>
       <Card>
-        <p class="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">ยอด 80%</p>
+        <p class="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">ยอดสุทธิ</p>
         <p class="mt-2 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{formatBaht(summary.netRevenue)}</p>
       </Card>
       <Card>
-        <p class="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">ยอด 20%</p>
+        <p class="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">ยอดสวัสดิการ</p>
         <p class="mt-2 text-2xl font-bold text-amber-600 dark:text-amber-400">{formatBaht(summary.welfareDeduction)}</p>
       </Card>
       <Card>
@@ -277,8 +277,8 @@
               <th class="px-3 py-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">เข้าร่วม</th>
               <th class="px-3 py-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">ผู้เยี่ยม</th>
               <th class="px-3 py-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">ผู้ต้องขัง</th>
-              <th class="px-3 py-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">ยอด 80%</th>
-              <th class="px-3 py-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">ยอด 20%</th>
+              <th class="px-3 py-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">ยอดสุทธิ</th>
+              <th class="px-3 py-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">ยอดสวัสดิการ</th>
               <th class="px-3 py-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">ยอดรวม</th>
             </tr>
           </thead>
@@ -303,7 +303,7 @@
           </tbody>
         </table>
       </div>
-      <p class="mt-3 text-xs text-slate-400 dark:text-slate-500">ยอดรวมคิดเฉพาะที่ลูกค้าชำระแล้ว แบ่งเป็นยอด 80% และยอดสวัสดิการร้านสงเคราะห์ 20%</p>
+      <p class="mt-3 text-xs text-slate-400 dark:text-slate-500">ยอดรวมคิดจากสถานะ ชำระแล้ว / เสร็จสิ้น แบ่งเป็นยอดสุทธิและยอดสวัสดิการร้านสงเคราะห์ตามวันเข้าเยี่ยม (วันอาทิตย์ 50/50 วันอื่น 80/20)</p>
     </Card>
 
     <Card title="สรุปรายเดือน">
@@ -316,8 +316,8 @@
               <th class="px-3 py-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">เข้าร่วม</th>
               <th class="px-3 py-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">ผู้เยี่ยม</th>
               <th class="px-3 py-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">ผู้ต้องขัง</th>
-              <th class="px-3 py-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">ยอด 80%</th>
-              <th class="px-3 py-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">ยอด 20%</th>
+              <th class="px-3 py-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">ยอดสุทธิ</th>
+              <th class="px-3 py-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">ยอดสวัสดิการ</th>
               <th class="px-3 py-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">ยอดรวม</th>
             </tr>
           </thead>
@@ -343,7 +343,7 @@
         </table>
       </div>
       <p class="mt-3 text-xs text-slate-400 dark:text-slate-500">
-        ยอดรวมคิดจากสถานะ ชำระแล้ว / เสร็จสิ้น เท่านั้น แบ่งเป็นยอด 80% และยอดสวัสดิการร้านสงเคราะห์ 20%
+        ยอดรวมคิดจากสถานะ ชำระแล้ว / เสร็จสิ้น แบ่งเป็นยอดสุทธิและยอดสวัสดิการร้านสงเคราะห์ตามวันเข้าเยี่ยม (วันอาทิตย์ 50/50 วันอื่น 80/20)
       </p>
     </Card>
   {/if}
