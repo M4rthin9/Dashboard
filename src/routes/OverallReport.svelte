@@ -16,9 +16,11 @@
     computeFinancialSummary,
     currentMonthISO,
     financialDateOf,
+    FINANCIAL_SPLIT_NOTE,
     lastDayISO,
     monthLabel,
     shiftMonthISO,
+    usesSundayFinancialSplit,
   } from '../lib/utils/dashboard';
   import { buildFinancialReport, openPrintWindow } from '../lib/utils/print';
   import { visitDateLabel } from '../lib/utils/format';
@@ -284,8 +286,14 @@
           </thead>
           <tbody>
             {#each daily as d (d.date)}
-              <tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/50 dark:border-slate-800 dark:hover:bg-slate-800/30">
-                <td class="whitespace-nowrap px-3 py-2 text-slate-700 dark:text-slate-200">{visitDateLabel(d.date)}</td>
+              {@const sundaySplit = usesSundayFinancialSplit(d.date)}
+              <tr class={["border-b border-slate-100 last:border-0 dark:border-slate-800", sundaySplit ? "bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-950/60" : "hover:bg-slate-50/50 dark:hover:bg-slate-800/30"]}>
+                <td class="whitespace-nowrap px-3 py-2 text-slate-700 dark:text-slate-200">
+                  {visitDateLabel(d.date)}
+                  {#if sundaySplit}
+                    <span class="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-900 dark:text-amber-100">50/50</span>
+                  {/if}
+                </td>
                 <td class="px-3 py-2 text-right text-slate-700 dark:text-slate-200">{formatNumber(d.bookings)}</td>
                 <td class="px-3 py-2 text-right text-slate-700 dark:text-slate-200">{formatNumber(d.attended)}</td>
                 <td class="px-3 py-2 text-right text-slate-700 dark:text-slate-200">{formatNumber(d.visitors)}</td>
@@ -303,7 +311,7 @@
           </tbody>
         </table>
       </div>
-      <p class="mt-3 text-xs text-slate-400 dark:text-slate-500">ยอดรวมคิดจากสถานะ ชำระแล้ว / เสร็จสิ้น แบ่งเป็นยอดสุทธิและยอดสวัสดิการร้านสงเคราะห์ตามวันเข้าเยี่ยม (วันอาทิตย์ 50/50 วันอื่น 80/20)</p>
+      <p class="mt-3 text-xs text-slate-400 dark:text-slate-500">{FINANCIAL_SPLIT_NOTE}</p>
     </Card>
 
     <Card title="สรุปรายเดือน">
@@ -343,7 +351,7 @@
         </table>
       </div>
       <p class="mt-3 text-xs text-slate-400 dark:text-slate-500">
-        ยอดรวมคิดจากสถานะ ชำระแล้ว / เสร็จสิ้น แบ่งเป็นยอดสุทธิและยอดสวัสดิการร้านสงเคราะห์ตามวันเข้าเยี่ยม (วันอาทิตย์ 50/50 วันอื่น 80/20)
+        {FINANCIAL_SPLIT_NOTE}
       </p>
     </Card>
   {/if}

@@ -137,6 +137,12 @@ export interface FinancialMonthRow extends FinancialAgg {
   month: string;
 }
 
+export const FINANCIAL_SPLIT_NOTE = 'ยอดรวมคิดจากสถานะ ชำระแล้ว / เสร็จสิ้น ตามวันเข้าเยี่ยม ตั้งแต่ 1 พ.ย. 2569 วันอาทิตย์แบ่ง 50/50 วันอื่นแบ่ง 80/20 ก่อนหน้านั้นทุกวันแบ่ง 80/20 (ยอดสุทธิ/ยอดสวัสดิการ)';
+
+export function usesSundayFinancialSplit(date: string): boolean {
+  return date >= '2026-11-01' && validDate(date) && new Date(date).getUTCDay() === 0;
+}
+
 export function financialDateOf(r: Reservation): string {
   return String(r.visitDateISO ?? '').trim() || String(r.visitDate ?? '').trim();
 }
@@ -165,8 +171,7 @@ function aggregateFinancial(rows: Reservation[]): FinancialAgg {
       agg.attended++;
       agg.prisoners += bookingPool(r) === 'table' ? 0 : prisonersOf(r).length;
       agg.paid += amt;
-      const visitDate = financialDateOf(r);
-      if (validDate(visitDate) && new Date(visitDate).getUTCDay() === 0) sundayPaid += amt;
+      if (usesSundayFinancialSplit(financialDateOf(r))) sundayPaid += amt;
       const d = computeDeptReportData(r);
       agg.adults += d.adults;
       agg.kidsUnder5 += d.kidsUnder5;

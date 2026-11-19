@@ -1,5 +1,5 @@
 import { formatNumber, visitDateLabel, parseExtraVisitors, prisonersOf, normalizeStatus } from './format';
-import { monthLabel } from './dashboard';
+import { FINANCIAL_SPLIT_NOTE, monthLabel, usesSundayFinancialSplit } from './dashboard';
 import { bookingPool } from './management';
 import type { Reservation } from '../api/types';
 import type { FinancialDayRow, FinancialMonthRow, FinancialSummary } from './dashboard';
@@ -363,10 +363,12 @@ export function buildFinancialReport(
   const dailyRows = daily
     .filter((d) => d.bookings > 0 || d.attended > 0)
     .map(
-      (d, i) => `
-      <tr>
+      (d, i) => {
+        const sundaySplit = usesSundayFinancialSplit(d.date);
+        return `
+      <tr${sundaySplit ? ' class="sunday-split" style="background-color:#fef3c7;print-color-adjust:exact;-webkit-print-color-adjust:exact;"' : ''}>
         <td style="text-align:center;">${i + 1}</td>
-        <td>${escapeHtml(thaiDateLabel(d.date))}</td>
+        <td>${escapeHtml(thaiDateLabel(d.date))}${sundaySplit ? ' <strong>(50/50)</strong>' : ''}</td>
         <td style="text-align:center;">${fmt(d.attended)}</td>
         <td style="text-align:center;">${fmt(d.adults)}</td>
         <td style="text-align:center;">${fmt(d.kidsUnder5)}</td>
@@ -377,7 +379,8 @@ export function buildFinancialReport(
         <td style="text-align:right;">${fmt(d.netRevenue)}</td>
         <td style="text-align:right;">${fmt(d.welfareDeduction)}</td>
         <td style="text-align:right;">${fmt(d.total)}</td>
-      </tr>`
+      </tr>`;
+      }
     )
     .join('');
 
@@ -423,7 +426,7 @@ export function buildFinancialReport(
       และจำนวนผู้เข้าร่วมกิจกรรม โดยมีรายละเอียดดังต่อไปนี้
     </p>
 
-    <p style="font-size:11px; color:#555;">ยอดรวมคิดจากสถานะ ชำระแล้ว / เสร็จสิ้น แบ่งเป็นยอดสุทธิและยอดสวัสดิการร้านสงเคราะห์ตามวันเข้าเยี่ยม (วันอาทิตย์ 50/50 วันอื่น 80/20)</p>
+    <p style="font-size:11px; color:#555;">${escapeHtml(FINANCIAL_SPLIT_NOTE)}</p>
 
     <h3 style="font-size:12.5px; font-weight:700; margin:0 0 8px;">1. สรุปข้อมูลทางการเงินและผู้เข้าร่วม</h3>
     <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
