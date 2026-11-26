@@ -7,6 +7,8 @@
   import Modal from '../lib/components/ui/Modal.svelte';
   import Pagination from '../lib/components/ui/Pagination.svelte';
   import PrisonerEditModal from '../lib/components/PrisonerEditModal.svelte';
+  import PrisonerWorkbookModal from '../lib/components/PrisonerWorkbookModal.svelte';
+  import type { WorkbookKind } from '../lib/utils/prisonerWorkbook';
   import { auth } from '../lib/store/auth.svelte';
   import { ui } from '../lib/store/ui.svelte';
   import { hasPermission } from '../lib/utils/permissions';
@@ -42,6 +44,7 @@
 
   let editing = $state<Prisoner | null>(null);
   let editOpen = $state(false);
+  let workbookKind = $state<WorkbookKind>();
 
   const isManager = $derived(hasPermission(auth.user?.role ?? '', 'manage_prisoners'));
 
@@ -225,6 +228,12 @@
         {#if isManager}
           <button class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors duration-150 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" onclick={doSyncWings} disabled={syncing}>
             {syncing ? 'กำลังซิงค์...' : 'ซิงค์แดน'}
+          </button>
+          <button type="button" class="rounded-xl bg-blue-700 px-3.5 py-2 text-sm font-semibold text-white hover:bg-blue-800" onclick={() => (workbookKind = 'roster')}>
+            นำเข้ารายชื่อ (.xlsm)
+          </button>
+          <button type="button" class="rounded-xl border border-slate-300 px-3.5 py-2 text-sm font-semibold hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800" onclick={() => (workbookKind = 'discipline')}>
+            อัปเดตวินัย (.xlsx)
           </button>
           <button class="inline-flex items-center gap-1.5 rounded-xl bg-blue-700 px-3.5 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-blue-700 focus-visible:outline-offset-2" onclick={openImport}>
             <span class="flex items-center gap-1.5"><Upload class="h-4 w-4" /> นำเข้า CSV</span>
@@ -432,3 +441,7 @@
 </Modal>
 
 <PrisonerEditModal open={editOpen} prisoner={editing} {wings} onclose={() => (editOpen = false)} onsaved={fetchData} />
+
+{#if workbookKind && isManager}
+  <PrisonerWorkbookModal kind={workbookKind} onclose={() => (workbookKind = undefined)} onsaved={fetchData} />
+{/if}
