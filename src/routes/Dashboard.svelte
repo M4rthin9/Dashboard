@@ -7,6 +7,7 @@
   import Spinner from '../lib/components/ui/Spinner.svelte';
   import ChartPanel from '../lib/components/dashboard/ChartPanel.svelte';
   import FloorPlan from '../lib/components/dashboard/FloorPlan.svelte';
+  import VisContactList from '../lib/components/dashboard/VisContactList.svelte';
   import PaymentApprovalModal from '../lib/components/PaymentApprovalModal.svelte';
   import VisitorApprovalModal from '../lib/components/VisitorApprovalModal.svelte';
   import ReservationDetailModal from '../lib/components/ReservationDetailModal.svelte';
@@ -120,6 +121,7 @@
 </script>
 
 <div class="management-dashboard flex flex-col gap-6">
+  <VisContactList />
   <div class="flex flex-wrap items-start justify-between gap-4">
     <div><p class="mb-2 text-xs text-slate-500">ภาพรวม · {visitDateLabel(today)}</p><h2 class="text-2xl font-medium tracking-tight text-slate-900 sm:text-[28px] dark:text-white">ภาพรวมการดำเนินงาน</h2><p class="mt-2 text-xs text-slate-500">ติดตามการจอง งานที่ต้องดำเนินการ และสถิติการให้บริการ · {roleLabel(role)}</p></div>
     <button class="quick-link dashboard-refresh" disabled={reservations.loading} onclick={() => void refresh()}><RefreshCw class="h-4 w-4 {reservations.loading ? 'animate-spin' : ''}" />อัปเดตข้อมูล</button>
